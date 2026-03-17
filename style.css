@@ -1,0 +1,280 @@
+/* style.css */
+
+:root {
+  --bg: #f5f5f3;
+  --surface: #ffffff;
+  --border: #e0e0de;
+  --text: #1a1a1a;
+  --text-muted: #6b6b68;
+  --toolbar-h: 52px;
+  --panel-w: 320px;
+  --radius: 8px;
+  --shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1a1a1c;
+    --surface: #242426;
+    --border: #38383a;
+    --text: #f0f0ee;
+    --text-muted: #9a9a96;
+    --shadow: 0 2px 8px rgba(0,0,0,0.4);
+  }
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo',
+    'Malgun Gothic', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Toolbar ── */
+#toolbar {
+  height: var(--toolbar-h);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px;
+  flex-shrink: 0;
+  box-shadow: var(--shadow);
+  z-index: 10;
+}
+
+.toolbar-brand {
+  font-weight: 700;
+  font-size: 15px;
+  margin-right: 8px;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.toolbar-sep { width: 1px; height: 24px; background: var(--border); margin: 0 4px; }
+
+select, button {
+  height: 32px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  padding: 0 10px;
+  transition: background 0.15s;
+}
+
+select:hover, button:hover { background: var(--bg); }
+
+button.primary {
+  background: #2563EB;
+  color: #fff;
+  border-color: #2563EB;
+}
+button.primary:hover { background: #1D4ED8; }
+
+button.danger { background: #DC2626; color: #fff; border-color: #DC2626; }
+button.danger:hover { background: #B91C1C; }
+
+.spacer { flex: 1; }
+
+/* ── Main layout ── */
+#main {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ── Graph container ── */
+#graph-container {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  cursor: default;
+  user-select: none;
+}
+
+.graph-canvas {
+  position: absolute;
+  top: 0; left: 0;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+
+.graph-nodes {
+  position: absolute;
+  top: 0; left: 0;
+}
+
+/* ── Nodes ── */
+.graph-node {
+  position: absolute;
+  background: var(--surface);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 8px 12px;
+  transition: opacity 0.2s, box-shadow 0.15s;
+  user-select: none;
+}
+
+.graph-node:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.14); }
+.graph-node.dim { opacity: 0.2; }
+
+.node-project {
+  font-weight: 700;
+  font-size: 13px;
+  background: var(--surface);
+}
+.node-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.node-category {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.node-cat-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.node-task { font-size: 12px; }
+
+.task-name {
+  font-weight: 500;
+  line-height: 1.3;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  margin-bottom: 6px;
+}
+
+.task-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.assignee {
+  font-size: 11px;
+  color: var(--text-muted);
+  background: var(--bg);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
+.status-badge {
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: 4px;
+  padding: 2px 6px;
+  white-space: nowrap;
+}
+
+/* ── Side Panel ── */
+#side-panel {
+  width: var(--panel-w);
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow-y: auto;
+  flex-shrink: 0;
+  z-index: 5;
+}
+
+#side-panel.open { transform: translateX(0); }
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.panel-header h3 { font-size: 15px; font-weight: 700; }
+
+#panel-close {
+  width: 28px; height: 28px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  font-size: 18px;
+  color: var(--text-muted);
+  display: flex; align-items: center; justify-content: center;
+  padding: 0;
+}
+#panel-close:hover { background: var(--bg); color: var(--text); }
+
+.panel-body { padding: 16px 20px; flex: 1; display: flex; flex-direction: column; gap: 14px; }
+
+.form-group { display: flex; flex-direction: column; gap: 5px; }
+.form-group label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  height: auto;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+  font-family: inherit;
+  resize: vertical;
+}
+.form-group textarea { min-height: 72px; }
+
+.panel-section-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 2px;
+}
+
+.project-context-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn-row button { flex: 1; min-width: 60px; }
+
+.cat-list-item {
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  margin-bottom: 4px;
+}
+.cat-list-item:hover { background: var(--border); }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
