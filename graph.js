@@ -38,9 +38,11 @@ export class Graph {
     this.canvas = document.createElement('div');
     this.canvas.className = 'graph-canvas';
 
-    // SVG는 pointer-events:none 유지 → 캔버스 패닝을 방해하지 않음
+    // SVG: 명시적 큰 크기로 설정 (% 기반이면 canvas가 0×0일 때 SVG도 0×0이 됨)
     this.svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    this.svg.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:visible;';
+    this.svg.setAttribute('width', '8000');
+    this.svg.setAttribute('height', '8000');
+    this.svg.style.cssText = 'position:absolute;top:0;left:0;pointer-events:none;overflow:visible;';
     this.svg.setAttribute('id', 'edge-svg');
 
     // Arrow marker for flow edges
