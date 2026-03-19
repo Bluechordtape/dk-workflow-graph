@@ -287,6 +287,28 @@ button.danger:hover { background: #B91C1C; }
   box-shadow: 0 0 0 4px #4f46e520 !important;
 }
 
+.flow-delete-btn {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #4f46e5;
+  color: #fff;
+  font-size: 14px;
+  line-height: 20px;
+  text-align: center;
+  cursor: pointer;
+  opacity: 0.35;
+  transition: opacity 0.15s, transform 0.15s;
+  user-select: none;
+  z-index: 10;
+}
+
+.flow-delete-btn:hover {
+  opacity: 1;
+  transform: scale(1.2);
+}
+
 /* ── Scrollbar ── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }

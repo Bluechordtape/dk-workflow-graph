@@ -38,8 +38,9 @@ export class Graph {
     this.canvas = document.createElement('div');
     this.canvas.className = 'graph-canvas';
 
+    // SVG는 pointer-events:none 유지 → 캔버스 패닝을 방해하지 않음
     this.svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    this.svg.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;overflow:visible;';
+    this.svg.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:visible;';
     this.svg.setAttribute('id', 'edge-svg');
 
     // Arrow marker for flow edges
@@ -52,8 +53,14 @@ export class Graph {
     this.nodesEl = document.createElement('div');
     this.nodesEl.className = 'graph-nodes';
 
+    // Flow 삭제 버튼 오버레이 (SVG 위에 HTML로 배치)
+    this.flowControlsEl = document.createElement('div');
+    this.flowControlsEl.className = 'flow-controls';
+    this.flowControlsEl.style.cssText = 'position:absolute;top:0;left:0;pointer-events:none;';
+
     this.canvas.appendChild(this.svg);
     this.canvas.appendChild(this.nodesEl);
+    this.canvas.appendChild(this.flowControlsEl);
     this.container.appendChild(this.canvas);
   }
 
@@ -235,6 +242,7 @@ export class Graph {
   _renderEdges() {
     // Clear everything except defs
     Array.from(this.svg.children).forEach(c => { if (c.tagName !== 'defs') c.remove(); });
+    this.flowControlsEl.innerHTML = '';
     if (!this.data) return;
 
     for (const project of this.data.projects) {
@@ -289,6 +297,8 @@ export class Graph {
     const x1 = a.x + a.w, y1 = a.y + a.h / 2;
     const x2 = b.x, y2 = b.y + b.h / 2;
     const cx = (x1 + x2) / 2;
+
+    // SVG 경로 (pointer-events:none이므로 클릭 불가 — HTML 버튼으로 대신 처리)
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     path.setAttribute('d', `M${x1},${y1} C${cx},${y1} ${cx},${y2} ${x2},${y2}`);
     path.setAttribute('fill', 'none');
@@ -297,15 +307,25 @@ export class Graph {
     path.setAttribute('stroke-opacity', '0.85');
     path.setAttribute('stroke-dasharray', '7,3');
     path.setAttribute('marker-end', 'url(#flow-arrow)');
-    path.setAttribute('pointer-events', 'stroke');
-    path.style.cursor = 'pointer';
-    path.addEventListener('click', (e) => {
+    this.svg.appendChild(path);
+
+    // 연결선 중간에 삭제 버튼 (HTML 오버레이)
+    const mx = (x1 + x2) / 2;
+    const my = (y1 + y2) / 2;
+    const btn = document.createElement('div');
+    btn.className = 'flow-delete-btn';
+    btn.style.left = (mx - 10) + 'px';
+    btn.style.top = (my - 10) + 'px';
+    btn.title = '연결 삭제';
+    btn.textContent = '×';
+    btn.style.pointerEvents = 'auto';
+    btn.addEventListener('click', (e) => {
       e.stopPropagation();
       if (confirm('이 연결을 삭제하시겠습니까?')) {
         this.onFlowDelete && this.onFlowDelete(flowId);
       }
     });
-    this.svg.appendChild(path);
+    this.flowControlsEl.appendChild(btn);
   }
 
   _makeDraggable(el, nodeId) {
@@ -348,7 +368,7 @@ export class Graph {
     window.addEventListener('mouseup', () => {
       this._dragging = null;
       this._panning = null;
-      this.container.style.cursor = '';
+      this.container.style.cursor = this.connectMode ? 'crosshair' : '';
     });
 
     // pan on canvas background
