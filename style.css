@@ -274,6 +274,19 @@ button.danger:hover { background: #B91C1C; }
 }
 .cat-list-item:hover { background: var(--border); }
 
+/* ── Connect mode ── */
+#btn-connect-mode.active {
+  background: #4f46e5;
+  color: #fff;
+  border-color: #4f46e5;
+}
+
+.connect-selected {
+  outline: 2.5px solid #4f46e5 !important;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px #4f46e520 !important;
+}
+
 /* ── Scrollbar ── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }

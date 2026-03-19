@@ -5,10 +5,15 @@ const STORAGE_KEY = 'dk_workflow_data';
 export async function loadData() {
   const saved = localStorage.getItem(STORAGE_KEY);
   if (saved) {
-    try { return JSON.parse(saved); } catch {}
+    try {
+      const data = JSON.parse(saved);
+      if (!data.flows) data.flows = [];
+      return data;
+    } catch {}
   }
   const res = await fetch('./sample-data.json');
   const data = await res.json();
+  if (!data.flows) data.flows = [];
   saveData(data);
   return data;
 }
@@ -106,6 +111,29 @@ export function moveTask(category, taskId, direction) {
   const swap = direction === 'up' ? idx - 1 : idx + 1;
   if (swap < 0 || swap >= category.tasks.length) return;
   [category.tasks[idx], category.tasks[swap]] = [category.tasks[swap], category.tasks[idx]];
+}
+
+// --- Flow helpers ---
+
+export function addFlow(data, fromId, toId) {
+  if (!data.flows) data.flows = [];
+  // Prevent duplicate
+  if (data.flows.some(f => f.from === fromId && f.to === toId)) return null;
+  const flow = { id: generateId('f'), from: fromId, to: toId };
+  data.flows.push(flow);
+  return flow;
+}
+
+export function deleteFlow(data, flowId) {
+  if (!data.flows) return;
+  data.flows = data.flows.filter(f => f.id !== flowId);
+}
+
+export function cleanFlows(data) {
+  if (!data.flows) return;
+  const taskIds = new Set();
+  data.projects.forEach(p => p.categories.forEach(c => c.tasks.forEach(t => taskIds.add(t.id))));
+  data.flows = data.flows.filter(f => taskIds.has(f.from) && taskIds.has(f.to));
 }
 
 // find helpers

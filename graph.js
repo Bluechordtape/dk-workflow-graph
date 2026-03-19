@@ -19,12 +19,16 @@ export class Graph {
     this.onNodeClick = onNodeClick;
     this.data = null;
     this.filter = { assignee: '', project: '', status: '' };
-    this.nodePositions = {}; // id -> {x, y}
+    this.nodePositions = {}; // id -> {x, y, w, h}
     this.scale = 1;
     this.offsetX = 0;
     this.offsetY = 0;
     this._dragging = null;
     this._panning = null;
+    this.connectMode = false;
+    this.connectFrom = null;
+    this.onFlowCreate = null;
+    this.onFlowDelete = null;
     this._setupDOM();
     this._setupInteractions();
   }
@@ -35,8 +39,15 @@ export class Graph {
     this.canvas.className = 'graph-canvas';
 
     this.svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    this.svg.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:visible;';
+    this.svg.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;overflow:visible;';
     this.svg.setAttribute('id', 'edge-svg');
+
+    // Arrow marker for flow edges
+    const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+    defs.innerHTML = `<marker id="flow-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#4f46e5" opacity="0.85"/>
+    </marker>`;
+    this.svg.appendChild(defs);
 
     this.nodesEl = document.createElement('div');
     this.nodesEl.className = 'graph-nodes';
@@ -48,8 +59,27 @@ export class Graph {
 
   setData(data) {
     this.data = data;
+    const oldPositions = this.nodePositions;
     this._computeLayout();
+    // Restore manually-dragged positions for existing nodes
+    for (const id in oldPositions) {
+      if (this.nodePositions[id]) {
+        this.nodePositions[id] = oldPositions[id];
+      }
+    }
     this.render();
+  }
+
+  setFlowCallbacks(onCreate, onDelete) {
+    this.onFlowCreate = onCreate;
+    this.onFlowDelete = onDelete;
+  }
+
+  setConnectMode(enabled) {
+    this.connectMode = enabled;
+    this.connectFrom = null;
+    this.nodesEl.querySelectorAll('.connect-selected').forEach(n => n.classList.remove('connect-selected'));
+    this.container.style.cursor = enabled ? 'crosshair' : '';
   }
 
   setFilter(filter) {
@@ -183,13 +213,28 @@ export class Graph {
         ${task.assignee ? `<span class="assignee">${task.assignee}</span>` : ''}
         <span class="status-badge" style="background:${sc}22;color:${sc}">${STATUS_LABEL[task.status]}</span>
       </div>`;
-    el.addEventListener('click', () => this.onNodeClick({ type: 'task', project, task }));
+    el.addEventListener('click', (e) => {
+      if (this.connectMode) {
+        e.stopPropagation();
+        if (!this.connectFrom) {
+          this.connectFrom = task.id;
+          el.classList.add('connect-selected');
+        } else if (this.connectFrom !== task.id) {
+          this.onFlowCreate && this.onFlowCreate(this.connectFrom, task.id);
+          this.connectFrom = null;
+          this.nodesEl.querySelectorAll('.connect-selected').forEach(n => n.classList.remove('connect-selected'));
+        }
+        return;
+      }
+      this.onNodeClick({ type: 'task', project, task });
+    });
     this._makeDraggable(el, task.id);
     return el;
   }
 
   _renderEdges() {
-    this.svg.innerHTML = '';
+    // Clear everything except defs
+    Array.from(this.svg.children).forEach(c => { if (c.tagName !== 'defs') c.remove(); });
     if (!this.data) return;
 
     for (const project of this.data.projects) {
@@ -210,6 +255,15 @@ export class Graph {
         }
       }
     }
+
+    // Custom flow edges
+    if (this.data.flows) {
+      for (const flow of this.data.flows) {
+        const a = this.nodePositions[flow.from];
+        const b = this.nodePositions[flow.to];
+        if (a && b) this._drawFlowEdge(a, b, flow.id);
+      }
+    }
   }
 
   _drawEdge(fromPos, toId, color) {
@@ -227,6 +281,30 @@ export class Graph {
     path.setAttribute('fill', 'none');
     path.setAttribute('stroke', color);
     path.setAttribute('stroke-width', '2');
+    path.setAttribute('pointer-events', 'none');
+    this.svg.appendChild(path);
+  }
+
+  _drawFlowEdge(a, b, flowId) {
+    const x1 = a.x + a.w, y1 = a.y + a.h / 2;
+    const x2 = b.x, y2 = b.y + b.h / 2;
+    const cx = (x1 + x2) / 2;
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', `M${x1},${y1} C${cx},${y1} ${cx},${y2} ${x2},${y2}`);
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', '#4f46e5');
+    path.setAttribute('stroke-width', '2.5');
+    path.setAttribute('stroke-opacity', '0.85');
+    path.setAttribute('stroke-dasharray', '7,3');
+    path.setAttribute('marker-end', 'url(#flow-arrow)');
+    path.setAttribute('pointer-events', 'stroke');
+    path.style.cursor = 'pointer';
+    path.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (confirm('이 연결을 삭제하시겠습니까?')) {
+        this.onFlowDelete && this.onFlowDelete(flowId);
+      }
+    });
     this.svg.appendChild(path);
   }
 
@@ -276,6 +354,12 @@ export class Graph {
     // pan on canvas background
     this.container.addEventListener('mousedown', (e) => {
       if (e.target !== this.container && e.target !== this.canvas) return;
+      if (this.connectMode) {
+        // Deselect connect source on background click
+        this.connectFrom = null;
+        this.nodesEl.querySelectorAll('.connect-selected').forEach(n => n.classList.remove('connect-selected'));
+        return;
+      }
       this._panning = {
         startX: e.clientX, startY: e.clientY,
         startOffX: this.offsetX, startOffY: this.offsetY

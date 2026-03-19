@@ -1,18 +1,32 @@
 // app.js — 메인 로직
 import { loadData, saveData, exportJSON, importJSON, generateId,
          addProject, deleteProject, addCategory, deleteCategory,
-         addTask, deleteTask, updateTask, moveTask, findTaskContext } from './data.js';
+         addTask, deleteTask, updateTask, moveTask, findTaskContext,
+         addFlow, deleteFlow, cleanFlows } from './data.js';
 import { Graph } from './graph.js';
 
 let data = null;
 let graph = null;
 let activePanel = null; // { type, project, category, task }
+let connectModeActive = false;
 
 async function init() {
   data = await loadData();
 
   const container = document.getElementById('graph-container');
   graph = new Graph(container, onNodeClick);
+  graph.setFlowCallbacks(
+    (fromId, toId) => {
+      addFlow(data, fromId, toId);
+      saveData(data);
+      graph.setData(data);
+    },
+    (flowId) => {
+      deleteFlow(data, flowId);
+      saveData(data);
+      graph.setData(data);
+    }
+  );
   graph.setData(data);
 
   buildAssigneeFilter();
@@ -64,6 +78,13 @@ function setupToolbar() {
 
   document.getElementById('btn-reset-view').addEventListener('click', () => graph.resetView());
   document.getElementById('btn-relayout').addEventListener('click', () => graph.relayout());
+
+  document.getElementById('btn-connect-mode').addEventListener('click', () => {
+    connectModeActive = !connectModeActive;
+    document.getElementById('btn-connect-mode').classList.toggle('active', connectModeActive);
+    graph.setConnectMode(connectModeActive);
+    if (connectModeActive) closePanel();
+  });
 
   document.getElementById('btn-export').addEventListener('click', () => exportJSON(data));
   document.getElementById('btn-import').addEventListener('click', () => {
@@ -168,6 +189,7 @@ function deleteTaskFromPanel() {
   const ctx = findTaskContext(data, activePanel.task.id);
   if (!ctx) return;
   deleteTask(ctx.category, activePanel.task.id);
+  cleanFlows(data);
   saveData(data);
   graph.setData(data);
   closePanel();
@@ -243,6 +265,7 @@ function deleteProjectFromPanel() {
   if (!activePanel || activePanel.type !== 'project') return;
   if (!confirm(`"${activePanel.project.name}" 프로젝트를 삭제하시겠습니까?`)) return;
   deleteProject(data, activePanel.project.id);
+  cleanFlows(data);
   saveData(data);
   graph.setData(data);
   buildProjectFilter();
@@ -263,6 +286,7 @@ function deleteCategoryFromPanel() {
   if (!activePanel || activePanel.type !== 'category') return;
   if (!confirm(`"${activePanel.category.name}" 카테고리를 삭제하시겠습니까?`)) return;
   deleteCategory(activePanel.project, activePanel.category.id);
+  cleanFlows(data);
   saveData(data);
   graph.setData(data);
   closePanel();
