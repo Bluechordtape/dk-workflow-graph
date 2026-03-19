@@ -250,16 +250,16 @@ export class Graph {
       for (const cat of project.categories) {
         const cPos = this.nodePositions[cat.id];
         // project -> category
-        this._drawEdge(pPos, cat.id, project.color + '66');
+        this._drawEdge(pPos, cat.id, project.color + 'cc');
         // category -> first task
         if (cat.tasks.length > 0) {
-          this._drawEdge(cPos, cat.tasks[0].id, project.color + '44');
+          this._drawEdge(cPos, cat.tasks[0].id, project.color + 'aa');
         }
         // task -> next task (chain)
         for (let i = 0; i < cat.tasks.length - 1; i++) {
           const a = this.nodePositions[cat.tasks[i].id];
           const b = this.nodePositions[cat.tasks[i + 1].id];
-          this._drawEdgeBetween(a, b, '#55555533');
+          this._drawEdgeBetween(a, b, '#94a3b8');
         }
       }
     }
@@ -288,7 +288,7 @@ export class Graph {
     path.setAttribute('d', `M${x1},${y1} C${cx},${y1} ${cx},${y2} ${x2},${y2}`);
     path.setAttribute('fill', 'none');
     path.setAttribute('stroke', color);
-    path.setAttribute('stroke-width', '2');
+    path.setAttribute('stroke-width', '2.5');
     path.setAttribute('pointer-events', 'none');
     this.svg.appendChild(path);
   }
@@ -299,12 +299,12 @@ export class Graph {
     const cx = (x1 + x2) / 2;
     const d = `M${x1},${y1} C${cx},${y1} ${cx},${y2} ${x2},${y2}`;
 
-    // 흰 윤곽선: 어두운 배경에서도 라인이 뚜렷하게 보임
+    // 배경과 구분되는 흰 윤곽선
     const outline = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     outline.setAttribute('d', d);
     outline.setAttribute('fill', 'none');
-    outline.setAttribute('stroke', 'rgba(255,255,255,0.5)');
-    outline.setAttribute('stroke-width', '5');
+    outline.setAttribute('stroke', 'rgba(255,255,255,0.85)');
+    outline.setAttribute('stroke-width', '6');
     this.svg.appendChild(outline);
 
     // 보라색 실선
