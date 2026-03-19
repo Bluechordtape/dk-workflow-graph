@@ -27,6 +27,25 @@ async function init() {
       graph.setData(data);
     }
   );
+  // flows가 없으면 예시 연결 자동 삽입 (기존 사용자 포함)
+  if (!data.flows || data.flows.length === 0) {
+    const taskIds = new Set();
+    data.projects.forEach(p => p.categories.forEach(c => c.tasks.forEach(t => taskIds.add(t.id))));
+    const sampleFlows = [
+      {id:'f1', from:'t1', to:'t2'}, {id:'f2', from:'t2', to:'t3'},
+      {id:'f3', from:'t4', to:'t5'}, {id:'f4', from:'t5', to:'t6'},
+      {id:'f5', from:'t5', to:'t2'}, {id:'f6', from:'t6', to:'t9'},
+      {id:'f7', from:'t7', to:'t8'}, {id:'f8', from:'t8', to:'t9'},
+      {id:'f9', from:'t10', to:'t11'}, {id:'f10', from:'t11', to:'t12'},
+      {id:'f11', from:'t13', to:'t14'}, {id:'f12', from:'t14', to:'t15'},
+      {id:'f13', from:'t15', to:'t16'}, {id:'f14', from:'t22', to:'t23'},
+      {id:'f15', from:'t23', to:'t24'}, {id:'f16', from:'t25', to:'t26'},
+      {id:'f17', from:'t26', to:'t27'}, {id:'f18', from:'t27', to:'t28'}
+    ];
+    data.flows = sampleFlows.filter(f => taskIds.has(f.from) && taskIds.has(f.to));
+    saveData(data);
+  }
+
   graph.setData(data);
 
   buildAssigneeFilter();
