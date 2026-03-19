@@ -2,7 +2,7 @@
 import { loadData, saveData, exportJSON, importJSON, generateId,
          addProject, deleteProject, addCategory, deleteCategory,
          addTask, deleteTask, updateTask, moveTask, findTaskContext,
-         addFlow, deleteFlow, cleanFlows } from './data.js';
+         addFlow, deleteFlow, cleanFlows, setSocketId } from './data.js';
 import { Graph } from './graph.js';
 
 let data = null;
@@ -10,7 +10,25 @@ let graph = null;
 let activePanel = null; // { type, project, category, task }
 let connectModeActive = false;
 
+// ── Socket.io 실시간 동기화 ───────────────────────────────
+function initSocket() {
+  if (typeof io === 'undefined') return; // 서버 없이 직접 열 때 skip
+  const socket = io();
+  socket.on('connect', () => {
+    setSocketId(socket.id); // 자신의 변경사항 echo 방지
+  });
+  socket.on('data:updated', (newData) => {
+    // 다른 사람이 수정했을 때 자동 반영
+    data = newData;
+    if (!data.flows) data.flows = [];
+    graph.setData(data);
+    buildAssigneeFilter();
+    buildProjectFilter();
+  });
+}
+
 async function init() {
+  initSocket();
   data = await loadData();
 
   const container = document.getElementById('graph-container');
