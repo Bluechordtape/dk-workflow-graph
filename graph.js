@@ -297,14 +297,22 @@ export class Graph {
     const x1 = a.x + a.w, y1 = a.y + a.h / 2;
     const x2 = b.x, y2 = b.y + b.h / 2;
     const cx = (x1 + x2) / 2;
+    const d = `M${x1},${y1} C${cx},${y1} ${cx},${y2} ${x2},${y2}`;
 
-    // SVG 경로 (pointer-events:none이므로 클릭 불가 — HTML 버튼으로 대신 처리)
+    // 흰 윤곽선: 어두운 배경에서도 라인이 뚜렷하게 보임
+    const outline = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    outline.setAttribute('d', d);
+    outline.setAttribute('fill', 'none');
+    outline.setAttribute('stroke', 'rgba(255,255,255,0.5)');
+    outline.setAttribute('stroke-width', '5');
+    this.svg.appendChild(outline);
+
+    // 보라색 실선
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    path.setAttribute('d', `M${x1},${y1} C${cx},${y1} ${cx},${y2} ${x2},${y2}`);
+    path.setAttribute('d', d);
     path.setAttribute('fill', 'none');
     path.setAttribute('stroke', '#4f46e5');
     path.setAttribute('stroke-width', '2.5');
-    path.setAttribute('stroke-opacity', '0.85');
     path.setAttribute('stroke-dasharray', '7,3');
     path.setAttribute('marker-end', 'url(#flow-arrow)');
     this.svg.appendChild(path);
