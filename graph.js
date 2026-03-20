@@ -4,12 +4,12 @@ export const NODE_W = 190;
 export const NODE_H = 88;
 
 const STATUS = {
-  pending: { label: '대기',     bar: '#D1D5DB', bg: '#F3F4F6', text: '#6B7280' },
-  todo:    { label: '대기',     bar: '#D1D5DB', bg: '#F3F4F6', text: '#6B7280' },
-  doing:   { label: '진행중',   bar: '#7C3AED', bg: '#EDE9FE', text: '#5B21B6' },
-  wip:     { label: '진행중',   bar: '#7C3AED', bg: '#EDE9FE', text: '#5B21B6' },
-  review:  { label: '완료요청', bar: '#EAB308', bg: '#FEF9C3', text: '#854D0E' },
-  done:    { label: '완료',     bar: '#22C55E', bg: '#DCFCE7', text: '#15803D' },
+  todo:    { label: '대기',     bar: '#BDBDBD', bg: '#F5F5F5', text: '#757575' },
+  pending: { label: '대기',     bar: '#BDBDBD', bg: '#F5F5F5', text: '#757575' },
+  wip:     { label: '진행중',   bar: '#616161', bg: '#EEEEEE', text: '#212121' },
+  doing:   { label: '진행중',   bar: '#616161', bg: '#EEEEEE', text: '#212121' },
+  review:  { label: '완료요청', bar: '#424242', bg: '#E0E0E0', text: '#212121' },
+  done:    { label: '완료',     bar: '#212121', bg: '#212121', text: '#FFFFFF' },
 };
 
 export class Graph {
@@ -43,14 +43,14 @@ export class Graph {
     const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
     defs.innerHTML = `
       <marker id="arr" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto" markerUnits="strokeWidth">
-        <path d="M0,0 L7,2.5 L0,5 Z" fill="#C7D2FE"/>
+        <path d="M0,0 L7,2.5 L0,5 Z" fill="#BDBDBD"/>
       </marker>`;
     this.svg.appendChild(defs);
 
     // 임시 연결선
     this.tempPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     this.tempPath.setAttribute('fill', 'none');
-    this.tempPath.setAttribute('stroke', '#C7D2FE');
+    this.tempPath.setAttribute('stroke', '#BDBDBD');
     this.tempPath.setAttribute('stroke-width', '1.5');
     this.tempPath.setAttribute('stroke-dasharray', '6,3');
     this.tempPath.style.display = 'none';
@@ -128,11 +128,11 @@ export class Graph {
 
     // node-inner에 box-shadow와 border-left를 인라인으로 직접 지정
     const innerStyle = [
-      `border: 1px solid #E5E7EB`,
+      `border: 1px solid #E0E0E0`,
       `border-left: 3px solid ${st.bar}`,
-      `border-radius: 10px`,
+      `border-radius: 8px`,
       `background: #FFFFFF`,
-      `box-shadow: 0 2px 8px rgba(0,0,0,0.08)`,
+      `box-shadow: 0 1px 4px rgba(0,0,0,0.07)`,
       `padding: 10px 12px`,
       `min-height: 88px`,
       `display: flex`,
@@ -147,11 +147,11 @@ export class Graph {
       <div class="nh nh-l" data-id="${task.id}" data-side="left"></div>
       <div class="node-inner" style="${innerStyle}">
         <div class="node-top">
-          <span class="node-dot" style="width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:3px;background:${color}"></span>
-          <span class="node-name" style="font-size:13px;font-weight:600;color:#111827;line-height:1.35;letter-spacing:-0.2px">${task.name}</span>
+          <span class="node-dot" style="width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:3px;background:${st.bar}"></span>
+          <span class="node-name" style="font-size:13px;font-weight:600;color:#212121;line-height:1.35;letter-spacing:-0.2px">${task.name}</span>
         </div>
         <div class="node-mid" style="display:flex;align-items:center;justify-content:space-between;gap:6px">
-          <span class="node-assignee" style="font-size:11px;color:#9CA3AF">${task.assignee || '미배정'}</span>
+          <span class="node-assignee" style="font-size:11px;color:#9E9E9E">${task.assignee || '미배정'}</span>
           <span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;white-space:nowrap;background:${st.bg};color:${st.text}">${st.label}</span>
         </div>
         ${subLine}
@@ -217,7 +217,7 @@ export class Graph {
       const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
       path.setAttribute('d', `M${x1},${y1} C${cx},${y1} ${cx},${y2} ${x2},${y2}`);
       path.setAttribute('fill', 'none');
-      path.setAttribute('stroke', '#C7D2FE');
+      path.setAttribute('stroke', '#BDBDBD');
       path.setAttribute('stroke-width', '1.5');
       path.setAttribute('marker-end', 'url(#arr)');
       path.style.pointerEvents = 'stroke';
