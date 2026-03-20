@@ -53,71 +53,61 @@ function logout() {
 
 // ── 로그인 UI ─────────────────────────────────────────────
 async function showLoginOverlay() {
-  const overlay   = document.getElementById('login-overlay');
-  const errorEl   = document.getElementById('login-error');
-  const nameGrid  = document.getElementById('login-name-grid');
-  const passField = document.getElementById('login-pass-field');
-  const passIn    = document.getElementById('login-password');
+  const overlay  = document.getElementById('login-overlay');
+  const errorEl  = document.getElementById('login-error');
+  const sel      = document.getElementById('login-name-select');
+  const passIn   = document.getElementById('login-password');
   const submitBtn = document.getElementById('login-submit');
 
+  // 초기화
   errorEl.style.display = 'none';
   passIn.value = '';
-  passField.style.display = 'none';
-  submitBtn.style.display = 'none';
-  nameGrid.innerHTML = '';
   overlay.classList.remove('hidden');
 
-  let selectedName = null;
-
-  // 서버에서 팀원 이름 목록 가져오기
-  let names = [];
+  // 드롭다운 옵션 채우기
+  sel.innerHTML = '<option value="">선택하세요</option>';
   try {
     const res = await fetch('/api/auth/names');
-    if (res.ok) names = await res.json();
+    if (res.ok) {
+      const names = await res.json();
+      names.forEach(name => {
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        sel.appendChild(opt);
+      });
+    }
   } catch {}
 
-  names.forEach(name => {
-    const btn = document.createElement('button');
-    btn.className = 'login-name-btn';
-    btn.textContent = name;
-    btn.addEventListener('click', () => {
-      nameGrid.querySelectorAll('.login-name-btn').forEach(b => b.classList.remove('selected'));
-      btn.classList.add('selected');
-      selectedName = name;
-      passField.style.display = '';
-      submitBtn.style.display = '';
-      errorEl.style.display = 'none';
-      setTimeout(() => passIn.focus(), 50);
-    });
-    nameGrid.appendChild(btn);
-  });
-
-  // 기존 리스너 제거 후 재등록
-  const newSubmit = submitBtn.cloneNode(true);
-  submitBtn.parentNode.replaceChild(newSubmit, submitBtn);
+  // 기존 리스너 제거 (재호출 시 중복 방지)
+  const newBtn = submitBtn.cloneNode(true);
+  submitBtn.replaceWith(newBtn);
 
   async function doLogin() {
-    if (!selectedName) { showLoginError('이름을 선택하세요'); return; }
+    const name = document.getElementById('login-name-select').value;
     const pass = document.getElementById('login-password').value;
-    if (!pass) { showLoginError('비밀번호를 입력하세요'); return; }
+    if (!name) { showLoginError('이름을 선택하세요'); return; }
+    if (!pass)  { showLoginError('비밀번호를 입력하세요'); return; }
 
-    newSubmit.disabled = true;
-    newSubmit.textContent = '로그인 중...';
+    newBtn.disabled = true;
+    newBtn.textContent = '로그인 중...';
     try {
-      currentUser = await login(selectedName, pass);
+      currentUser = await login(name, pass);
       overlay.classList.add('hidden');
       await startApp();
     } catch (err) {
       showLoginError(err.message);
-      newSubmit.disabled = false;
-      newSubmit.textContent = '로그인';
+      newBtn.disabled = false;
+      newBtn.textContent = '로그인';
     }
   }
 
-  newSubmit.addEventListener('click', doLogin);
-  passIn.addEventListener('keydown', function handler(e) {
-    if (e.key === 'Enter') { doLogin(); }
+  newBtn.addEventListener('click', doLogin);
+  document.getElementById('login-password').addEventListener('keydown', function h(e) {
+    if (e.key === 'Enter') { this.removeEventListener('keydown', h); doLogin(); }
   });
+
+  setTimeout(() => sel.focus(), 50);
 }
 
 function showLoginError(msg) {
