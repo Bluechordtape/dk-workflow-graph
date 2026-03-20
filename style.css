@@ -155,11 +155,15 @@ body {
 }
 
 .brand {
-  font-size: 15px;
-  font-weight: 700;
-  color: #C8102E;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 800;
+  color: #212121;
   white-space: nowrap;
-  letter-spacing: -0.3px;
+  letter-spacing: -0.5px;
+  flex-shrink: 0;
 }
 
 .sep {
