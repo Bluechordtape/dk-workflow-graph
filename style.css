@@ -179,8 +179,8 @@ body {
   transition: box-shadow 0.15s, border-color 0.15s;
 }
 .task-node:hover .node-inner {
-  box-shadow: 0 4px 16px rgba(0,0,0,0.10), 0 0 0 1px #C7D2FE;
-  border-color: #C7D2FE;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.10), 0 0 0 1px #C7D2FE !important;
+  border-color: #C7D2FE !important;
 }
 
 .node-top {

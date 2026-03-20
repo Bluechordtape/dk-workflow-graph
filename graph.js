@@ -110,9 +110,9 @@ export class Graph {
     const el = document.createElement('div');
     el.className = 'task-node' + (dim ? ' dim' : '');
     el.dataset.id = task.id;
-    el.style.cssText = `left:${task.x}px;top:${task.y}px;`;
-    el.style.setProperty('--pc', color);
-    el.style.setProperty('--sc', st.bar);
+    // cssText 대신 개별 style 설정 — CSS variable이 날아가지 않도록
+    el.style.left = `${task.x}px`;
+    el.style.top  = `${task.y}px`;
 
     const sub = task.subtasks || [];
     const subDone = sub.filter(s => s.status === 'done').length;
@@ -123,16 +123,32 @@ export class Graph {
       ? `<button class="node-action btn-cfm" data-id="${task.id}">✓ 컨펌</button>`
       : '';
 
+    // node-inner에 box-shadow와 border-left를 인라인으로 직접 지정
+    const innerStyle = [
+      `border: 1px solid #E5E7EB`,
+      `border-left: 3px solid ${st.bar}`,
+      `border-radius: 10px`,
+      `background: #FFFFFF`,
+      `box-shadow: 0 2px 8px rgba(0,0,0,0.08)`,
+      `padding: 10px 12px`,
+      `min-height: 88px`,
+      `display: flex`,
+      `flex-direction: column`,
+      `gap: 5px`,
+      `cursor: pointer`,
+      `user-select: none`,
+    ].join(';');
+
     el.innerHTML = `
       <div class="nh nh-l" data-id="${task.id}" data-side="left"></div>
-      <div class="node-inner">
+      <div class="node-inner" style="${innerStyle}">
         <div class="node-top">
-          <span class="node-dot" style="background:${color}"></span>
-          <span class="node-name">${task.name}</span>
+          <span class="node-dot" style="width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:3px;background:${color}"></span>
+          <span class="node-name" style="font-size:13px;font-weight:600;color:#111827;line-height:1.35;letter-spacing:-0.2px">${task.name}</span>
         </div>
-        <div class="node-mid">
-          <span class="node-assignee">${task.assignee || '미배정'}</span>
-          <span class="node-status" style="background:${st.bg};color:${st.text}">${st.label}</span>
+        <div class="node-mid" style="display:flex;align-items:center;justify-content:space-between;gap:6px">
+          <span class="node-assignee" style="font-size:11px;color:#9CA3AF">${task.assignee || '미배정'}</span>
+          <span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;white-space:nowrap;background:${st.bg};color:${st.text}">${st.label}</span>
         </div>
         ${subLine}
         ${actionBtn}
