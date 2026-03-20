@@ -403,6 +403,7 @@ function renderCalendar() {
           // 해당 업무의 시트로 전환 후 패널 열기
           if (data.activeSheetId !== taskSheet.id) {
             data.activeSheetId = taskSheet.id;
+            saveData(data);
             graph.setData(cs());
             buildFilters();
             renderSheetTabs();
