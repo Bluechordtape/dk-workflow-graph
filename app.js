@@ -48,6 +48,10 @@ function undo() {
   graph.setData(cs());
   buildFilters();
   renderSheetTabs();
+  if (activeTaskId) {
+    const t = cs().tasks.find(t => t.id === activeTaskId);
+    if (t) openPanel(t); else closePanel();
+  }
 }
 
 function redo() {
@@ -58,6 +62,10 @@ function redo() {
   graph.setData(cs());
   buildFilters();
   renderSheetTabs();
+  if (activeTaskId) {
+    const t = cs().tasks.find(t => t.id === activeTaskId);
+    if (t) openPanel(t); else closePanel();
+  }
 }
 
 // ── 인증 ─────────────────────────────────────────────────
@@ -201,8 +209,10 @@ async function startApp() {
       onNodeMoved: () => { if (canWrite()) saveData(data); }
     });
 
-    // 키보드 단축키
+    // 키보드 단축키 (텍스트 입력 중에는 브라우저 기본 동작 유지)
     document.addEventListener('keydown', e => {
+      const tag = e.target.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target.isContentEditable) return;
       if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 'z') {
         e.preventDefault(); undo();
       }
@@ -601,9 +611,9 @@ function setupToolbar() {
   document.getElementById('btn-add-project').addEventListener('click', () => {
     if (!canWrite()) return;
     const name = prompt('새 프로젝트 이름:');
-    if (!name) return;
+    if (!name?.trim()) return;
     pushUndo();
-    addProject(cs(), name);
+    addProject(cs(), name.trim());
     saveData(data);
     buildFilters();
   });
