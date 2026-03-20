@@ -689,6 +689,17 @@ body {
   flex-shrink: 0;
   padding-top: 2px;
 }
+.backup-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 3px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.backup-badge.auto   { background: #EEEEEE; color: #757575; }
+.backup-badge.manual { background: #212121; color: #FFFFFF; }
+
 .tmpl-del {
   width: 22px; height: 22px;
   border: none; background: none;

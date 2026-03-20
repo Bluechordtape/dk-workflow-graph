@@ -55,6 +55,35 @@ export async function saveTaskStatus(taskId, status, socketId) {
   return res.json();
 }
 
+// ── 백업 API ─────────────────────────────────────────────
+export async function fetchBackups() {
+  const res = await fetch('/api/backups', { headers: authHeaders() });
+  if (!res.ok) throw new Error('백업 목록 조회 실패');
+  return res.json();
+}
+
+export async function createBackup(name) {
+  const res = await fetch('/api/backups', {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ name })
+  });
+  if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || '백업 실패'); }
+  return res.json();
+}
+
+export async function restoreBackup(id) {
+  const res = await fetch(`/api/backups/${id}/restore`, { method: 'POST', headers: authHeaders() });
+  if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || '복구 실패'); }
+  return res.json();
+}
+
+export async function deleteBackup(id) {
+  const res = await fetch(`/api/backups/${id}`, { method: 'DELETE', headers: authHeaders() });
+  if (!res.ok) throw new Error('삭제 실패');
+  return res.json();
+}
+
 // ── 템플릿 API ────────────────────────────────────────────
 export async function fetchTemplates() {
   const res = await fetch('/api/templates', { headers: authHeaders() });

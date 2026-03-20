@@ -68,6 +68,7 @@
   </button>
   <button id="btn-template-load">템플릿</button>
   <button id="btn-template-save">템플릿 저장</button>
+  <button id="btn-backup">백업</button>
   <button id="btn-import">가져오기</button>
   <button id="btn-export">내보내기</button>
 </div>
@@ -133,6 +134,25 @@
         <button id="btn-delete-task" class="danger">삭제</button>
       </div>
 
+    </div>
+  </div>
+</div>
+
+<!-- ── 백업 모달 ── -->
+<div id="modal-backup" class="modal-overlay hidden">
+  <div class="modal-card modal-card-wide">
+    <div class="modal-header">
+      <h3>백업 / 히스토리</h3>
+      <button class="modal-close" data-modal="modal-backup">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:4px">
+        <button id="btn-backup-create" class="primary" style="height:30px;padding:0 14px;border-radius:6px;border:none;font-size:12px;font-weight:600;font-family:inherit;cursor:pointer">+ 지금 백업</button>
+      </div>
+      <div id="backup-list" class="tmpl-list"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" data-modal="modal-backup">닫기</button>
     </div>
   </div>
 </div>

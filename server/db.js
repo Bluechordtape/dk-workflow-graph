@@ -115,6 +115,18 @@ async function initDB() {
     console.log('[DB] 기본 템플릿 2개 생성 완료');
   }
 
+  // 백업 테이블
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS backups (
+      id         SERIAL PRIMARY KEY,
+      name       TEXT NOT NULL,
+      data       JSONB NOT NULL,
+      created_by TEXT NOT NULL DEFAULT 'system',
+      created_at TIMESTAMP DEFAULT NOW(),
+      is_auto    BOOLEAN NOT NULL DEFAULT false
+    )
+  `);
+
   console.log('[DB] 테이블 준비 완료');
 }
 

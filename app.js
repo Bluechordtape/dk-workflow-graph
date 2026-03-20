@@ -5,7 +5,8 @@ import {
   addProject, deleteProject,
   addTask, updateTask, deleteTask,
   addFlow, deleteFlow,
-  fetchTemplates, saveTemplate, deleteTemplate
+  fetchTemplates, saveTemplate, deleteTemplate,
+  fetchBackups, createBackup, restoreBackup, deleteBackup
 } from './data.js';
 import { Graph } from './graph.js';
 
@@ -180,6 +181,7 @@ function applyRoleUI() {
   document.getElementById('btn-add-project').style.display = hideCreate ? 'none' : '';
   document.getElementById('btn-import').style.display         = isAdmin()  ? '' : 'none';
   document.getElementById('btn-export').style.display         = isAdmin()  ? '' : 'none';
+  document.getElementById('btn-backup').style.display         = isAdmin()  ? '' : 'none';
   document.getElementById('btn-template-save').style.display  = isAdmin()  ? '' : 'none';
   document.getElementById('btn-template-load').style.display  = '';
 
@@ -308,6 +310,7 @@ function setupToolbar() {
     saveData(data);
     buildFilters();
   });
+  document.getElementById('btn-backup').addEventListener('click', openBackupModal);
   document.getElementById('btn-template-save').addEventListener('click', () => openModal('modal-save-template'));
   document.getElementById('btn-template-load').addEventListener('click', openTemplateLoadModal);
   document.getElementById('btn-add-task').addEventListener('click', () => {
@@ -566,6 +569,80 @@ document.getElementById('btn-tmpl-load-confirm').addEventListener('click', async
   } catch (err) {
     alert(err.message);
   }
+});
+
+// ── 백업 ─────────────────────────────────────────────────
+async function openBackupModal() {
+  openModal('modal-backup');
+  await refreshBackupList();
+}
+
+async function refreshBackupList() {
+  const list = document.getElementById('backup-list');
+  list.innerHTML = '<div style="color:#9E9E9E;font-size:13px;padding:8px 0">불러오는 중...</div>';
+  try {
+    const backups = await fetchBackups();
+    list.innerHTML = '';
+    if (backups.length === 0) {
+      list.innerHTML = '<div style="color:#9E9E9E;font-size:13px;padding:8px 0">저장된 백업이 없습니다.</div>';
+      return;
+    }
+    backups.forEach(b => {
+      const item = document.createElement('div');
+      item.className = 'tmpl-item';
+      item.style.cursor = 'default';
+      const dt = new Date(b.created_at);
+      const dateStr = dt.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })
+                    + ' ' + dt.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+      item.innerHTML = `
+        <div class="tmpl-item-info">
+          <div style="display:flex;align-items:center;gap:6px">
+            <span class="backup-badge ${b.is_auto ? 'auto' : 'manual'}">${b.is_auto ? '자동' : '수동'}</span>
+            <span class="tmpl-item-name">${b.name}</span>
+          </div>
+          <div class="tmpl-item-desc">업무 ${b.task_count}개 · ${b.created_by} · ${dateStr}</div>
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0">
+          <button class="btn-restore" data-id="${b.id}"
+            style="height:26px;padding:0 10px;border-radius:5px;border:1px solid #E0E0E0;
+                   background:#FAFAFA;font-size:11px;font-weight:600;font-family:inherit;cursor:pointer">
+            복구
+          </button>
+          <button class="tmpl-del" data-id="${b.id}" title="삭제">×</button>
+        </div>
+      `;
+      item.querySelector('.btn-restore').addEventListener('click', async () => {
+        if (!confirm(`"${b.name}" 백업으로 복구하시겠습니까?\n\n현재 데이터가 덮어씌워집니다.`)) return;
+        try {
+          const result = await restoreBackup(b.id);
+          data = result.data;
+          graph.setData(data);
+          buildFilters();
+          closeModal('modal-backup');
+          alert('복구가 완료됐습니다.');
+        } catch (err) { alert(err.message); }
+      });
+      item.querySelector('.tmpl-del').addEventListener('click', async () => {
+        if (!confirm(`"${b.name}" 백업을 삭제할까요?`)) return;
+        try {
+          await deleteBackup(b.id);
+          await refreshBackupList();
+        } catch (err) { alert(err.message); }
+      });
+      list.appendChild(item);
+    });
+  } catch (err) {
+    list.innerHTML = `<div style="color:#C8102E;font-size:13px">${err.message}</div>`;
+  }
+}
+
+document.getElementById('btn-backup-create').addEventListener('click', async () => {
+  const name = prompt('백업 이름:', `수동 백업 ${new Date().toLocaleDateString('ko-KR')}`);
+  if (name === null) return;
+  try {
+    await createBackup(name.trim() || undefined);
+    await refreshBackupList();
+  } catch (err) { alert(err.message); }
 });
 
 // ── 진입점 ───────────────────────────────────────────────
