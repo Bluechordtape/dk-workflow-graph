@@ -15,17 +15,14 @@
 <div id="login-overlay">
   <div id="login-card">
     <div class="login-brand">DK Workflow</div>
-    <p class="login-sub">로그인하여 시작하세요</p>
+    <p class="login-sub">누구신가요?</p>
     <div id="login-error" class="login-error" style="display:none"></div>
-    <div class="login-field">
-      <label for="login-email">이메일</label>
-      <input type="email" id="login-email" placeholder="admin@dk.com" autocomplete="email">
-    </div>
-    <div class="login-field">
+    <div id="login-name-grid"></div>
+    <div class="login-field" id="login-pass-field" style="display:none">
       <label for="login-password">비밀번호</label>
       <input type="password" id="login-password" placeholder="비밀번호 입력" autocomplete="current-password">
     </div>
-    <button id="login-submit">로그인</button>
+    <button id="login-submit" style="display:none">로그인</button>
   </div>
 </div>
 

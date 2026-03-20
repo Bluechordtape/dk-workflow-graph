@@ -43,8 +43,23 @@ async function initDB() {
        VALUES ($1, $2, $3, 'admin')`,
       ['admin@dk.com', hash, '관리자']
     );
-    console.log('[DB] admin 계정 생성: admin@dk.com / dk2024!');
+    console.log('[DB] admin 계정 생성: 관리자 / dk2024!');
   }
+
+  // 팀원 계정 시딩 (없을 때만)
+  const MEMBERS = ['민경', '창규', '진희', '정현'];
+  for (const name of MEMBERS) {
+    const exists = await pool.query('SELECT id FROM users WHERE name = $1', [name]);
+    if (exists.rows.length === 0) {
+      const hash = await bcrypt.hash('dkc2626', 10);
+      await pool.query(
+        `INSERT INTO users (email, password_hash, name, role)
+         VALUES ($1, $2, $3, 'member')`,
+        [`${name}@dk.internal`, hash, name]
+      );
+    }
+  }
+  console.log('[DB] 팀원 계정 확인 완료');
 
   console.log('[DB] 테이블 준비 완료');
 }

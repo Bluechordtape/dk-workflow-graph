@@ -31,11 +31,11 @@ async function checkAuth() {
   }
 }
 
-async function login(email, password) {
+async function login(name, password) {
   const res = await fetch('/api/auth/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password })
+    body: JSON.stringify({ name, password })
   });
   const body = await res.json();
   if (!res.ok) throw new Error(body.error || '로그인 실패');
@@ -52,31 +52,59 @@ function logout() {
 }
 
 // ── 로그인 UI ─────────────────────────────────────────────
-function showLoginOverlay() {
-  const overlay  = document.getElementById('login-overlay');
-  const errorEl  = document.getElementById('login-error');
-  const emailIn  = document.getElementById('login-email');
-  const passIn   = document.getElementById('login-password');
+async function showLoginOverlay() {
+  const overlay   = document.getElementById('login-overlay');
+  const errorEl   = document.getElementById('login-error');
+  const nameGrid  = document.getElementById('login-name-grid');
+  const passField = document.getElementById('login-pass-field');
+  const passIn    = document.getElementById('login-password');
   const submitBtn = document.getElementById('login-submit');
 
   errorEl.style.display = 'none';
-  emailIn.value = '';
   passIn.value = '';
+  passField.style.display = 'none';
+  submitBtn.style.display = 'none';
+  nameGrid.innerHTML = '';
   overlay.classList.remove('hidden');
 
-  // 기존 리스너 제거 후 재등록 (중복 방지)
+  let selectedName = null;
+
+  // 서버에서 팀원 이름 목록 가져오기
+  let names = [];
+  try {
+    const res = await fetch('/api/auth/names');
+    if (res.ok) names = await res.json();
+  } catch {}
+
+  names.forEach(name => {
+    const btn = document.createElement('button');
+    btn.className = 'login-name-btn';
+    btn.textContent = name;
+    btn.addEventListener('click', () => {
+      nameGrid.querySelectorAll('.login-name-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      selectedName = name;
+      passField.style.display = '';
+      submitBtn.style.display = '';
+      errorEl.style.display = 'none';
+      setTimeout(() => passIn.focus(), 50);
+    });
+    nameGrid.appendChild(btn);
+  });
+
+  // 기존 리스너 제거 후 재등록
   const newSubmit = submitBtn.cloneNode(true);
   submitBtn.parentNode.replaceChild(newSubmit, submitBtn);
 
   async function doLogin() {
-    const email = document.getElementById('login-email').value.trim();
-    const pass  = document.getElementById('login-password').value;
-    if (!email || !pass) { showLoginError('이메일과 비밀번호를 입력하세요'); return; }
+    if (!selectedName) { showLoginError('이름을 선택하세요'); return; }
+    const pass = document.getElementById('login-password').value;
+    if (!pass) { showLoginError('비밀번호를 입력하세요'); return; }
 
     newSubmit.disabled = true;
     newSubmit.textContent = '로그인 중...';
     try {
-      currentUser = await login(email, pass);
+      currentUser = await login(selectedName, pass);
       overlay.classList.add('hidden');
       await startApp();
     } catch (err) {
@@ -87,11 +115,9 @@ function showLoginOverlay() {
   }
 
   newSubmit.addEventListener('click', doLogin);
-  document.getElementById('login-password').addEventListener('keydown', function onEnter(e) {
-    if (e.key === 'Enter') { doLogin(); this.removeEventListener('keydown', onEnter); }
+  passIn.addEventListener('keydown', function handler(e) {
+    if (e.key === 'Enter') { doLogin(); }
   });
-
-  setTimeout(() => document.getElementById('login-email').focus(), 50);
 }
 
 function showLoginError(msg) {

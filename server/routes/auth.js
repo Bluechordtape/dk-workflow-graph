@@ -8,23 +8,35 @@ const { authenticateToken, JWT_SECRET } = require('../middleware/auth');
 module.exports = function () {
   const router = express.Router();
 
-  // POST /api/auth/login
+  // GET /api/auth/names — 공개: 로그인 화면용 팀원 이름 목록
+  router.get('/names', async (req, res) => {
+    try {
+      const result = await pool.query(
+        'SELECT name FROM users ORDER BY created_at'
+      );
+      res.json(result.rows.map(r => r.name));
+    } catch (err) {
+      res.status(500).json({ error: '서버 오류' });
+    }
+  });
+
+  // POST /api/auth/login — name + password
   router.post('/login', async (req, res) => {
-    const { email, password } = req.body;
-    if (!email || !password)
-      return res.status(400).json({ error: '이메일과 비밀번호를 입력하세요' });
+    const { name, password } = req.body;
+    if (!name || !password)
+      return res.status(400).json({ error: '이름과 비밀번호를 입력하세요' });
 
     try {
       const result = await pool.query(
-        'SELECT * FROM users WHERE email = $1', [email.toLowerCase().trim()]
+        'SELECT * FROM users WHERE name = $1', [name.trim()]
       );
       if (result.rows.length === 0)
-        return res.status(401).json({ error: '이메일 또는 비밀번호가 올바르지 않습니다' });
+        return res.status(401).json({ error: '이름 또는 비밀번호가 올바르지 않습니다' });
 
       const user = result.rows[0];
       const valid = await bcrypt.compare(password, user.password_hash);
       if (!valid)
-        return res.status(401).json({ error: '이메일 또는 비밀번호가 올바르지 않습니다' });
+        return res.status(401).json({ error: '이름 또는 비밀번호가 올바르지 않습니다' });
 
       const token = jwt.sign(
         { id: user.id, email: user.email, name: user.name, role: user.role },
