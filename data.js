@@ -261,6 +261,16 @@ export async function updateUserRole(userId, role) {
   return res.json();
 }
 
+export async function createUser(name, email, password, role) {
+  const res = await fetch('/api/auth/users', {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ name, email, password, role })
+  });
+  if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || '추가 실패'); }
+  return res.json();
+}
+
 export async function resetUserPassword(userId, password) {
   const res = await fetch(`/api/auth/users/${userId}/password`, {
     method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ password })

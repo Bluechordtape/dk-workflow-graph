@@ -10,7 +10,7 @@ import {
   fetchTemplates, saveTemplate, deleteTemplate,
   fetchBackups, createBackup, restoreBackup, deleteBackup,
   addSheet, deleteSheet, copyTaskToSheet, normalize,
-  fetchUserNames, fetchUsers, updateUserRole, resetUserPassword
+  fetchUserNames, fetchUsers, updateUserRole, resetUserPassword, createUser
 } from './data.js';
 import { Graph } from './graph.js';
 
@@ -1017,6 +1017,32 @@ async function renderUserList() {
     list.innerHTML = `<div style="color:#C8102E;font-size:13px">${err.message}</div>`;
   }
 }
+
+document.getElementById('btn-open-add-user').addEventListener('click', () => {
+  document.getElementById('new-user-name').value = '';
+  document.getElementById('new-user-email').value = '';
+  document.getElementById('new-user-password').value = '';
+  document.getElementById('new-user-role').value = 'member';
+  openModal('modal-add-user');
+});
+
+document.getElementById('btn-add-user-confirm').addEventListener('click', async () => {
+  const name     = document.getElementById('new-user-name').value.trim();
+  const email    = document.getElementById('new-user-email').value.trim();
+  const password = document.getElementById('new-user-password').value;
+  const role     = document.getElementById('new-user-role').value;
+  if (!name)     { alert('이름을 입력하세요.'); return; }
+  if (!email)    { alert('이메일을 입력하세요.'); return; }
+  if (!password || password.length < 4) { alert('비밀번호는 4자 이상이어야 합니다.'); return; }
+  try {
+    await createUser(name, email, password, role);
+    closeModal('modal-add-user');
+    await renderUserList();
+    // 로그인 드롭다운도 갱신
+    await loadLoginNames();
+    alert(`"${name}" 사용자가 추가됐습니다.`);
+  } catch (err) { alert(err.message); }
+});
 
 // ── 모달 ─────────────────────────────────────────────────
 let _selectedTemplateId = null;
