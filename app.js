@@ -793,7 +793,6 @@ function renderSubtasks(task, focusLast = false) {
     cb.addEventListener('change', (e) => {
       s.status = e.target.checked ? 'done' : 'pending';
       if (canWrite()) saveData(data);
-      graph.setData(cs());
     });
 
     const nameInput = document.createElement('input');
@@ -823,7 +822,7 @@ function renderSubtasks(task, focusLast = false) {
 
   if (focusLast && list.lastChild) {
     const input = list.lastChild.querySelector('.sub-name');
-    if (input) { input.focus(); input.select(); }
+    if (input) setTimeout(() => { input.focus(); input.select(); }, 0);
   }
 }
 
@@ -835,7 +834,6 @@ function addSubtask() {
   task.subtasks.push({ id: `s_${Date.now()}`, name: '', status: 'pending' });
   renderSubtasks(task, true);
   saveData(data);
-  setTimeout(() => graph.setData(cs()), 50);
 }
 
 // ── 업무 복제 (다른 시트로) ───────────────────────────────
