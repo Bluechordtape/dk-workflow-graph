@@ -52,7 +52,7 @@ function logout() {
 }
 
 // ── 로그인 UI ─────────────────────────────────────────────
-async function showLoginOverlay() {
+function showLoginOverlay() {
   const overlay  = document.getElementById('login-overlay');
   const errorEl  = document.getElementById('login-error');
   const sel      = document.getElementById('login-name-select');
@@ -64,20 +64,8 @@ async function showLoginOverlay() {
   passIn.value = '';
   overlay.classList.remove('hidden');
 
-  // 드롭다운 옵션 채우기
-  sel.innerHTML = '<option value="">선택하세요</option>';
-  try {
-    const res = await fetch('/api/auth/names');
-    if (res.ok) {
-      const names = await res.json();
-      names.forEach(name => {
-        const opt = document.createElement('option');
-        opt.value = name;
-        opt.textContent = name;
-        sel.appendChild(opt);
-      });
-    }
-  } catch {}
+  // 드롭다운 초기화 (HTML에 옵션이 이미 있으므로 첫 번째 항목만 선택)
+  sel.selectedIndex = 0;
 
   // 기존 리스너 제거 (재호출 시 중복 방지)
   const newBtn = submitBtn.cloneNode(true);
