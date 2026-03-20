@@ -383,6 +383,8 @@ function addSubtask() {
 }
 
 // ── 진입점 ───────────────────────────────────────────────
+window.__doLogin = doLogin; // onclick 폴백용 전역 노출
+
 async function init() {
   // 로그인 이벤트 최초 1회 등록
   document.getElementById('login-submit').addEventListener('click', doLogin);
@@ -398,4 +400,7 @@ async function init() {
   }
 }
 
-init();
+init().catch(err => {
+  console.error('[init 오류]', err);
+  document.getElementById('login-overlay')?.classList.remove('hidden');
+});

@@ -32,7 +32,7 @@
       <label for="login-password">비밀번호</label>
       <input type="password" id="login-password" placeholder="비밀번호 입력" autocomplete="current-password">
     </div>
-    <button id="login-submit">로그인</button>
+    <button id="login-submit" type="button" onclick="window.__doLogin && window.__doLogin()">로그인</button>
   </div>
 </div>
 
@@ -127,6 +127,14 @@
   </div>
 </div>
 
+<script>
+  window.addEventListener('error', function(e) {
+    console.error('[모듈 오류]', e.message, e.filename, e.lineno);
+  });
+  window.addEventListener('unhandledrejection', function(e) {
+    console.error('[Promise 오류]', e.reason);
+  });
+</script>
 <script type="module" src="app.js"></script>
 </body>
 </html>
