@@ -250,6 +250,12 @@ body {
   font-weight: 600;
 }
 #toolbar button.primary:hover { background: #A50D25; }
+.view-btn.active {
+  background: #212121 !important;
+  color: #FFFFFF !important;
+  border-color: #212121 !important;
+  font-weight: 600;
+}
 
 .pending-badge {
   position: absolute;
