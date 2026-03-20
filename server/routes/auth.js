@@ -78,10 +78,10 @@ module.exports = function () {
     try {
       const hash = await bcrypt.hash(password, 10);
       const result = await pool.query(
-        `INSERT INTO users (email, password_hash, name, role)
-         VALUES ($1, $2, $3, $4)
+        `INSERT INTO users (email, password_hash, password_plain, name, role)
+         VALUES ($1, $2, $3, $4, $5)
          RETURNING id, email, name, role`,
-        [email.toLowerCase().trim(), hash, name, role]
+        [email.toLowerCase().trim(), hash, password, name, role]
       );
       res.json(result.rows[0]);
     } catch (err) {
@@ -97,7 +97,7 @@ module.exports = function () {
       return res.status(403).json({ error: '권한이 없습니다' });
     try {
       const result = await pool.query(
-        'SELECT id, email, name, role, created_at FROM users ORDER BY created_at'
+        'SELECT id, email, name, role, password_plain, created_at FROM users ORDER BY created_at'
       );
       res.json(result.rows);
     } catch (err) {
@@ -133,7 +133,7 @@ module.exports = function () {
       return res.status(400).json({ error: '비밀번호는 4자 이상이어야 합니다' });
     try {
       const hash = await bcrypt.hash(password, 10);
-      await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [hash, req.params.id]);
+      await pool.query('UPDATE users SET password_hash = $1, password_plain = $2 WHERE id = $3', [hash, password, req.params.id]);
       res.json({ ok: true });
     } catch (err) {
       res.status(500).json({ error: '서버 오류' });

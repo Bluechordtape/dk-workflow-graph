@@ -4,12 +4,19 @@ export const NODE_W = 190;
 export const NODE_H = 88;
 
 const STATUS = {
-  todo:    { label: '대기',     bar: '#BDBDBD', bg: '#F5F5F5', text: '#757575' },
-  pending: { label: '대기',     bar: '#BDBDBD', bg: '#F5F5F5', text: '#757575' },
-  wip:     { label: '진행중',   bar: '#616161', bg: '#EEEEEE', text: '#212121' },
-  doing:   { label: '진행중',   bar: '#616161', bg: '#EEEEEE', text: '#212121' },
-  review:  { label: '완료요청', bar: '#424242', bg: '#E0E0E0', text: '#212121' },
-  done:    { label: '완료',     bar: '#212121', bg: '#212121', text: '#FFFFFF' },
+  // 구버전 호환
+  todo:     { label: '착수전',   bar: '#9E9E9E', bg: '#F5F5F5', text: '#757575' },
+  pending:  { label: '착수전',   bar: '#9E9E9E', bg: '#F5F5F5', text: '#757575' },
+  wip:      { label: '진행 중',  bar: '#2563EB', bg: '#EFF6FF', text: '#1D4ED8' },
+  // 새 상태
+  pre:      { label: '착수전',   bar: '#9E9E9E', bg: '#F5F5F5', text: '#757575' },
+  doing:    { label: '진행 중',  bar: '#2563EB', bg: '#EFF6FF', text: '#1D4ED8' },
+  waiting:  { label: '대기',     bar: '#D97706', bg: '#FFFBEB', text: '#92400E' },
+  delayed:  { label: '지연',     bar: '#DC2626', bg: '#FEF2F2', text: '#991B1B' },
+  review:   { label: '완료요청', bar: '#7C3AED', bg: '#F5F3FF', text: '#5B21B6' },
+  inactive: { label: '미진행',   bar: '#616161', bg: '#F5F5F5', text: '#424242' },
+  done:     { label: '완료',     bar: '#059669', bg: '#ECFDF5', text: '#065F46' },
+  closed:   { label: '종결',     bar: '#212121', bg: '#212121', text: '#FFFFFF' },
 };
 
 export class Graph {
@@ -98,9 +105,11 @@ export class Graph {
   // ── 노드 렌더링 ────────────────────────────────────────
   _taskVisible(task) {
     const { assignee, project, status } = this.filter;
-    if (assignee && task.assignee !== assignee) return false;
-    if (project  && task.projectId !== project) return false;
-    if (status   && task.status   !== status)   return false;
+    if (assignee === '__unassigned__') {
+      if (task.assignee) return false;
+    } else if (assignee && task.assignee !== assignee) return false;
+    if (project && task.projectId !== project) return false;
+    if (status  && task.status   !== status)   return false;
     return true;
   }
 
@@ -144,19 +153,24 @@ export class Graph {
     const myName = this.userCtx?.name;
     const isMine = task.assignee === myName;
     const isMgmt = ['admin', 'leader', 'manager'].includes(role);
-    const canStart = task.status === 'pending' && (isMgmt || isMine);
-    const canReq   = task.status === 'doing'   && (isMgmt || isMine);
-    const canCfm   = task.status === 'review'  && isMgmt;
+    const canAct  = isMgmt || isMine; // 담당자 or 관리자급
+    const st2 = task.status;
+
+    // 그래프 노드 액션 버튼
+    let actionBtn = '';
+    if (st2 === 'pre' && canAct) {
+      actionBtn = `<button class="node-action btn-start" data-id="${task.id}">▶ 시작</button>`;
+    } else if ((st2 === 'doing' || st2 === 'waiting' || st2 === 'delayed') && canAct) {
+      actionBtn = `<button class="node-action btn-req" data-id="${task.id}">완료 요청</button>`;
+    } else if (st2 === 'review' && isMgmt) {
+      actionBtn = `<button class="node-action btn-cfm" data-id="${task.id}">✓ 완료 확정</button>`;
+    } else if (st2 === 'inactive' && isMgmt) {
+      actionBtn = `<button class="node-action btn-close" data-id="${task.id}">✓ 종결</button>`;
+    }
+
     const group  = this.data.groups?.find(g => g.id === task.groupId);
     const groupBadge = group
       ? `<span style="font-size:10px;font-weight:600;padding:1px 7px;border-radius:3px;background:${group.color}1A;color:${group.color};border:1px solid ${group.color}44;white-space:nowrap">${group.name}</span>`
-      : '';
-    const actionBtn = canStart
-      ? `<button class="node-action btn-start" data-id="${task.id}">▶ 시작</button>`
-      : canReq
-      ? `<button class="node-action btn-req" data-id="${task.id}">완료 요청</button>`
-      : canCfm
-      ? `<button class="node-action btn-cfm" data-id="${task.id}">✓ 컨펌</button>`
       : '';
 
     // node-inner에 box-shadow와 border-left를 인라인으로 직접 지정
@@ -207,17 +221,20 @@ export class Graph {
       e.stopPropagation();
       this.cb.onStatusChange?.(task.id, 'doing');
     });
-
     // 완료 요청
     el.querySelector('.btn-req')?.addEventListener('click', (e) => {
       e.stopPropagation();
       this.cb.onStatusChange?.(task.id, 'review');
     });
-
-    // 컨펌
+    // 완료 확정
     el.querySelector('.btn-cfm')?.addEventListener('click', (e) => {
       e.stopPropagation();
       this.cb.onStatusChange?.(task.id, 'done');
+    });
+    // 종결
+    el.querySelector('.btn-close')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.cb.onStatusChange?.(task.id, 'closed');
     });
 
     // 드래그 이동
@@ -297,13 +314,14 @@ export class Graph {
     );
     this.nodesEl.querySelectorAll('.task-node').forEach(n => {
       const isConn = connected.has(n.dataset.id);
-      n.classList.toggle('dim-hover', !isConn);
+      // 연결된 노드는 테두리 빛남, 연결 안 된 노드는 흐려지지 않음 (그대로 유지)
       n.classList.toggle('highlight-hover', isConn && n.dataset.id !== taskId);
+      n.classList.remove('dim-hover'); // 절대 흐려지지 않음
     });
     Array.from(this.svg.children).forEach(c => {
       if (c.tagName !== 'defs' && c !== this.tempPath) {
         const isConn = connectedFlows.has(c.dataset?.flowId);
-        c.style.opacity = isConn ? '1' : '0.08';
+        c.style.opacity = isConn ? '1' : '0.25'; // 약간만 흐리게 (완전히 숨기지 않음)
         if (isConn) c.setAttribute('stroke', '#424242');
       }
     });
@@ -321,13 +339,21 @@ export class Graph {
   _physicsStep() {
     if (!this.data?.tasks?.length) return;
 
-    const damping = 0.82;
-    const maxVel  = 0.35;
-    const springK = 0.018;
+    const damping  = 0.88;  // 부드러운 감속 (높을수록 오래 지속)
+    const maxVel   = 0.28;  // 최대 속도 (느리게)
+    const springK  = 0.018; // 드래그시 스프링 강도
+    const driftAmp = 0.00035; // 유영 진폭 (아주 작게)
+    const now = Date.now() / 1000;
     let moved = false;
 
     for (const t of this.data.tasks) {
       if (t._vx === undefined) { t._vx = 0; t._vy = 0; }
+      // 각 노드의 고유 위상 (id 기반)
+      if (t._phase === undefined) {
+        let h = 0;
+        for (let i = 0; i < t.id.length; i++) h = (h * 31 + t.id.charCodeAt(i)) & 0xFFFFFF;
+        t._phase = h / 0xFFFFFF * Math.PI * 2;
+      }
     }
 
     // 드래그 중인 노드에서 연결된 노드로 스프링 힘 전달
@@ -349,11 +375,18 @@ export class Graph {
 
     for (const t of this.data.tasks) {
       if (this._drag?.taskId === t.id) { t._vx = 0; t._vy = 0; continue; }
+
+      // 물/우주 유영 — 각 노드마다 다른 주기·위상의 시누소이드 힘
+      const px = t._phase;
+      const py = t._phase + 1.3;
+      t._vx += Math.sin(now * 0.25 + px) * Math.cos(now * 0.17 + px * 0.5) * driftAmp;
+      t._vy += Math.cos(now * 0.20 + py) * Math.sin(now * 0.13 + py * 0.7) * driftAmp;
+
       t._vx *= damping;
       t._vy *= damping;
       const spd = Math.sqrt(t._vx * t._vx + t._vy * t._vy);
       if (spd > maxVel) { t._vx = (t._vx / spd) * maxVel; t._vy = (t._vy / spd) * maxVel; }
-      if (Math.abs(t._vx) > 0.008 || Math.abs(t._vy) > 0.008) {
+      if (Math.abs(t._vx) > 0.003 || Math.abs(t._vy) > 0.003) {
         t.x += t._vx; t.y += t._vy;
         moved = true;
       }

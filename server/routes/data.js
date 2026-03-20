@@ -57,8 +57,8 @@ module.exports = function (io) {
     if (!taskId || !updates) return res.status(400).json({ error: 'taskId, updates 필요' });
 
     const canComplete = ['admin', 'leader', 'manager'].includes(req.user.role);
-    if (updates.status === 'done' && !canComplete)
-      return res.status(403).json({ error: '완료 처리 권한이 없습니다' });
+    if ((updates.status === 'done' || updates.status === 'closed') && !canComplete)
+      return res.status(403).json({ error: '완료/종결 처리 권한이 없습니다' });
 
     try {
       const result = await pool.query('SELECT data FROM workflow_data WHERE id = 1');
@@ -107,17 +107,21 @@ module.exports = function (io) {
   // PATCH /api/data/task-status — 자기 담당 업무 상태 변경
   router.patch('/data/task-status', authenticateToken, async (req, res) => {
     const { taskId, status } = req.body;
-    const allowedStatuses = ['pending', 'doing', 'review'];
+    // 팀원이 설정 가능한 상태 (착수전→진행중→대기→지연→완료요청→미진행)
+    const memberStatuses = ['pre', 'doing', 'waiting', 'delayed', 'review', 'inactive',
+                            'pending']; // 구버전 호환
+    // 관리자급만 가능한 상태
+    const mgmtStatuses = ['done', 'closed'];
+    const allAllowed = [...memberStatuses, ...mgmtStatuses];
 
     if (!taskId || !status)
       return res.status(400).json({ error: 'taskId, status 필요' });
 
-    // member는 done 상태로 직접 변경 불가 (admin/leader/manager만 컨펌 가능)
     const canComplete = ['admin', 'leader', 'manager'].includes(req.user.role);
-    if (!canComplete && status === 'done')
-      return res.status(403).json({ error: '컨펌 권한이 없습니다' });
+    if (!canComplete && mgmtStatuses.includes(status))
+      return res.status(403).json({ error: '이 상태는 관리자급만 설정할 수 있습니다' });
 
-    if (!allowedStatuses.concat(['done']).includes(status))
+    if (!allAllowed.includes(status))
       return res.status(400).json({ error: '올바르지 않은 상태값' });
 
     try {

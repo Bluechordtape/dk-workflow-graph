@@ -49,10 +49,11 @@ export function normalize(d) {
     if (!sheet.tasks)    sheet.tasks    = [];
     if (!sheet.flows)    sheet.flows    = [];
     if (!sheet.groups)   sheet.groups   = [];
-    // 구버전 상태값 정규화
+    // 구버전 상태값 정규화 (새 상태 시스템으로 마이그레이션)
     for (const task of sheet.tasks) {
-      if (task.status === 'todo') task.status = 'pending';
-      if (task.status === 'wip')  task.status = 'doing';
+      if (task.status === 'todo')    task.status = 'pre';
+      if (task.status === 'wip')     task.status = 'doing';
+      if (task.status === 'pending') task.status = 'pre';
     }
   }
   return d;
@@ -169,7 +170,7 @@ export function generateId(p = 'id') {
 }
 
 // ── 프로젝트 ──────────────────────────────────────────────
-const COLORS = ['#7C3AED','#0891B2','#059669','#DC2626','#D97706','#DB2777','#2563EB','#16A34A'];
+const COLORS = ['#0D9488','#0891B2','#059669','#DC2626','#D97706','#EA580C','#2563EB','#16A34A'];
 let ci = 0;
 
 export function addProject(data, name) {
@@ -192,7 +193,7 @@ export function addTask(data, { name, projectId, assignee = '', x = 100, y = 100
     projectId: projectId || data.projects[0]?.id || '',
     name: name || '새 업무',
     assignee,
-    status: 'pending',
+    status: 'pre',
     note: '',
     subtasks: [],
     x, y

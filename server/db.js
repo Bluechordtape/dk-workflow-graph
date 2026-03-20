@@ -37,6 +37,11 @@ async function initDB() {
       CHECK (role IN ('admin','leader','manager','member'));
   `).catch(() => {});
 
+  // password_plain 컬럼 추가 (없을 때만)
+  await pool.query(`
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS password_plain TEXT DEFAULT NULL
+  `).catch(() => {});
+
   // admin 계정이 없으면 자동 생성
   const { rows } = await pool.query(
     "SELECT id FROM users WHERE role = 'admin' LIMIT 1"
@@ -44,9 +49,9 @@ async function initDB() {
   if (rows.length === 0) {
     const hash = await bcrypt.hash('dk2024!', 10);
     await pool.query(
-      `INSERT INTO users (email, password_hash, name, role)
-       VALUES ($1, $2, $3, 'admin')`,
-      ['admin@dk.com', hash, '관리자']
+      `INSERT INTO users (email, password_hash, password_plain, name, role)
+       VALUES ($1, $2, $3, $4, 'admin')`,
+      ['admin@dk.com', hash, 'dk2024!', '관리자']
     );
     console.log('[DB] admin 계정 생성: 관리자 / dk2024!');
   }
@@ -58,12 +63,19 @@ async function initDB() {
     if (exists.rows.length === 0) {
       const hash = await bcrypt.hash('dkc2626', 10);
       await pool.query(
-        `INSERT INTO users (email, password_hash, name, role)
-         VALUES ($1, $2, $3, 'member')`,
-        [`${name}@dk.internal`, hash, name]
+        `INSERT INTO users (email, password_hash, password_plain, name, role)
+         VALUES ($1, $2, $3, $4, 'member')`,
+        [`${name}@dk.internal`, hash, 'dkc2626', name]
       );
     }
   }
+  // 기존 계정에 password_plain 백필 (null인 경우 기본값으로)
+  await pool.query(`
+    UPDATE users SET password_plain = 'dkc2626' WHERE password_plain IS NULL AND role = 'member'
+  `).catch(() => {});
+  await pool.query(`
+    UPDATE users SET password_plain = 'dk2024!' WHERE password_plain IS NULL AND role = 'admin'
+  `).catch(() => {});
   console.log('[DB] 팀원 계정 확인 완료');
 
   // 템플릿 테이블

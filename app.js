@@ -194,8 +194,9 @@ async function startApp() {
         if (!canWrite()) {
           try {
             const result = await saveTaskStatus(taskId, st);
-            data = result.data;
+            data = normalize(result.data);
             graph.setData(cs());
+            buildFilters();
             if (activeTaskId === taskId) document.getElementById('task-status').value = st;
           } catch (err) { alert(err.message); }
         } else {
@@ -203,6 +204,7 @@ async function startApp() {
           updateTask(cs(), taskId, { status: st });
           saveData(data);
           graph.setData(cs());
+          buildFilters();
           if (activeTaskId === taskId) document.getElementById('task-status').value = st;
         }
       },
@@ -269,7 +271,14 @@ function applyRoleUI() {
   document.getElementById('task-project').disabled  = isMember;
   document.getElementById('task-due-date').readOnly = isMember;
   document.getElementById('task-group').disabled    = isMember;
-  document.getElementById('task-status').disabled   = false;
+  document.getElementById('task-status').disabled = false;
+  // 관리자급만 완료/종결 설정 가능
+  const statusSel = document.getElementById('task-status');
+  statusSel.querySelectorAll('option').forEach(opt => {
+    if (opt.value === 'done' || opt.value === 'closed') {
+      opt.style.display = canWrite() ? '' : 'none';
+    }
+  });
   document.getElementById('btn-add-subtask').style.display   = canWrite() ? '' : 'none';
   document.getElementById('btn-manage-groups').style.display = canWrite() ? '' : 'none';
 }
@@ -426,9 +435,13 @@ function renderCalendar() {
 function buildFilters() {
   const sheet = cs();
   const assignees = new Set(sheet.tasks.map(t => t.assignee).filter(Boolean));
+  const hasUnassigned = sheet.tasks.some(t => !t.assignee);
   const asel = document.getElementById('filter-assignee');
   const av = asel.value;
   asel.innerHTML = '<option value="">담당자 전체</option>';
+  if (hasUnassigned) {
+    const o = document.createElement('option'); o.value = '__unassigned__'; o.textContent = '미배정'; asel.appendChild(o);
+  }
   assignees.forEach(a => { const o = document.createElement('option'); o.value = a; o.textContent = a; asel.appendChild(o); });
   asel.value = av;
 
@@ -455,9 +468,9 @@ function buildFilters() {
   });
   ps.value = ppv;
 
-  const pending = sheet.tasks.filter(t => t.status === 'review').length;
-  document.getElementById('pending-badge').textContent = pending > 0 ? pending : '';
-  document.getElementById('pending-badge').style.display = pending > 0 ? '' : 'none';
+  const pendingCount = sheet.tasks.filter(t => t.status === 'review' || t.status === 'inactive').length;
+  document.getElementById('pending-badge').textContent = pendingCount > 0 ? pendingCount : '';
+  document.getElementById('pending-badge').style.display = pendingCount > 0 ? '' : 'none';
 
   updateOverview();
 }
@@ -485,11 +498,14 @@ function updateOverview() {
 
   if (tasks.length === 0) { bar.style.display = 'none'; return; }
 
-  const total   = tasks.length;
-  const done    = tasks.filter(t => t.status === 'done').length;
-  const doing   = tasks.filter(t => t.status === 'doing').length;
-  const review  = tasks.filter(t => t.status === 'review').length;
-  const pending = tasks.filter(t => t.status === 'pending').length;
+  const total    = tasks.length;
+  const done     = tasks.filter(t => t.status === 'done' || t.status === 'closed').length;
+  const doing    = tasks.filter(t => t.status === 'doing').length;
+  const review   = tasks.filter(t => t.status === 'review').length;
+  const pre      = tasks.filter(t => t.status === 'pre' || t.status === 'pending').length;
+  const waiting  = tasks.filter(t => t.status === 'waiting').length;
+  const delayed  = tasks.filter(t => t.status === 'delayed').length;
+  const inactive = tasks.filter(t => t.status === 'inactive').length;
 
   const donePct  = Math.round(done  / total * 100);
   const doingPct = Math.round(doing / total * 100);
@@ -499,10 +515,13 @@ function updateOverview() {
     : '전체 프로젝트';
 
   const metaParts = [];
-  if (done)    metaParts.push(`완료 ${done}개`);
-  if (doing)   metaParts.push(`진행중 ${doing}개`);
-  if (review)  metaParts.push(`완료요청 ${review}개`);
-  if (pending) metaParts.push(`대기 ${pending}개`);
+  if (done)     metaParts.push(`완료 ${done}개`);
+  if (doing)    metaParts.push(`진행 중 ${doing}개`);
+  if (review)   metaParts.push(`완료요청 ${review}개`);
+  if (waiting)  metaParts.push(`대기 ${waiting}개`);
+  if (delayed)  metaParts.push(`지연 ${delayed}개`);
+  if (inactive) metaParts.push(`미진행 ${inactive}개`);
+  if (pre)      metaParts.push(`착수전 ${pre}개`);
 
   bar.style.display = '';
   bar.innerHTML = `
@@ -730,9 +749,11 @@ function openPanel(task) {
   updateGroupSwatch(task.groupId);
 
   const statusEl = document.getElementById('task-status');
-  const doneOpt = statusEl.querySelector('option[value="done"]');
-  if (doneOpt) doneOpt.style.display = canWrite() ? '' : 'none';
-  statusEl.value = task.status;
+  // 관리자급만 완료/종결 설정 가능
+  statusEl.querySelectorAll('option').forEach(opt => {
+    if (opt.value === 'done' || opt.value === 'closed') opt.style.display = canWrite() ? '' : 'none';
+  });
+  statusEl.value = task.status || 'pre';
 
   document.getElementById('btn-copy-task').style.display =
     canWrite() && data.sheets.length > 1 ? '' : 'none';
@@ -975,53 +996,83 @@ async function openUsersModal() {
 
 async function renderUserList() {
   const list = document.getElementById('user-list');
-  list.innerHTML = '<div style="color:#9E9E9E;font-size:13px;padding:8px 0">불러오는 중...</div>';
+  list.innerHTML = '<div style="color:#9E9E9E;font-size:13px;padding:12px 0">불러오는 중...</div>';
   try {
     const users = await fetchUsers();
     list.innerHTML = '';
     const roleLabel = { admin: '관리자', leader: '팀장', manager: '과장', member: '팀원' };
+    const roleColor = { admin: '#212121', leader: '#6366F1', manager: '#9E9E9E', member: '#BDBDBD' };
     const roles = ['admin', 'leader', 'manager', 'member'];
+
     users.forEach(u => {
       const item = document.createElement('div');
-      item.className = 'tmpl-item';
-      item.style.cursor = 'default';
+      item.className = 'user-item';
+      item.dataset.userId = u.id;
+      const pw = u.password_plain || '—';
       item.innerHTML = `
-        <div class="tmpl-item-info" style="flex:1">
-          <div style="display:flex;align-items:center;gap:8px">
-            <span class="tmpl-item-name">${u.name}</span>
-            <span style="font-size:11px;color:#9E9E9E">${u.email || ''}</span>
+        <div class="user-item-main">
+          <div class="user-item-avatar" style="background:${roleColor[u.role]}22;color:${roleColor[u.role]};border:1.5px solid ${roleColor[u.role]}44">
+            ${u.name.slice(0,1)}
+          </div>
+          <div class="user-item-info">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
+              <span class="user-item-name">${u.name}</span>
+              <span class="role-badge ${u.role}">${roleLabel[u.role]}</span>
+            </div>
+            <div style="font-size:11px;color:#9E9E9E">${u.email || ''}</div>
+          </div>
+          <div class="user-item-pw">
+            <span style="font-size:10px;color:#BDBDBD;font-weight:500">PW</span>
+            <span class="pw-display" style="font-size:12px;font-family:monospace;color:#424242;cursor:pointer;border-bottom:1px dashed #BDBDBD" title="클릭하여 비밀번호 변경">${pw}</span>
           </div>
         </div>
-        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
-          <select class="user-role-sel" style="height:28px;border:1px solid #E0E0E0;border-radius:5px;font-size:12px;font-family:inherit;padding:0 6px">
+        <div class="user-item-actions">
+          <select class="user-role-sel">
             ${roles.map(r => `<option value="${r}" ${u.role === r ? 'selected' : ''}>${roleLabel[r]}</option>`).join('')}
           </select>
-          <button class="btn-role-save" style="height:28px;padding:0 10px;border-radius:5px;border:1px solid #E0E0E0;background:#FAFAFA;font-size:11px;font-weight:600;font-family:inherit;cursor:pointer">저장</button>
-          <button class="btn-pw-reset" style="height:28px;padding:0 10px;border-radius:5px;border:1px solid #E0E0E0;background:#FAFAFA;font-size:11px;font-weight:600;font-family:inherit;cursor:pointer">비밀번호 초기화</button>
+          <button class="btn-role-save btn-small-action">권한 저장</button>
+          <button class="btn-pw-reset btn-small-action">비밀번호 변경</button>
         </div>
       `;
-      item.querySelector('.btn-role-save').addEventListener('click', async () => {
+
+      // 권한 저장 (최적화: 전체 재렌더링 없이 해당 아이템만 업데이트)
+      item.querySelector('.btn-role-save').addEventListener('click', async (e) => {
+        const btn = e.target;
         const role = item.querySelector('.user-role-sel').value;
+        btn.disabled = true; btn.textContent = '저장 중...';
         try {
           await updateUserRole(u.id, role);
-          // 자기 자신의 역할 변경 시 반영
+          u.role = role;
+          // 아이템 뱃지 + 아바타 색상만 갱신
+          item.querySelector('.role-badge').className = `role-badge ${role}`;
+          item.querySelector('.role-badge').textContent = roleLabel[role];
+          item.querySelector('.user-item-avatar').style.background = `${roleColor[role]}22`;
+          item.querySelector('.user-item-avatar').style.color = roleColor[role];
+          item.querySelector('.user-item-avatar').style.border = `1.5px solid ${roleColor[role]}44`;
+          btn.textContent = '✓ 저장됨';
+          setTimeout(() => { btn.textContent = '권한 저장'; btn.disabled = false; }, 1500);
           if (u.id === currentUser?.id) {
             currentUser.role = role;
             applyRoleUI();
             updateUserBtn();
           }
-          await renderUserList();
-        } catch (err) { alert(err.message); }
+        } catch (err) { alert(err.message); btn.textContent = '권한 저장'; btn.disabled = false; }
       });
-      item.querySelector('.btn-pw-reset').addEventListener('click', async () => {
+
+      // 비밀번호 변경
+      const pwChange = async () => {
         const pw = prompt(`${u.name}의 새 비밀번호 (4자 이상):`);
         if (!pw) return;
         if (pw.length < 4) { alert('비밀번호는 4자 이상이어야 합니다.'); return; }
         try {
           await resetUserPassword(u.id, pw);
-          alert('비밀번호가 변경됐습니다.');
+          item.querySelector('.pw-display').textContent = pw;
+          u.password_plain = pw;
         } catch (err) { alert(err.message); }
-      });
+      };
+      item.querySelector('.btn-pw-reset').addEventListener('click', pwChange);
+      item.querySelector('.pw-display').addEventListener('click', pwChange);
+
       list.appendChild(item);
     });
   } catch (err) {
@@ -1049,7 +1100,9 @@ document.getElementById('btn-add-user-confirm').addEventListener('click', async 
     await createUser(name, email, password, role);
     closeModal('modal-add-user');
     await renderUserList();
-    // 로그인 드롭다운도 갱신
+    // 담당자 목록 + 로그인 드롭다운 갱신
+    try { userNames = await fetchUserNames(); } catch {}
+    populateAssigneeSelect();
     await loadLoginNames();
     alert(`"${name}" 사용자가 추가됐습니다.`);
   } catch (err) { alert(err.message); }
