@@ -480,8 +480,9 @@ body {
   letter-spacing: -0.1px;
 }
 .node-action:hover { opacity: 0.8; }
-.btn-req { background: #EEEEEE; color: #212121; }
-.btn-cfm { background: #212121; color: #FFFFFF; }
+.btn-start { background: #E8F5E9; color: #2E7D32; }
+.btn-req   { background: #EEEEEE; color: #212121; }
+.btn-cfm   { background: #212121; color: #FFFFFF; }
 
 /* ── 사이드 패널 ──────────────────────────────────────── */
 #side-panel {

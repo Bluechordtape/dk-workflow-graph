@@ -149,6 +149,7 @@ function initSocket() {
     graph.setData(cs());
     buildFilters();
     renderSheetTabs();
+    if (viewMode === 'calendar') renderCalendar();
   });
 }
 
@@ -320,14 +321,15 @@ function renderCalendar() {
   });
   grid.appendChild(header);
 
-  // 해당 월의 태스크를 날짜별로 분류
-  const sheet = cs();
+  // 모든 시트의 태스크를 날짜별로 종합
   const tasksByDate = {};
-  for (const task of sheet.tasks) {
-    if (!task.dueDate) continue;
-    const key = task.dueDate.slice(0, 10); // YYYY-MM-DD
-    if (!tasksByDate[key]) tasksByDate[key] = [];
-    tasksByDate[key].push(task);
+  for (const sheet of data.sheets) {
+    for (const task of sheet.tasks) {
+      if (!task.dueDate) continue;
+      const key = task.dueDate.slice(0, 10); // YYYY-MM-DD
+      if (!tasksByDate[key]) tasksByDate[key] = [];
+      tasksByDate[key].push({ task, sheet });
+    }
   }
 
   const today = new Date();
@@ -377,17 +379,24 @@ function renderCalendar() {
       dayNum.textContent = cellDay;
       cell.appendChild(dayNum);
 
-      const tasks = tasksByDate[cellStr] || [];
-      tasks.forEach(task => {
-        const project = sheet.projects.find(p => p.id === task.projectId);
+      const entries = tasksByDate[cellStr] || [];
+      entries.forEach(({ task, sheet: taskSheet }) => {
+        const project = taskSheet.projects.find(p => p.id === task.projectId);
         const chip = document.createElement('div');
         chip.className = 'cal-task-chip';
         chip.textContent = task.name;
         chip.style.background = (project?.color || '#9E9E9E') + '22';
         chip.style.color = project?.color || '#424242';
         chip.style.borderLeft = `3px solid ${project?.color || '#9E9E9E'}`;
-        chip.title = `${task.name} (${task.assignee || '미배정'})`;
+        chip.title = `[${taskSheet.name}] ${task.name} (${task.assignee || '미배정'})`;
         chip.addEventListener('click', () => {
+          // 해당 업무의 시트로 전환 후 패널 열기
+          if (data.activeSheetId !== taskSheet.id) {
+            data.activeSheetId = taskSheet.id;
+            graph.setData(cs());
+            buildFilters();
+            renderSheetTabs();
+          }
           setViewMode('graph');
           setTimeout(() => openPanel(task), 100);
         });
@@ -550,6 +559,7 @@ function renderSheetTabs() {
       applyFilter();
       renderSheetTabs();
       applyRoleUI();
+      if (viewMode === 'calendar') renderCalendar();
     });
 
     container.appendChild(tab);
@@ -1198,11 +1208,26 @@ document.getElementById('btn-backup-create').addEventListener('click', async () 
 // ── 진입점 ───────────────────────────────────────────────
 window.__doLogin = doLogin;
 
+async function loadLoginNames() {
+  try {
+    const names = await fetchUserNames();
+    const sel = document.getElementById('login-name-select');
+    sel.innerHTML = '<option value="">— 선택하세요 —</option>';
+    names.forEach(n => {
+      const o = document.createElement('option');
+      o.value = n; o.textContent = n;
+      sel.appendChild(o);
+    });
+  } catch {}
+}
+
 async function init() {
   document.getElementById('login-submit').addEventListener('click', doLogin);
   document.getElementById('login-password').addEventListener('keydown', e => {
     if (e.key === 'Enter') doLogin();
   });
+
+  await loadLoginNames();
 
   currentUser = await checkAuth();
   if (!currentUser) {

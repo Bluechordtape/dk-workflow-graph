@@ -144,13 +144,16 @@ export class Graph {
     const myName = this.userCtx?.name;
     const isMine = task.assignee === myName;
     const isMgmt = ['admin', 'leader', 'manager'].includes(role);
-    const canReq = task.status === 'doing'  && (isMgmt || isMine);
-    const canCfm = task.status === 'review' && isMgmt;
+    const canStart = task.status === 'pending' && (isMgmt || isMine);
+    const canReq   = task.status === 'doing'   && (isMgmt || isMine);
+    const canCfm   = task.status === 'review'  && isMgmt;
     const group  = this.data.groups?.find(g => g.id === task.groupId);
     const groupBadge = group
       ? `<span style="font-size:10px;font-weight:600;padding:1px 7px;border-radius:3px;background:${group.color}1A;color:${group.color};border:1px solid ${group.color}44;white-space:nowrap">${group.name}</span>`
       : '';
-    const actionBtn = canReq
+    const actionBtn = canStart
+      ? `<button class="node-action btn-start" data-id="${task.id}">▶ 시작</button>`
+      : canReq
       ? `<button class="node-action btn-req" data-id="${task.id}">완료 요청</button>`
       : canCfm
       ? `<button class="node-action btn-cfm" data-id="${task.id}">✓ 컨펌</button>`
@@ -197,6 +200,12 @@ export class Graph {
     el.querySelector('.node-inner').addEventListener('click', (e) => {
       if (e.target.closest('.node-action')) return;
       this.cb.onNodeClick?.(task);
+    });
+
+    // 시작
+    el.querySelector('.btn-start')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.cb.onStatusChange?.(task.id, 'doing');
     });
 
     // 완료 요청
