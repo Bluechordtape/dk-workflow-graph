@@ -232,6 +232,74 @@ body {
   padding: 0 4px;
 }
 
+/* ── 오버뷰 바 ────────────────────────────────────────── */
+#overview-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px;
+  height: 36px;
+  background: #FFFFFF;
+  border-bottom: 1px solid #E5E7EB;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.ov-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: #424242;
+  white-space: nowrap;
+  letter-spacing: -0.2px;
+  flex-shrink: 0;
+}
+
+.ov-bar {
+  width: 100px;
+  height: 4px;
+  background: #F0F0F0;
+  border-radius: 2px;
+  position: relative;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.ov-bar-done {
+  position: absolute;
+  left: 0; top: 0; height: 100%;
+  background: #212121;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+.ov-bar-doing {
+  position: absolute;
+  top: 0; height: 100%;
+  background: #9E9E9E;
+  transition: left 0.3s ease, width 0.3s ease;
+}
+
+.ov-pct {
+  font-size: 12px;
+  font-weight: 700;
+  color: #212121;
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: 32px;
+}
+
+.ov-sep {
+  color: #E0E0E0;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.ov-meta {
+  font-size: 11px;
+  color: #9E9E9E;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* ── 메인 레이아웃 ────────────────────────────────────── */
 #main {
   display: flex;

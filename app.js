@@ -232,6 +232,8 @@ function buildFilters() {
   const pending = data.tasks.filter(t => t.status === 'review').length;
   document.getElementById('pending-badge').textContent = pending > 0 ? pending : '';
   document.getElementById('pending-badge').style.display = pending > 0 ? '' : 'none';
+
+  updateOverview();
 }
 
 function applyFilter() {
@@ -240,6 +242,52 @@ function applyFilter() {
     project:  document.getElementById('filter-project').value,
     status:   document.getElementById('filter-status').value
   });
+  updateOverview();
+}
+
+function updateOverview() {
+  const bar = document.getElementById('overview-bar');
+  if (!data || !data.tasks) { bar.style.display = 'none'; return; }
+
+  const projectFilter  = document.getElementById('filter-project').value;
+  const assigneeFilter = document.getElementById('filter-assignee').value;
+
+  let tasks = data.tasks;
+  if (projectFilter)  tasks = tasks.filter(t => t.projectId === projectFilter);
+  if (assigneeFilter) tasks = tasks.filter(t => t.assignee  === assigneeFilter);
+
+  if (tasks.length === 0) { bar.style.display = 'none'; return; }
+
+  const total   = tasks.length;
+  const done    = tasks.filter(t => t.status === 'done').length;
+  const doing   = tasks.filter(t => t.status === 'doing'   || t.status === 'wip').length;
+  const review  = tasks.filter(t => t.status === 'review').length;
+  const pending = tasks.filter(t => t.status === 'pending' || t.status === 'todo').length;
+
+  const donePct  = Math.round(done  / total * 100);
+  const doingPct = Math.round(doing / total * 100);
+
+  const projectName = projectFilter
+    ? (data.projects.find(p => p.id === projectFilter)?.name || '프로젝트')
+    : '전체 프로젝트';
+
+  const metaParts = [];
+  if (done)    metaParts.push(`완료 ${done}개`);
+  if (doing)   metaParts.push(`진행중 ${doing}개`);
+  if (review)  metaParts.push(`완료요청 ${review}개`);
+  if (pending) metaParts.push(`대기 ${pending}개`);
+
+  bar.style.display = '';
+  bar.innerHTML = `
+    <span class="ov-name">${projectName}</span>
+    <div class="ov-bar">
+      <div class="ov-bar-done" style="width:${donePct}%"></div>
+      <div class="ov-bar-doing" style="left:${donePct}%;width:${doingPct}%"></div>
+    </div>
+    <span class="ov-pct">${donePct}%</span>
+    <span class="ov-sep">·</span>
+    <span class="ov-meta">전체 ${total}개 중 ${metaParts.join(', ')}</span>
+  `;
 }
 
 // ── 툴바 ─────────────────────────────────────────────────
