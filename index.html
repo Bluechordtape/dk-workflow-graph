@@ -66,6 +66,8 @@
     + 프로젝트
     <span id="pending-badge" class="pending-badge" style="display:none"></span>
   </button>
+  <button id="btn-template-load">템플릿</button>
+  <button id="btn-template-save">템플릿 저장</button>
   <button id="btn-import">가져오기</button>
   <button id="btn-export">내보내기</button>
 </div>
@@ -128,6 +130,51 @@
         <button id="btn-delete-task" class="danger">삭제</button>
       </div>
 
+    </div>
+  </div>
+</div>
+
+<!-- ── 템플릿 저장 모달 ── -->
+<div id="modal-save-template" class="modal-overlay hidden">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3>템플릿으로 저장</h3>
+      <button class="modal-close" data-modal="modal-save-template">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>템플릿 이름</label>
+        <input type="text" id="tmpl-save-name" placeholder="예: 제안서 제출">
+      </div>
+      <div class="form-group">
+        <label>설명 (선택)</label>
+        <textarea id="tmpl-save-desc" rows="2" placeholder="어떤 흐름인지 간략히 설명"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" data-modal="modal-save-template">취소</button>
+      <button id="btn-tmpl-save-confirm" class="primary">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 템플릿 불러오기 모달 ── -->
+<div id="modal-load-template" class="modal-overlay hidden">
+  <div class="modal-card modal-card-wide">
+    <div class="modal-header">
+      <h3>템플릿 불러오기</h3>
+      <button class="modal-close" data-modal="modal-load-template">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="tmpl-list" class="tmpl-list"></div>
+      <div class="form-group" style="margin-top:14px">
+        <label>새 프로젝트 이름</label>
+        <input type="text" id="tmpl-load-project" placeholder="프로젝트 이름">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" data-modal="modal-load-template">취소</button>
+      <button id="btn-tmpl-load-confirm" class="primary">불러오기</button>
     </div>
   </div>
 </div>

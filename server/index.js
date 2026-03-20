@@ -6,8 +6,9 @@ const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
 
-const dataRouter = require('./routes/data');
-const authRouter = require('./routes/auth');
+const dataRouter      = require('./routes/data');
+const authRouter      = require('./routes/auth');
+const templatesRouter = require('./routes/templates');
 
 const app = express();
 const server = http.createServer(app);
@@ -22,8 +23,9 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, '..')));
 
 // ── API 라우터 ────────────────────────────────────────────
-app.use('/api/auth', authRouter());
-app.use('/api', dataRouter(io));
+app.use('/api/auth',      authRouter());
+app.use('/api/templates', templatesRouter());
+app.use('/api',           dataRouter(io));
 
 // SPA 폴백
 app.get('*', (req, res) => {

@@ -55,6 +55,29 @@ export async function saveTaskStatus(taskId, status, socketId) {
   return res.json();
 }
 
+// ── 템플릿 API ────────────────────────────────────────────
+export async function fetchTemplates() {
+  const res = await fetch('/api/templates', { headers: authHeaders() });
+  if (!res.ok) throw new Error('템플릿 조회 실패');
+  return res.json();
+}
+
+export async function saveTemplate(name, description, templateData) {
+  const res = await fetch('/api/templates', {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ name, description, data: templateData })
+  });
+  if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || '저장 실패'); }
+  return res.json();
+}
+
+export async function deleteTemplate(id) {
+  const res = await fetch(`/api/templates/${id}`, { method: 'DELETE', headers: authHeaders() });
+  if (!res.ok) throw new Error('삭제 실패');
+  return res.json();
+}
+
 // ── JSON 가져오기 / 내보내기 ──────────────────────────────
 export function exportJSON(data) {
   const a = document.createElement('a');

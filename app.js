@@ -4,7 +4,8 @@ import {
   setSocketId, setToken,
   addProject, deleteProject,
   addTask, updateTask, deleteTask,
-  addFlow, deleteFlow
+  addFlow, deleteFlow,
+  fetchTemplates, saveTemplate, deleteTemplate
 } from './data.js';
 import { Graph } from './graph.js';
 
@@ -177,8 +178,10 @@ function applyRoleUI() {
   const hideCreate = role === 'member' || role === 'manager';
   document.getElementById('btn-add-task').style.display    = hideCreate ? 'none' : '';
   document.getElementById('btn-add-project').style.display = hideCreate ? 'none' : '';
-  document.getElementById('btn-import').style.display      = isAdmin()  ? '' : 'none';
-  document.getElementById('btn-export').style.display      = isAdmin()  ? '' : 'none';
+  document.getElementById('btn-import').style.display         = isAdmin()  ? '' : 'none';
+  document.getElementById('btn-export').style.display         = isAdmin()  ? '' : 'none';
+  document.getElementById('btn-template-save').style.display  = isAdmin()  ? '' : 'none';
+  document.getElementById('btn-template-load').style.display  = '';
 
   // 패널 저장/삭제 버튼
   document.getElementById('btn-save-task').style.display   = canWrite() ? '' : 'none';
@@ -257,6 +260,8 @@ function setupToolbar() {
     saveData(data);
     buildFilters();
   });
+  document.getElementById('btn-template-save').addEventListener('click', () => openModal('modal-save-template'));
+  document.getElementById('btn-template-load').addEventListener('click', openTemplateLoadModal);
   document.getElementById('btn-add-task').addEventListener('click', () => {
     if (!canWrite()) return;
     const task = addTask(data, { x: 120 + Math.random() * 200, y: 120 + Math.random() * 200, assignee: currentUser.name });
@@ -383,6 +388,137 @@ function addSubtask() {
   saveData(data);
   graph.setData(data);
 }
+
+// ── 템플릿 ──────────────────────────────────────────────
+let _selectedTemplateId = null;
+
+function openModal(id) {
+  document.getElementById(id).classList.remove('hidden');
+}
+function closeModal(id) {
+  document.getElementById(id).classList.add('hidden');
+}
+
+// 모달 닫기 버튼 공통 처리
+document.addEventListener('click', e => {
+  const btn = e.target.closest('.modal-close, .btn-cancel');
+  if (btn) {
+    const id = btn.dataset.modal;
+    if (id) closeModal(id);
+  }
+});
+
+// ── 템플릿 저장 모달 ──
+document.getElementById('btn-tmpl-save-confirm').addEventListener('click', async () => {
+  const name = document.getElementById('tmpl-save-name').value.trim();
+  const desc = document.getElementById('tmpl-save-desc').value.trim();
+  if (!name) { alert('템플릿 이름을 입력하세요.'); return; }
+
+  const templateData = {
+    tasks: data.tasks.map(t => ({
+      id: t.id, name: t.name, x: t.x, y: t.y,
+      status: 'pending', assignee: '', note: '', subtasks: [], dueDate: null
+    })),
+    flows: data.flows.map(f => ({ id: f.id, from: f.from, to: f.to }))
+  };
+
+  try {
+    await saveTemplate(name, desc, templateData);
+    closeModal('modal-save-template');
+    document.getElementById('tmpl-save-name').value = '';
+    document.getElementById('tmpl-save-desc').value = '';
+    alert('템플릿이 저장됐습니다.');
+  } catch (err) {
+    alert(err.message);
+  }
+});
+
+// ── 템플릿 불러오기 모달 ──
+async function openTemplateLoadModal() {
+  _selectedTemplateId = null;
+  const list = document.getElementById('tmpl-list');
+  list.innerHTML = '<div style="color:#9E9E9E;font-size:13px;padding:8px 0">불러오는 중...</div>';
+  openModal('modal-load-template');
+
+  try {
+    const templates = await fetchTemplates();
+    list.innerHTML = '';
+    if (templates.length === 0) {
+      list.innerHTML = '<div style="color:#9E9E9E;font-size:13px;padding:8px 0">저장된 템플릿이 없습니다.</div>';
+      return;
+    }
+    templates.forEach(t => {
+      const item = document.createElement('div');
+      item.className = 'tmpl-item';
+      item.dataset.id = t.id;
+      const date = new Date(t.created_at).toLocaleDateString('ko-KR', { month:'short', day:'numeric' });
+      item.innerHTML = `
+        <div class="tmpl-item-info">
+          <div class="tmpl-item-name">${t.name}</div>
+          ${t.description ? `<div class="tmpl-item-desc">${t.description}</div>` : ''}
+        </div>
+        <div class="tmpl-item-meta">${t.created_by} · ${date}</div>
+        ${isAdmin() ? `<button class="tmpl-del" data-id="${t.id}" title="삭제">×</button>` : ''}
+      `;
+      item.addEventListener('click', e => {
+        if (e.target.closest('.tmpl-del')) return;
+        list.querySelectorAll('.tmpl-item').forEach(i => i.classList.remove('selected'));
+        item.classList.add('selected');
+        _selectedTemplateId = t.id;
+        document.getElementById('tmpl-load-project').value = t.name;
+        document.getElementById('tmpl-load-project').focus();
+      });
+      item.querySelector('.tmpl-del')?.addEventListener('click', async e => {
+        e.stopPropagation();
+        if (!confirm(`"${t.name}" 템플릿을 삭제할까요?`)) return;
+        try {
+          await deleteTemplate(t.id);
+          item.remove();
+          if (_selectedTemplateId === t.id) _selectedTemplateId = null;
+        } catch (err) { alert(err.message); }
+      });
+      list.appendChild(item);
+    });
+    // 첫 번째 자동 선택
+    if (templates.length > 0) {
+      list.firstChild.click();
+    }
+  } catch (err) {
+    list.innerHTML = `<div style="color:#C8102E;font-size:13px">${err.message}</div>`;
+  }
+}
+
+document.getElementById('btn-tmpl-load-confirm').addEventListener('click', async () => {
+  if (!_selectedTemplateId) { alert('템플릿을 선택하세요.'); return; }
+  const projectName = document.getElementById('tmpl-load-project').value.trim();
+  if (!projectName) { alert('프로젝트 이름을 입력하세요.'); return; }
+
+  try {
+    const templates = await fetchTemplates();
+    const tmpl = templates.find(t => t.id === _selectedTemplateId);
+    if (!tmpl) { alert('템플릿을 찾을 수 없습니다.'); return; }
+
+    const project = addProject(data, projectName);
+    const idMap = {};
+    for (const t of tmpl.data.tasks) {
+      const newTask = addTask(data, { name: t.name, projectId: project.id, x: t.x, y: t.y });
+      idMap[t.id] = newTask.id;
+    }
+    for (const f of tmpl.data.flows) {
+      if (idMap[f.from] && idMap[f.to]) addFlow(data, idMap[f.from], idMap[f.to]);
+    }
+
+    saveData(data);
+    graph.setData(data);
+    buildFilters();
+    // 새 프로젝트로 필터 전환
+    document.getElementById('filter-project').value = project.id;
+    applyFilter();
+    closeModal('modal-load-template');
+  } catch (err) {
+    alert(err.message);
+  }
+});
 
 // ── 진입점 ───────────────────────────────────────────────
 window.__doLogin = doLogin; // onclick 폴백용 전역 노출
