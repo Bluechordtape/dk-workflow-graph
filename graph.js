@@ -5,9 +5,11 @@ export const NODE_H = 88;
 
 const STATUS = {
   pending: { label: '대기',     bar: '#D1D5DB', bg: '#F3F4F6', text: '#6B7280' },
+  todo:    { label: '대기',     bar: '#D1D5DB', bg: '#F3F4F6', text: '#6B7280' },
   doing:   { label: '진행중',   bar: '#7C3AED', bg: '#EDE9FE', text: '#5B21B6' },
+  wip:     { label: '진행중',   bar: '#7C3AED', bg: '#EDE9FE', text: '#5B21B6' },
   review:  { label: '완료요청', bar: '#EAB308', bg: '#FEF9C3', text: '#854D0E' },
-  done:    { label: '완료',     bar: '#22C55E', bg: '#DCFCE7', text: '#15803D' }
+  done:    { label: '완료',     bar: '#22C55E', bg: '#DCFCE7', text: '#15803D' },
 };
 
 export class Graph {
