@@ -15,12 +15,12 @@ body {
 #login-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.25);
+  background: rgba(0,0,0,0.20);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(6px);
 }
 #login-overlay.hidden { display: none; }
 
@@ -28,16 +28,15 @@ body {
   background: #FFFFFF;
   border-radius: 14px;
   box-shadow: 0 8px 40px rgba(0,0,0,0.14);
-  padding: 36px 32px 28px;
-  width: 340px;
+  padding: 40px 36px 32px;
+  width: 360px;
   display: flex;
   flex-direction: column;
-  align-items: center;
   gap: 0;
 }
 
 .login-brand {
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 800;
   color: #C8102E;
   letter-spacing: -0.5px;
@@ -45,88 +44,68 @@ body {
 }
 
 .login-sub {
-  font-size: 14px;
-  color: #757575;
-  margin-bottom: 20px;
+  font-size: 13px;
+  color: #9E9E9E;
+  margin-bottom: 28px;
 }
 
-#login-user-list {
-  width: 100%;
+.login-error {
+  background: #FFF0F0;
+  border: 1px solid #FFCDD2;
+  border-radius: 7px;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: #C8102E;
+  margin-bottom: 16px;
+}
+
+.login-field {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: 5px;
+  margin-bottom: 14px;
+}
+.login-field label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #757575;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.login-field input {
+  height: 42px;
+  padding: 0 12px;
+  border: 1px solid #E0E0E0;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  color: #212121;
+  background: #FFFFFF;
+  outline: none;
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+.login-field input:focus {
+  border-color: #C8102E;
+  box-shadow: 0 0 0 3px rgba(200,16,46,0.08);
 }
 
-.login-user-btn {
+#login-submit {
+  margin-top: 8px;
   width: 100%;
   height: 44px;
-  border: 1px solid #E0E0E0;
-  border-radius: 8px;
-  background: #FAFAFA;
-  font-size: 14px;
-  font-weight: 500;
-  font-family: inherit;
-  color: #212121;
-  cursor: pointer;
-  transition: background 0.1s, border-color 0.1s;
-  text-align: left;
-  padding: 0 14px;
-}
-.login-user-btn:hover {
-  background: #F5F5F5;
-  border-color: #BDBDBD;
-}
-
-#login-add-btn {
-  margin-top: 4px;
-  width: 100%;
-  height: 36px;
-  border: 1px dashed #BDBDBD;
-  border-radius: 8px;
-  background: none;
-  font-size: 13px;
-  font-family: inherit;
-  color: #757575;
-  cursor: pointer;
-  transition: border-color 0.1s, color 0.1s;
-}
-#login-add-btn:hover { border-color: #424242; color: #212121; }
-
-#login-add-row {
-  display: none;
-  width: 100%;
-  gap: 6px;
-  margin-top: 4px;
-}
-#login-add-row.visible { display: flex; }
-
-#login-new-name {
-  flex: 1;
-  height: 36px;
-  padding: 0 10px;
-  border: 1px solid #E0E0E0;
-  border-radius: 7px;
-  font-size: 13px;
-  font-family: inherit;
-  color: #212121;
-  outline: none;
-}
-#login-new-name:focus { border-color: #C8102E; }
-
-#login-confirm-add {
-  height: 36px;
-  padding: 0 14px;
   background: #C8102E;
   color: #FFFFFF;
   border: none;
-  border-radius: 7px;
-  font-size: 13px;
-  font-weight: 600;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
   font-family: inherit;
   cursor: pointer;
+  transition: background 0.12s;
+  letter-spacing: -0.2px;
 }
-#login-confirm-add:hover { background: #A50D25; }
+#login-submit:hover { background: #A50D25; }
+#login-submit:disabled { background: #BDBDBD; cursor: not-allowed; }
 
 /* ── 툴바 유저 버튼 ──────────────────────────────────── */
 .user-btn {
@@ -141,8 +120,22 @@ body {
   color: #212121 !important;
   cursor: pointer;
   white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 5px;
 }
 .user-btn:hover { background: #F5F5F5 !important; }
+
+.role-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 3px;
+  letter-spacing: 0;
+}
+.role-badge.admin   { background: #212121; color: #FFFFFF; }
+.role-badge.manager { background: #EEEEEE; color: #424242; }
+.role-badge.member  { background: #F5F5F5; color: #757575; }
 
 /* ── 툴바 ─────────────────────────────────────────────── */
 #toolbar {

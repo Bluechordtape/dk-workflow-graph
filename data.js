@@ -1,19 +1,29 @@
 // data.js
 
 let _socketId = null;
+let _token = null;
+
 export function setSocketId(id) { _socketId = id; }
+export function setToken(token) { _token = token; }
+
+function authHeaders(extra = {}) {
+  const h = { 'Content-Type': 'application/json', ...extra };
+  if (_token) h['Authorization'] = `Bearer ${_token}`;
+  if (_socketId) h['x-socket-id'] = _socketId;
+  return h;
+}
 
 // ── 로드 ─────────────────────────────────────────────────
 export async function loadData() {
   try {
-    const res = await fetch('/api/data');
+    const res = await fetch('/api/data', { headers: authHeaders() });
     if (res.ok) {
       const d = await res.json();
       if (d && d.tasks) return normalize(d);
     }
+    if (res.status === 401 || res.status === 403) return null; // 인증 실패 신호
   } catch {}
-  const res = await fetch('./sample-data.json');
-  return normalize(await res.json());
+  return null;
 }
 
 function normalize(d) {
@@ -25,10 +35,24 @@ function normalize(d) {
 
 // ── 저장 ─────────────────────────────────────────────────
 export function saveData(data) {
-  const headers = { 'Content-Type': 'application/json' };
-  if (_socketId) headers['x-socket-id'] = _socketId;
-  fetch('/api/data', { method: 'PUT', headers, body: JSON.stringify(data) })
+  fetch('/api/data', { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data) })
     .catch(err => console.error('저장 실패:', err));
+}
+
+// ── 상태만 변경 (member 전용) ─────────────────────────────
+export async function saveTaskStatus(taskId, status, socketId) {
+  const headers = authHeaders();
+  if (socketId) headers['x-socket-id'] = socketId;
+  const res = await fetch('/api/data/task-status', {
+    method: 'PATCH',
+    headers,
+    body: JSON.stringify({ taskId, status })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || '상태 변경 실패');
+  }
+  return res.json();
 }
 
 // ── JSON 가져오기 / 내보내기 ──────────────────────────────
@@ -74,12 +98,12 @@ export function deleteProject(data, projectId) {
 }
 
 // ── 업무 ─────────────────────────────────────────────────
-export function addTask(data, { name, projectId, x = 100, y = 100 }) {
+export function addTask(data, { name, projectId, assignee = '', x = 100, y = 100 }) {
   const task = {
     id: generateId('t'),
     projectId: projectId || data.projects[0]?.id || '',
     name: name || '새 업무',
-    assignee: '',
+    assignee,
     status: 'pending',
     note: '',
     subtasks: [],

@@ -24,6 +24,7 @@ export class Graph {
     this._drag = null;      // { taskId, startMouse, startPos }
     this._pan = null;
     this._conn = null;      // { fromId, x1, y1 } — connection being drawn
+    this.userCtx = null;    // { id, name, role }
     this._setup();
     this._bind();
   }
@@ -75,6 +76,11 @@ export class Graph {
     this.render();
   }
 
+  setUserContext(user) {
+    this.userCtx = user;
+    if (this.data) this.render();
+  }
+
   resetView() {
     this.scale = 1; this.offsetX = 0; this.offsetY = 0;
     this._transform();
@@ -109,7 +115,6 @@ export class Graph {
 
   _makeNode(task, color, dim) {
     const st = STATUS[task.status] || STATUS.pending;
-    console.log('[node]', task.name, 'status:', task.status, 'st:', st);
     const el = document.createElement('div');
     el.className = 'task-node' + (dim ? ' dim' : '');
     el.dataset.id = task.id;
@@ -120,9 +125,14 @@ export class Graph {
     const sub = task.subtasks || [];
     const subDone = sub.filter(s => s.status === 'done').length;
     const subLine = sub.length ? `<div class="node-sub">${subDone}/${sub.length} 세부업무</div>` : '';
-    const actionBtn = task.status === 'doing'
+    const role   = this.userCtx?.role;
+    const myName = this.userCtx?.name;
+    const isMine = task.assignee === myName;
+    const canReq = task.status === 'doing' && (role === 'admin' || role === 'manager' || isMine);
+    const canCfm = task.status === 'review' && (role === 'admin' || role === 'manager');
+    const actionBtn = canReq
       ? `<button class="node-action btn-req" data-id="${task.id}">완료 요청</button>`
-      : task.status === 'review'
+      : canCfm
       ? `<button class="node-action btn-cfm" data-id="${task.id}">✓ 컨펌</button>`
       : '';
 
@@ -141,8 +151,6 @@ export class Graph {
       `cursor: pointer`,
       `user-select: none`,
     ].join(';');
-    console.log('[innerStyle]', innerStyle);
-
     el.innerHTML = `
       <div class="nh nh-l" data-id="${task.id}" data-side="left"></div>
       <div class="node-inner" style="${innerStyle}">

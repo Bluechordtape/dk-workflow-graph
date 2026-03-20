@@ -7,6 +7,7 @@ const { Server } = require('socket.io');
 const path = require('path');
 
 const dataRouter = require('./routes/data');
+const authRouter = require('./routes/auth');
 
 const app = express();
 const server = http.createServer(app);
@@ -17,13 +18,14 @@ const io = new Server(server, {
 // ── 미들웨어 ──────────────────────────────────────────────
 app.use(express.json({ limit: '10mb' }));
 
-// 프론트엔드 정적 파일 제공 (server/ 의 상위 폴더)
+// 프론트엔드 정적 파일 제공
 app.use(express.static(path.join(__dirname, '..')));
 
 // ── API 라우터 ────────────────────────────────────────────
+app.use('/api/auth', authRouter());
 app.use('/api', dataRouter(io));
 
-// SPA 폴백 (index.html)
+// SPA 폴백
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../index.html'));
 });
@@ -31,7 +33,6 @@ app.get('*', (req, res) => {
 // ── Socket.io ─────────────────────────────────────────────
 io.on('connection', (socket) => {
   console.log(`[Socket] 연결: ${socket.id}`);
-
   socket.on('disconnect', () => {
     console.log(`[Socket] 해제: ${socket.id}`);
   });

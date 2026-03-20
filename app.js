@@ -1,6 +1,7 @@
 // app.js
 import {
-  loadData, saveData, exportJSON, importJSON, setSocketId,
+  loadData, saveData, saveTaskStatus, exportJSON, importJSON,
+  setSocketId, setToken,
   addProject, deleteProject,
   addTask, updateTask, deleteTask,
   addFlow, deleteFlow
@@ -10,124 +11,93 @@ import { Graph } from './graph.js';
 let data = null;
 let graph = null;
 let activeTaskId = null;
-let currentUser = null;
+let currentUser = null; // { id, email, name, role }
 
-// ── 로그인 ────────────────────────────────────────────
-const DEFAULT_USERS = ['창규', '민경', '진희', '정현'];
-const USERS_KEY = 'dk_users';
-const SESSION_KEY = 'dk_current_user';
+const TOKEN_KEY = 'dk_jwt';
 
-function getUsers() {
+// ── 인증 ─────────────────────────────────────────────────
+async function checkAuth() {
+  const token = localStorage.getItem(TOKEN_KEY);
+  if (!token) return null;
   try {
-    const saved = JSON.parse(localStorage.getItem(USERS_KEY));
-    if (Array.isArray(saved) && saved.length) return saved;
-  } catch {}
-  return [...DEFAULT_USERS];
-}
-
-function saveUsers(users) {
-  localStorage.setItem(USERS_KEY, JSON.stringify(users));
-}
-
-function initLogin() {
-  return new Promise(resolve => {
-    const saved = localStorage.getItem(SESSION_KEY);
-    if (saved) { currentUser = saved; resolve(); return; }
-
-    const overlay = document.getElementById('login-overlay');
-    const list    = document.getElementById('login-user-list');
-    const addBtn  = document.getElementById('login-add-btn');
-    const addRow  = document.getElementById('login-add-row');
-    const nameIn  = document.getElementById('login-new-name');
-    const confirmBtn = document.getElementById('login-confirm-add');
-
-    function renderList() {
-      list.innerHTML = '';
-      getUsers().forEach(name => {
-        const btn = document.createElement('button');
-        btn.className = 'login-user-btn';
-        btn.textContent = name;
-        btn.addEventListener('click', () => selectUser(name));
-        list.appendChild(btn);
-      });
-    }
-
-    function selectUser(name) {
-      currentUser = name;
-      localStorage.setItem(SESSION_KEY, name);
-      overlay.classList.add('hidden');
-      updateUserBtn();
-      resolve();
-    }
-
-    function addUser() {
-      const name = nameIn.value.trim();
-      if (!name) return;
-      const users = getUsers();
-      if (!users.includes(name)) { users.push(name); saveUsers(users); }
-      selectUser(name);
-    }
-
-    addBtn.addEventListener('click', () => {
-      addRow.classList.add('visible');
-      addBtn.style.display = 'none';
-      nameIn.focus();
+    const res = await fetch('/api/auth/me', {
+      headers: { Authorization: `Bearer ${token}` }
     });
-    confirmBtn.addEventListener('click', addUser);
-    nameIn.addEventListener('keydown', e => { if (e.key === 'Enter') addUser(); });
+    if (!res.ok) { localStorage.removeItem(TOKEN_KEY); return null; }
+    setToken(token);
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
 
-    renderList();
+async function login(email, password) {
+  const res = await fetch('/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password })
   });
+  const body = await res.json();
+  if (!res.ok) throw new Error(body.error || '로그인 실패');
+  localStorage.setItem(TOKEN_KEY, body.token);
+  setToken(body.token);
+  return body.user;
 }
 
-function updateUserBtn() {
-  const btn = document.getElementById('btn-switch-user');
-  btn.textContent = currentUser ? `👤 ${currentUser}` : '로그인';
+function logout() {
+  localStorage.removeItem(TOKEN_KEY);
+  setToken(null);
+  currentUser = null;
+  showLoginOverlay();
 }
 
+// ── 로그인 UI ─────────────────────────────────────────────
 function showLoginOverlay() {
-  const overlay = document.getElementById('login-overlay');
-  const addRow  = document.getElementById('login-add-row');
-  const addBtn  = document.getElementById('login-add-btn');
-  const nameIn  = document.getElementById('login-new-name');
-  const list    = document.getElementById('login-user-list');
+  const overlay  = document.getElementById('login-overlay');
+  const errorEl  = document.getElementById('login-error');
+  const emailIn  = document.getElementById('login-email');
+  const passIn   = document.getElementById('login-password');
+  const submitBtn = document.getElementById('login-submit');
 
-  addRow.classList.remove('visible');
-  addBtn.style.display = '';
-  nameIn.value = '';
-  list.innerHTML = '';
-  getUsers().forEach(name => {
-    const btn = document.createElement('button');
-    btn.className = 'login-user-btn';
-    btn.textContent = name;
-    btn.addEventListener('click', () => {
-      currentUser = name;
-      localStorage.setItem(SESSION_KEY, name);
+  errorEl.style.display = 'none';
+  emailIn.value = '';
+  passIn.value = '';
+  overlay.classList.remove('hidden');
+
+  // 기존 리스너 제거 후 재등록 (중복 방지)
+  const newSubmit = submitBtn.cloneNode(true);
+  submitBtn.parentNode.replaceChild(newSubmit, submitBtn);
+
+  async function doLogin() {
+    const email = document.getElementById('login-email').value.trim();
+    const pass  = document.getElementById('login-password').value;
+    if (!email || !pass) { showLoginError('이메일과 비밀번호를 입력하세요'); return; }
+
+    newSubmit.disabled = true;
+    newSubmit.textContent = '로그인 중...';
+    try {
+      currentUser = await login(email, pass);
       overlay.classList.add('hidden');
-      updateUserBtn();
-    });
-    list.appendChild(btn);
+      await startApp();
+    } catch (err) {
+      showLoginError(err.message);
+      newSubmit.disabled = false;
+      newSubmit.textContent = '로그인';
+    }
+  }
+
+  newSubmit.addEventListener('click', doLogin);
+  document.getElementById('login-password').addEventListener('keydown', function onEnter(e) {
+    if (e.key === 'Enter') { doLogin(); this.removeEventListener('keydown', onEnter); }
   });
 
-  const confirmBtn = document.getElementById('login-confirm-add');
-  const addBtn2    = document.getElementById('login-add-btn');
-  addBtn2.addEventListener('click', () => {
-    addRow.classList.add('visible');
-    addBtn2.style.display = 'none';
-    nameIn.focus();
-  }, { once: true });
-  confirmBtn.onclick = () => {
-    const name = nameIn.value.trim();
-    if (!name) return;
-    const users = getUsers();
-    if (!users.includes(name)) { users.push(name); saveUsers(users); }
-    currentUser = name;
-    localStorage.setItem(SESSION_KEY, name);
-    overlay.classList.add('hidden');
-    updateUserBtn();
-  };
+  setTimeout(() => document.getElementById('login-email').focus(), 50);
+}
 
-  overlay.classList.remove('hidden');
+function showLoginError(msg) {
+  const el = document.getElementById('login-error');
+  el.textContent = msg;
+  el.style.display = '';
 }
 
 // ── Socket.io ─────────────────────────────────────────────
@@ -142,37 +112,103 @@ function initSocket() {
   });
 }
 
-// ── 초기화 ───────────────────────────────────────────────
-async function init() {
-  await initLogin();
-  initSocket();
-  data = await loadData();
+// ── 앱 시작 (로그인 후) ───────────────────────────────────
+async function startApp() {
+  if (!graph) {
+    initSocket();
 
-  graph = new Graph(document.getElementById('graph-container'), {
-    onNodeClick:    (task) => openPanel(task),
-    onNodeCreate:   (x, y) => {
-      const task = addTask(data, { x, y, projectId: document.getElementById('filter-project').value || data.projects[0]?.id, assignee: currentUser || '' });
-      saveData(data);
-      graph.setData(data);
-      openPanel(task);
-    },
-    onFlowCreate:   (fromId, toId) => { addFlow(data, fromId, toId); saveData(data); graph.setData(data); },
-    onFlowDelete:   (flowId)       => { deleteFlow(data, flowId);    saveData(data); graph.setData(data); },
-    onStatusChange: (taskId, st)   => {
-      updateTask(data, taskId, { status: st });
-      saveData(data);
-      graph.setData(data);
-      if (activeTaskId === taskId) document.getElementById('task-status').value = st;
-    },
-    onNodeMoved: () => saveData(data)
-  });
+    graph = new Graph(document.getElementById('graph-container'), {
+      onNodeClick: (task) => openPanel(task),
+      onNodeCreate: (x, y) => {
+        if (!canWrite()) return;
+        const task = addTask(data, {
+          x, y,
+          projectId: document.getElementById('filter-project').value || data.projects[0]?.id,
+          assignee: currentUser.name
+        });
+        saveData(data);
+        graph.setData(data);
+        openPanel(task);
+      },
+      onFlowCreate: (fromId, toId) => {
+        if (!canWrite()) return;
+        addFlow(data, fromId, toId); saveData(data); graph.setData(data);
+      },
+      onFlowDelete: (flowId) => {
+        if (!canWrite()) return;
+        deleteFlow(data, flowId); saveData(data); graph.setData(data);
+      },
+      onStatusChange: async (taskId, st) => {
+        if (currentUser.role === 'member') {
+          try {
+            const result = await saveTaskStatus(taskId, st);
+            data = result.data;
+            graph.setData(data);
+            if (activeTaskId === taskId) document.getElementById('task-status').value = st;
+          } catch (err) { alert(err.message); }
+        } else {
+          updateTask(data, taskId, { status: st });
+          saveData(data);
+          graph.setData(data);
+          if (activeTaskId === taskId) document.getElementById('task-status').value = st;
+        }
+      },
+      onNodeMoved: () => { if (canWrite()) saveData(data); }
+    });
+  }
+
+  data = await loadData();
+  if (!data) { logout(); return; }
 
   graph.setData(data);
+  graph.setUserContext(currentUser);
   buildFilters();
   setupToolbar();
   setupPanel();
+  applyRoleUI();
   updateUserBtn();
-  document.getElementById('btn-switch-user').addEventListener('click', showLoginOverlay);
+}
+
+// ── 역할 권한 헬퍼 ────────────────────────────────────────
+function canWrite() {
+  return currentUser?.role === 'admin' || currentUser?.role === 'manager';
+}
+function isAdmin() { return currentUser?.role === 'admin'; }
+
+// ── 역할별 UI 제어 ────────────────────────────────────────
+function applyRoleUI() {
+  const role = currentUser?.role;
+
+  // member/manager: 업무·프로젝트 추가 숨김
+  const hideCreate = role === 'member' || role === 'manager';
+  document.getElementById('btn-add-task').style.display    = hideCreate ? 'none' : '';
+  document.getElementById('btn-add-project').style.display = hideCreate ? 'none' : '';
+  document.getElementById('btn-import').style.display      = isAdmin()  ? '' : 'none';
+  document.getElementById('btn-export').style.display      = isAdmin()  ? '' : 'none';
+
+  // 패널 저장/삭제 버튼
+  document.getElementById('btn-save-task').style.display   = canWrite() ? '' : 'none';
+  document.getElementById('btn-delete-task').style.display = isAdmin()  ? '' : 'none';
+
+  // member: 업무명·담당자·상태 수정 불가 (메모만 가능)
+  const readOnly = role === 'member';
+  ['task-name', 'task-assignee'].forEach(id => {
+    document.getElementById(id).readOnly = readOnly;
+    document.getElementById(id).style.background = readOnly ? '#F5F5F5' : '';
+  });
+  document.getElementById('task-project').disabled = readOnly;
+  document.getElementById('task-status').disabled  = readOnly;
+  document.getElementById('btn-add-subtask').style.display = canWrite() ? '' : 'none';
+}
+
+// ── 툴바 유저 버튼 ────────────────────────────────────────
+function updateUserBtn() {
+  const btn = document.getElementById('btn-switch-user');
+  const roleLabel = { admin: '관리자', manager: '매니저', member: '멤버' };
+  btn.innerHTML = `
+    ${currentUser?.name || '?'}
+    <span class="role-badge ${currentUser?.role}">${roleLabel[currentUser?.role] || ''}</span>
+  `;
 }
 
 // ── 필터 ─────────────────────────────────────────────────
@@ -190,14 +226,12 @@ function buildFilters() {
   data.projects.forEach(p => { const o = document.createElement('option'); o.value = p.id; o.textContent = p.name; psel.appendChild(o); });
   psel.value = pv;
 
-  // 패널 내 프로젝트 셀렉트
   const ps = document.getElementById('task-project');
   const ppv = ps.value;
   ps.innerHTML = '';
   data.projects.forEach(p => { const o = document.createElement('option'); o.value = p.id; o.textContent = p.name; ps.appendChild(o); });
   ps.value = ppv;
 
-  // 컨펌 대기 뱃지
   const pending = data.tasks.filter(t => t.status === 'review').length;
   document.getElementById('pending-badge').textContent = pending > 0 ? pending : '';
   document.getElementById('pending-badge').style.display = pending > 0 ? '' : 'none';
@@ -216,31 +250,36 @@ function setupToolbar() {
   ['filter-assignee','filter-project','filter-status'].forEach(id =>
     document.getElementById(id).addEventListener('change', applyFilter)
   );
-
   document.getElementById('btn-reset-view').addEventListener('click', () => graph.resetView());
   document.getElementById('btn-export').addEventListener('click', () => exportJSON(data));
   document.getElementById('btn-import').addEventListener('click', () =>
     importJSON(d => { data = d; graph.setData(data); buildFilters(); closePanel(); })
   );
-
   document.getElementById('btn-add-project').addEventListener('click', () => {
+    if (!canWrite()) return;
     const name = prompt('새 프로젝트 이름:');
     if (!name) return;
     addProject(data, name);
     saveData(data);
     buildFilters();
   });
-
   document.getElementById('btn-add-task').addEventListener('click', () => {
-    const task = addTask(data, { x: 120 + Math.random() * 200, y: 120 + Math.random() * 200, assignee: currentUser || '' });
+    if (!canWrite()) return;
+    const task = addTask(data, { x: 120 + Math.random() * 200, y: 120 + Math.random() * 200, assignee: currentUser.name });
     saveData(data);
     graph.setData(data);
     openPanel(task);
   });
+  document.getElementById('btn-switch-user').addEventListener('click', () => {
+    if (confirm(`${currentUser?.name}님, 로그아웃 하시겠습니까?`)) logout();
+  });
 }
 
 // ── 사이드 패널 ──────────────────────────────────────────
+let panelSetup = false;
 function setupPanel() {
+  if (panelSetup) return;
+  panelSetup = true;
   document.getElementById('panel-close').addEventListener('click', closePanel);
   document.getElementById('btn-save-task').addEventListener('click', saveTask);
   document.getElementById('btn-delete-task').addEventListener('click', deleteTaskBtn);
@@ -250,11 +289,11 @@ function setupPanel() {
 function openPanel(task) {
   activeTaskId = task.id;
   document.getElementById('side-panel').classList.add('open');
-  document.getElementById('task-name').value    = task.name;
-  document.getElementById('task-project').value = task.projectId;
+  document.getElementById('task-name').value     = task.name;
+  document.getElementById('task-project').value  = task.projectId;
   document.getElementById('task-assignee').value = task.assignee;
-  document.getElementById('task-status').value  = task.status;
-  document.getElementById('task-note').value    = task.note || '';
+  document.getElementById('task-status').value   = task.status;
+  document.getElementById('task-note').value     = task.note || '';
   renderSubtasks(task);
 }
 
@@ -264,7 +303,7 @@ function closePanel() {
 }
 
 function saveTask() {
-  if (!activeTaskId) return;
+  if (!activeTaskId || !canWrite()) return;
   updateTask(data, activeTaskId, {
     name:      document.getElementById('task-name').value,
     projectId: document.getElementById('task-project').value,
@@ -278,7 +317,7 @@ function saveTask() {
 }
 
 function deleteTaskBtn() {
-  if (!activeTaskId) return;
+  if (!activeTaskId || !isAdmin()) return;
   const task = data.tasks.find(t => t.id === activeTaskId);
   if (!confirm(`"${task?.name}" 업무를 삭제할까요?`)) return;
   deleteTask(data, activeTaskId);
@@ -310,14 +349,15 @@ function renderSubtasks(task, focusLast = false) {
     nameInput.className = 'sub-name';
     nameInput.value = s.name;
     nameInput.placeholder = '세부업무 이름';
-    nameInput.addEventListener('input', (e) => {
-      s.name = e.target.value;
-    });
+    nameInput.readOnly = !canWrite();
+    nameInput.style.background = canWrite() ? '' : '#F5F5F5';
+    nameInput.addEventListener('input', (e) => { s.name = e.target.value; });
     nameInput.addEventListener('blur', () => saveData(data));
 
     const delBtn = document.createElement('button');
     delBtn.className = 'sub-del';
     delBtn.textContent = '×';
+    delBtn.style.display = canWrite() ? '' : 'none';
     delBtn.addEventListener('click', () => {
       task.subtasks.splice(i, 1);
       saveData(data);
@@ -338,7 +378,7 @@ function renderSubtasks(task, focusLast = false) {
 }
 
 function addSubtask() {
-  if (!activeTaskId) return;
+  if (!activeTaskId || !canWrite()) return;
   const task = data.tasks.find(t => t.id === activeTaskId);
   if (!task) return;
   if (!task.subtasks) task.subtasks = [];
@@ -346,6 +386,16 @@ function addSubtask() {
   renderSubtasks(task, true);
   saveData(data);
   graph.setData(data);
+}
+
+// ── 진입점 ───────────────────────────────────────────────
+async function init() {
+  currentUser = await checkAuth();
+  if (!currentUser) {
+    showLoginOverlay();
+  } else {
+    await startApp();
+  }
 }
 
 init();
