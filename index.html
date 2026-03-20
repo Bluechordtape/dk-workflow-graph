@@ -91,6 +91,11 @@
   <button id="btn-template-load">템플릿</button>
   <button id="btn-template-save">템플릿 저장</button>
   <button id="btn-manage-projects">프로젝트 관리</button>
+  <button id="btn-manage-users">사용자 관리</button>
+  <div class="sep"></div>
+  <button id="btn-view-graph" class="view-btn active">그래프</button>
+  <button id="btn-view-calendar" class="view-btn">캘린더</button>
+  <div class="sep"></div>
   <button id="btn-backup">백업</button>
   <button id="btn-import">가져오기</button>
   <button id="btn-export">내보내기</button>
@@ -101,6 +106,16 @@
 
 <!-- ── 시트 탭 ── -->
 <div id="sheet-tabs"></div>
+
+<!-- ── 캘린더 뷰 ── -->
+<div id="calendar-view" style="display:none">
+  <div id="calendar-header">
+    <button id="cal-prev">‹</button>
+    <span id="cal-month-label"></span>
+    <button id="cal-next">›</button>
+  </div>
+  <div id="calendar-grid"></div>
+</div>
 
 <!-- ── 메인 ── -->
 <div id="main">
@@ -126,7 +141,7 @@
 
       <div class="form-group">
         <label>담당자</label>
-        <input type="text" id="task-assignee" placeholder="담당자 이름">
+        <select id="task-assignee"></select>
       </div>
 
       <div class="form-group">
@@ -277,6 +292,22 @@
     <div class="modal-footer">
       <button class="btn-cancel" data-modal="modal-load-template">취소</button>
       <button id="btn-tmpl-load-confirm" class="primary">불러오기</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 사용자 관리 모달 ── -->
+<div id="modal-users" class="modal-overlay hidden">
+  <div class="modal-card modal-card-wide">
+    <div class="modal-header">
+      <h3>사용자 관리</h3>
+      <button class="modal-close" data-modal="modal-users">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="user-list" class="tmpl-list"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" data-modal="modal-users">닫기</button>
     </div>
   </div>
 </div>

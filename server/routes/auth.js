@@ -105,5 +105,40 @@ module.exports = function () {
     }
   });
 
+  // PATCH /api/auth/users/:id/role — 역할 변경 (admin 전용)
+  router.patch('/users/:id/role', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'admin')
+      return res.status(403).json({ error: '관리자만 역할을 변경할 수 있습니다' });
+    const { role } = req.body;
+    if (!['admin','leader','manager','member'].includes(role))
+      return res.status(400).json({ error: '올바른 역할을 선택하세요' });
+    try {
+      const result = await pool.query(
+        'UPDATE users SET role = $1 WHERE id = $2 RETURNING id, name, role',
+        [role, req.params.id]
+      );
+      if (result.rows.length === 0) return res.status(404).json({ error: '사용자를 찾을 수 없습니다' });
+      res.json(result.rows[0]);
+    } catch (err) {
+      res.status(500).json({ error: '서버 오류' });
+    }
+  });
+
+  // PATCH /api/auth/users/:id/password — 비밀번호 초기화 (admin 전용)
+  router.patch('/users/:id/password', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'admin')
+      return res.status(403).json({ error: '관리자만 비밀번호를 변경할 수 있습니다' });
+    const { password } = req.body;
+    if (!password || password.length < 4)
+      return res.status(400).json({ error: '비밀번호는 4자 이상이어야 합니다' });
+    try {
+      const hash = await bcrypt.hash(password, 10);
+      await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [hash, req.params.id]);
+      res.json({ ok: true });
+    } catch (err) {
+      res.status(500).json({ error: '서버 오류' });
+    }
+  });
+
   return router;
 };

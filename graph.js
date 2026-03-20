@@ -25,8 +25,10 @@ export class Graph {
     this._pan = null;
     this._conn = null;      // { fromId, x1, y1 } — connection being drawn
     this.userCtx = null;    // { id, name, role }
+    this._physicsRaf = null;
     this._setup();
     this._bind();
+    this._startPhysics();
   }
 
   // ── DOM ────────────────────────────────────────────────
@@ -296,6 +298,65 @@ export class Graph {
         if (isConn) c.setAttribute('stroke', '#424242');
       }
     });
+  }
+
+  // ── 물리 애니메이션 ────────────────────────────────────
+  _startPhysics() {
+    const loop = () => {
+      this._physicsRaf = requestAnimationFrame(loop);
+      this._physicsStep();
+    };
+    this._physicsRaf = requestAnimationFrame(loop);
+  }
+
+  _physicsStep() {
+    if (!this.data?.tasks?.length) return;
+
+    const damping = 0.82;
+    const maxVel  = 0.35;
+    const springK = 0.018;
+    let moved = false;
+
+    for (const t of this.data.tasks) {
+      if (t._vx === undefined) { t._vx = 0; t._vy = 0; }
+    }
+
+    // 드래그 중인 노드에서 연결된 노드로 스프링 힘 전달
+    if (this._drag) {
+      const dragged = this.data.tasks.find(t => t.id === this._drag.taskId);
+      if (dragged) {
+        for (const flow of (this.data.flows || [])) {
+          let other = null;
+          if (flow.from === dragged.id) other = this.data.tasks.find(t => t.id === flow.to);
+          else if (flow.to === dragged.id) other = this.data.tasks.find(t => t.id === flow.from);
+          if (!other || this._drag.taskId === other.id) continue;
+          const dx = dragged.x - other.x, dy = dragged.y - other.y;
+          const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+          other._vx += (dx / dist) * springK * 3;
+          other._vy += (dy / dist) * springK * 3;
+        }
+      }
+    }
+
+    for (const t of this.data.tasks) {
+      if (this._drag?.taskId === t.id) { t._vx = 0; t._vy = 0; continue; }
+      t._vx *= damping;
+      t._vy *= damping;
+      const spd = Math.sqrt(t._vx * t._vx + t._vy * t._vy);
+      if (spd > maxVel) { t._vx = (t._vx / spd) * maxVel; t._vy = (t._vy / spd) * maxVel; }
+      if (Math.abs(t._vx) > 0.008 || Math.abs(t._vy) > 0.008) {
+        t.x += t._vx; t.y += t._vy;
+        moved = true;
+      }
+    }
+
+    if (moved) {
+      for (const t of this.data.tasks) {
+        const el = this.nodesEl.querySelector(`[data-id="${t.id}"]`);
+        if (el) { el.style.left = t.x + 'px'; el.style.top = t.y + 'px'; }
+      }
+      this._renderEdges();
+    }
   }
 
   _clearHover() {

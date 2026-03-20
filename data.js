@@ -240,6 +240,35 @@ export function deleteFlow(data, flowId) {
   data.flows = data.flows.filter(f => f.id !== flowId);
 }
 
+// ── 사용자 API ────────────────────────────────────────────
+export async function fetchUserNames() {
+  const res = await fetch('/api/auth/names');
+  if (!res.ok) throw new Error('사용자 조회 실패');
+  return res.json();
+}
+
+export async function fetchUsers() {
+  const res = await fetch('/api/auth/users', { headers: authHeaders() });
+  if (!res.ok) throw new Error('사용자 조회 실패');
+  return res.json();
+}
+
+export async function updateUserRole(userId, role) {
+  const res = await fetch(`/api/auth/users/${userId}/role`, {
+    method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ role })
+  });
+  if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || '변경 실패'); }
+  return res.json();
+}
+
+export async function resetUserPassword(userId, password) {
+  const res = await fetch(`/api/auth/users/${userId}/password`, {
+    method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ password })
+  });
+  if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || '변경 실패'); }
+  return res.json();
+}
+
 // ── 시트 ─────────────────────────────────────────────────
 export function addSheet(data, name) {
   const sheet = { id: generateId('sheet'), name, projects: [], tasks: [], flows: [], groups: [] };

@@ -9,7 +9,8 @@ import {
   addGroup, deleteGroup, GROUP_COLORS,
   fetchTemplates, saveTemplate, deleteTemplate,
   fetchBackups, createBackup, restoreBackup, deleteBackup,
-  addSheet, deleteSheet, copyTaskToSheet, normalize
+  addSheet, deleteSheet, copyTaskToSheet, normalize,
+  fetchUserNames, fetchUsers, updateUserRole, resetUserPassword
 } from './data.js';
 import { Graph } from './graph.js';
 
@@ -17,6 +18,9 @@ let data = null;
 let graph = null;
 let activeTaskId = null;
 let currentUser = null; // { id, email, name, role }
+let userNames = [];     // 전체 팀원 이름 목록
+let calendarDate = new Date(); // 현재 캘린더 월
+let viewMode = 'graph'; // 'graph' | 'calendar'
 
 const TOKEN_KEY = 'dk_jwt';
 
@@ -207,6 +211,9 @@ async function startApp() {
     });
   }
 
+  // 팀원 이름 목록 로드
+  try { userNames = await fetchUserNames(); } catch { userNames = []; }
+
   data = await loadData();
   if (!data) { logout(); return; }
 
@@ -218,6 +225,7 @@ async function startApp() {
   applyRoleUI();
   updateUserBtn();
   renderSheetTabs();
+  populateAssigneeSelect();
 }
 
 // ── 역할 권한 헬퍼 ────────────────────────────────────────
@@ -233,6 +241,7 @@ function applyRoleUI() {
   document.getElementById('btn-add-task').style.display        = canWrite() ? '' : 'none';
   document.getElementById('btn-add-project').style.display     = canWrite() ? '' : 'none';
   document.getElementById('btn-manage-projects').style.display = canWrite() ? '' : 'none';
+  document.getElementById('btn-manage-users').style.display    = isAdmin()  ? '' : 'none';
   document.getElementById('btn-import').style.display          = isAdmin()  ? '' : 'none';
   document.getElementById('btn-export').style.display          = isAdmin()  ? '' : 'none';
   document.getElementById('btn-backup').style.display          = isAdmin()  ? '' : 'none';
@@ -242,10 +251,10 @@ function applyRoleUI() {
   document.getElementById('btn-save-task').style.display   = '';
   document.getElementById('btn-delete-task').style.display = isAdmin() ? '' : 'none';
 
-  ['task-name', 'task-assignee'].forEach(id => {
-    document.getElementById(id).readOnly = isMember;
-    document.getElementById(id).style.background = isMember ? '#F5F5F5' : '';
-  });
+  document.getElementById('task-name').readOnly = isMember;
+  document.getElementById('task-name').style.background = isMember ? '#F5F5F5' : '';
+  document.getElementById('task-assignee').disabled  = isMember;
+  document.getElementById('task-assignee').style.background = isMember ? '#F5F5F5' : '';
   document.getElementById('task-project').disabled  = isMember;
   document.getElementById('task-due-date').readOnly = isMember;
   document.getElementById('task-group').disabled    = isMember;
@@ -262,6 +271,135 @@ function updateUserBtn() {
     ${currentUser?.name || '?'}
     <span class="role-badge ${currentUser?.role}">${roleLabel[currentUser?.role] || ''}</span>
   `;
+}
+
+// ── 담당자 셀렉트 ─────────────────────────────────────────
+function populateAssigneeSelect() {
+  const sel = document.getElementById('task-assignee');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">미배정</option>';
+  userNames.forEach(name => {
+    const o = document.createElement('option');
+    o.value = name; o.textContent = name;
+    sel.appendChild(o);
+  });
+  if (cur) sel.value = cur;
+}
+
+// ── 뷰 전환 ──────────────────────────────────────────────
+function setViewMode(mode) {
+  viewMode = mode;
+  const isGraph = mode === 'graph';
+  document.getElementById('main').style.display = isGraph ? '' : 'none';
+  document.getElementById('calendar-view').style.display = isGraph ? 'none' : '';
+  document.getElementById('btn-view-graph').classList.toggle('active', isGraph);
+  document.getElementById('btn-view-calendar').classList.toggle('active', !isGraph);
+  if (!isGraph) renderCalendar();
+}
+
+// ── 캘린더 ───────────────────────────────────────────────
+function renderCalendar() {
+  const year = calendarDate.getFullYear();
+  const month = calendarDate.getMonth();
+
+  document.getElementById('cal-month-label').textContent =
+    `${year}년 ${month + 1}월`;
+
+  const grid = document.getElementById('calendar-grid');
+  grid.innerHTML = '';
+
+  // 헤더
+  const days = ['일','월','화','수','목','금','토'];
+  const header = document.createElement('div');
+  header.className = 'cal-row cal-header';
+  days.forEach(d => {
+    const cell = document.createElement('div');
+    cell.className = 'cal-cell cal-day-label';
+    cell.textContent = d;
+    header.appendChild(cell);
+  });
+  grid.appendChild(header);
+
+  // 해당 월의 태스크를 날짜별로 분류
+  const sheet = cs();
+  const tasksByDate = {};
+  for (const task of sheet.tasks) {
+    if (!task.dueDate) continue;
+    const key = task.dueDate.slice(0, 10); // YYYY-MM-DD
+    if (!tasksByDate[key]) tasksByDate[key] = [];
+    tasksByDate[key].push(task);
+  }
+
+  const today = new Date();
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const prevDays = new Date(year, month, 0).getDate();
+
+  let day = 1;
+  let nextDay = 1;
+  let started = false;
+
+  for (let row = 0; row < 6; row++) {
+    const rowEl = document.createElement('div');
+    rowEl.className = 'cal-row';
+
+    for (let col = 0; col < 7; col++) {
+      const cell = document.createElement('div');
+      cell.className = 'cal-cell';
+
+      let cellDay, cellDate, isCurrentMonth;
+
+      if (!started && col < firstDay) {
+        cellDay = prevDays - firstDay + col + 1;
+        cellDate = new Date(year, month - 1, cellDay);
+        isCurrentMonth = false;
+      } else if (day > daysInMonth) {
+        cellDay = nextDay++;
+        cellDate = new Date(year, month + 1, cellDay);
+        isCurrentMonth = false;
+      } else {
+        started = true;
+        cellDay = day++;
+        cellDate = new Date(year, month, cellDay);
+        isCurrentMonth = true;
+      }
+
+      if (!isCurrentMonth) cell.classList.add('cal-other-month');
+      if (col === 0) cell.classList.add('cal-sunday');
+      if (col === 6) cell.classList.add('cal-saturday');
+
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+      const cellStr  = `${cellDate.getFullYear()}-${String(cellDate.getMonth()+1).padStart(2,'0')}-${String(cellDate.getDate()).padStart(2,'0')}`;
+      if (cellStr === todayStr) cell.classList.add('cal-today');
+
+      const dayNum = document.createElement('span');
+      dayNum.className = 'cal-day-num';
+      dayNum.textContent = cellDay;
+      cell.appendChild(dayNum);
+
+      const tasks = tasksByDate[cellStr] || [];
+      tasks.forEach(task => {
+        const project = sheet.projects.find(p => p.id === task.projectId);
+        const chip = document.createElement('div');
+        chip.className = 'cal-task-chip';
+        chip.textContent = task.name;
+        chip.style.background = (project?.color || '#9E9E9E') + '22';
+        chip.style.color = project?.color || '#424242';
+        chip.style.borderLeft = `3px solid ${project?.color || '#9E9E9E'}`;
+        chip.title = `${task.name} (${task.assignee || '미배정'})`;
+        chip.addEventListener('click', () => {
+          setViewMode('graph');
+          setTimeout(() => openPanel(task), 100);
+        });
+        cell.appendChild(chip);
+      });
+
+      rowEl.appendChild(cell);
+    }
+
+    grid.appendChild(rowEl);
+    if (day > daysInMonth && row >= 4) break;
+  }
 }
 
 // ── 필터 ─────────────────────────────────────────────────
@@ -473,6 +611,17 @@ function setupToolbar() {
   });
   document.getElementById('btn-logout').addEventListener('click', () => {
     if (confirm(`${currentUser?.name}님, 로그아웃 하시겠습니까?`)) logout();
+  });
+  document.getElementById('btn-view-graph').addEventListener('click', () => setViewMode('graph'));
+  document.getElementById('btn-view-calendar').addEventListener('click', () => setViewMode('calendar'));
+  document.getElementById('btn-manage-users').addEventListener('click', openUsersModal);
+  document.getElementById('cal-prev').addEventListener('click', () => {
+    calendarDate = new Date(calendarDate.getFullYear(), calendarDate.getMonth() - 1, 1);
+    renderCalendar();
+  });
+  document.getElementById('cal-next').addEventListener('click', () => {
+    calendarDate = new Date(calendarDate.getFullYear(), calendarDate.getMonth() + 1, 1);
+    renderCalendar();
   });
 }
 
@@ -686,7 +835,7 @@ function addSubtask() {
   task.subtasks.push({ id: `s_${Date.now()}`, name: '', status: 'pending' });
   renderSubtasks(task, true);
   saveData(data);
-  graph.setData(cs());
+  setTimeout(() => graph.setData(cs()), 50);
 }
 
 // ── 업무 복제 (다른 시트로) ───────────────────────────────
@@ -782,7 +931,84 @@ document.getElementById('btn-grp-save').addEventListener('click', () => {
   buildFilters();
   closeModal('modal-group-create');
   renderGroupList();
+  // 패널이 열려 있으면 그룹 선택 목록 갱신
+  if (activeTaskId) {
+    const task = cs().tasks.find(t => t.id === activeTaskId);
+    if (task) {
+      const gs = document.getElementById('task-group');
+      const prev = gs.value;
+      gs.innerHTML = '<option value="">그룹 없음</option>';
+      (cs().groups || []).forEach(g => {
+        const o = document.createElement('option');
+        o.value = g.id; o.textContent = g.name;
+        gs.appendChild(o);
+      });
+      gs.value = prev;
+    }
+  }
 });
+
+// ── 사용자 관리 모달 ──────────────────────────────────────
+async function openUsersModal() {
+  openModal('modal-users');
+  await renderUserList();
+}
+
+async function renderUserList() {
+  const list = document.getElementById('user-list');
+  list.innerHTML = '<div style="color:#9E9E9E;font-size:13px;padding:8px 0">불러오는 중...</div>';
+  try {
+    const users = await fetchUsers();
+    list.innerHTML = '';
+    const roleLabel = { admin: '관리자', leader: '팀장', manager: '과장', member: '팀원' };
+    const roles = ['admin', 'leader', 'manager', 'member'];
+    users.forEach(u => {
+      const item = document.createElement('div');
+      item.className = 'tmpl-item';
+      item.style.cursor = 'default';
+      item.innerHTML = `
+        <div class="tmpl-item-info" style="flex:1">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="tmpl-item-name">${u.name}</span>
+            <span style="font-size:11px;color:#9E9E9E">${u.email || ''}</span>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+          <select class="user-role-sel" style="height:28px;border:1px solid #E0E0E0;border-radius:5px;font-size:12px;font-family:inherit;padding:0 6px">
+            ${roles.map(r => `<option value="${r}" ${u.role === r ? 'selected' : ''}>${roleLabel[r]}</option>`).join('')}
+          </select>
+          <button class="btn-role-save" style="height:28px;padding:0 10px;border-radius:5px;border:1px solid #E0E0E0;background:#FAFAFA;font-size:11px;font-weight:600;font-family:inherit;cursor:pointer">저장</button>
+          <button class="btn-pw-reset" style="height:28px;padding:0 10px;border-radius:5px;border:1px solid #E0E0E0;background:#FAFAFA;font-size:11px;font-weight:600;font-family:inherit;cursor:pointer">비밀번호 초기화</button>
+        </div>
+      `;
+      item.querySelector('.btn-role-save').addEventListener('click', async () => {
+        const role = item.querySelector('.user-role-sel').value;
+        try {
+          await updateUserRole(u.id, role);
+          // 자기 자신의 역할 변경 시 반영
+          if (u.id === currentUser?.id) {
+            currentUser.role = role;
+            applyRoleUI();
+            updateUserBtn();
+          }
+          await renderUserList();
+        } catch (err) { alert(err.message); }
+      });
+      item.querySelector('.btn-pw-reset').addEventListener('click', async () => {
+        const pw = prompt(`${u.name}의 새 비밀번호 (4자 이상):`);
+        if (!pw) return;
+        if (pw.length < 4) { alert('비밀번호는 4자 이상이어야 합니다.'); return; }
+        try {
+          await resetUserPassword(u.id, pw);
+          alert('비밀번호가 변경됐습니다.');
+        } catch (err) { alert(err.message); }
+      });
+      list.appendChild(item);
+    });
+  } catch (err) {
+    list.innerHTML = `<div style="color:#C8102E;font-size:13px">${err.message}</div>`;
+  }
+}
 
 // ── 모달 ─────────────────────────────────────────────────
 let _selectedTemplateId = null;
