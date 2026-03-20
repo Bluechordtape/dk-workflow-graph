@@ -358,6 +358,12 @@ body {
   font-weight: 400;
 }
 
+.node-dday {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: -0.1px;
+}
+
 .node-action {
   margin-top: 5px;
   width: 100%;

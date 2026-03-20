@@ -287,6 +287,7 @@ function openPanel(task) {
   document.getElementById('task-project').value  = task.projectId;
   document.getElementById('task-assignee').value = task.assignee;
   document.getElementById('task-status').value   = task.status;
+  document.getElementById('task-due-date').value = task.dueDate || '';
   document.getElementById('task-note').value     = task.note || '';
   renderSubtasks(task);
 }
@@ -303,6 +304,7 @@ function saveTask() {
     projectId: document.getElementById('task-project').value,
     assignee:  document.getElementById('task-assignee').value,
     status:    document.getElementById('task-status').value,
+    dueDate:   document.getElementById('task-due-date').value || null,
     note:      document.getElementById('task-note').value
   });
   saveData(data);

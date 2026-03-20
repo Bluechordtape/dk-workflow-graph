@@ -113,6 +113,18 @@ export class Graph {
     }
   }
 
+  _dday(task) {
+    if (!task.dueDate || task.status === 'done') return '';
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const due   = new Date(task.dueDate); due.setHours(0, 0, 0, 0);
+    const diff  = Math.round((due - today) / 86400000);
+    let label, color;
+    if (diff > 0)       { label = `D-${diff}`;    color = diff <= 2 ? '#F97316' : '#9E9E9E'; }
+    else if (diff === 0){ label = 'D-day';          color = '#C8102E'; }
+    else                { label = `D+${-diff} 초과`; color = '#C8102E'; }
+    return `<div class="node-dday" style="color:${color}">${label}</div>`;
+  }
+
   _makeNode(task, color, dim) {
     const st = STATUS[task.status] || STATUS.pending;
     const el = document.createElement('div');
@@ -125,6 +137,7 @@ export class Graph {
     const sub = task.subtasks || [];
     const subDone = sub.filter(s => s.status === 'done').length;
     const subLine = sub.length ? `<div class="node-sub">${subDone}/${sub.length} 세부업무</div>` : '';
+    const ddayLine = this._dday(task);
     const role   = this.userCtx?.role;
     const myName = this.userCtx?.name;
     const isMine = task.assignee === myName;
@@ -163,6 +176,7 @@ export class Graph {
           <span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;white-space:nowrap;background:${st.bg};color:${st.text}">${st.label}</span>
         </div>
         ${subLine}
+        ${ddayLine}
         ${actionBtn}
       </div>
       <div class="nh nh-r" data-id="${task.id}" data-side="right"></div>`;
