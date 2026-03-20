@@ -289,30 +289,52 @@ function deleteTaskBtn() {
 }
 
 // ── 세부업무 ─────────────────────────────────────────────
-function renderSubtasks(task) {
+function renderSubtasks(task, focusLast = false) {
   const list = document.getElementById('subtask-list');
   list.innerHTML = '';
   (task.subtasks || []).forEach((s, i) => {
     const row = document.createElement('div');
     row.className = 'subtask-row';
-    row.innerHTML = `
-      <input type="checkbox" ${s.status === 'done' ? 'checked' : ''}>
-      <input type="text" class="sub-name" value="${s.name}">
-      <button class="sub-del">×</button>`;
-    row.querySelector('input[type=checkbox]').addEventListener('change', (e) => {
+
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = s.status === 'done';
+    cb.addEventListener('change', (e) => {
       s.status = e.target.checked ? 'done' : 'pending';
-      saveData(data); graph.setData(data);
+      saveData(data);
+      graph.setData(data);
     });
-    row.querySelector('.sub-name').addEventListener('change', (e) => {
-      s.name = e.target.value; saveData(data);
+
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.className = 'sub-name';
+    nameInput.value = s.name;
+    nameInput.placeholder = '세부업무 이름';
+    nameInput.addEventListener('input', (e) => {
+      s.name = e.target.value;
     });
-    row.querySelector('.sub-del').addEventListener('click', () => {
+    nameInput.addEventListener('blur', () => saveData(data));
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'sub-del';
+    delBtn.textContent = '×';
+    delBtn.addEventListener('click', () => {
       task.subtasks.splice(i, 1);
-      saveData(data); graph.setData(data);
+      saveData(data);
+      graph.setData(data);
       renderSubtasks(task);
     });
+
+    row.appendChild(cb);
+    row.appendChild(nameInput);
+    row.appendChild(delBtn);
     list.appendChild(row);
   });
+
+  if (focusLast && list.lastChild) {
+    const input = list.lastChild.querySelector('.sub-name');
+    if (input) { input.focus(); input.select(); }
+  }
 }
 
 function addSubtask() {
@@ -320,9 +342,10 @@ function addSubtask() {
   const task = data.tasks.find(t => t.id === activeTaskId);
   if (!task) return;
   if (!task.subtasks) task.subtasks = [];
-  task.subtasks.push({ id: `s_${Date.now()}`, name: '새 세부업무', status: 'pending' });
-  saveData(data); graph.setData(data);
-  renderSubtasks(task);
+  task.subtasks.push({ id: `s_${Date.now()}`, name: '', status: 'pending' });
+  renderSubtasks(task, true);
+  saveData(data);
+  graph.setData(data);
 }
 
 init();
