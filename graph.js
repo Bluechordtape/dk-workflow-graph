@@ -107,6 +107,7 @@ export class Graph {
 
   _makeNode(task, color, dim) {
     const st = STATUS[task.status] || STATUS.pending;
+    console.log('[node]', task.name, 'status:', task.status, 'st:', st);
     const el = document.createElement('div');
     el.className = 'task-node' + (dim ? ' dim' : '');
     el.dataset.id = task.id;
@@ -138,6 +139,7 @@ export class Graph {
       `cursor: pointer`,
       `user-select: none`,
     ].join(';');
+    console.log('[innerStyle]', innerStyle);
 
     el.innerHTML = `
       <div class="nh nh-l" data-id="${task.id}" data-side="left"></div>
