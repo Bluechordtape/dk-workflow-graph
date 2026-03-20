@@ -11,6 +11,20 @@
 </head>
 <body>
 
+<!-- ── 로그인 오버레이 ── -->
+<div id="login-overlay">
+  <div id="login-card">
+    <div class="login-brand">DK Workflow</div>
+    <p class="login-sub">누구신가요?</p>
+    <div id="login-user-list"></div>
+    <div id="login-add-row">
+      <input type="text" id="login-new-name" placeholder="이름 입력">
+      <button id="login-confirm-add">추가</button>
+    </div>
+    <button id="login-add-btn">+ 사용자 추가</button>
+  </div>
+</div>
+
 <!-- ── 툴바 ── -->
 <div id="toolbar">
   <span class="brand">DK Workflow</span>
@@ -35,6 +49,7 @@
 
   <div class="spacer"></div>
 
+  <button id="btn-switch-user" class="user-btn"></button>
   <button id="btn-add-task">+ 업무 추가</button>
   <button id="btn-add-project" class="primary">
     + 프로젝트
