@@ -4,10 +4,10 @@ export const NODE_W = 190;
 export const NODE_H = 88;
 
 const STATUS = {
-  todo:    { label: '대기',     color: '#94a3b8' },
-  wip:     { label: '진행중',   color: '#f59e0b' },
-  pending: { label: '완료요청', color: '#8b5cf6' },
-  done:    { label: '완료',     color: '#10b981' }
+  todo:    { label: '대기',     bar: '#D1D5DB', bg: '#F3F4F6', text: '#6B7280' },
+  wip:     { label: '진행중',   bar: '#6366F1', bg: '#E0E7FF', text: '#3730A3' },
+  pending: { label: '완료요청', bar: '#F59E0B', bg: '#FEF3C7', text: '#92400E' },
+  done:    { label: '완료',     bar: '#10B981', bg: '#D1FAE5', text: '#065F46' }
 };
 
 export class Graph {
@@ -41,21 +41,15 @@ export class Graph {
     const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
     defs.innerHTML = `
       <marker id="arr" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto" markerUnits="strokeWidth">
-        <path d="M0,0 L7,2.5 L0,5 Z" fill="#94a3b8"/>
-      </marker>
-      <marker id="arr-done" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto" markerUnits="strokeWidth">
-        <path d="M0,0 L7,2.5 L0,5 Z" fill="#10b981"/>
-      </marker>
-      <marker id="arr-pending" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto" markerUnits="strokeWidth">
-        <path d="M0,0 L7,2.5 L0,5 Z" fill="#8b5cf6"/>
+        <path d="M0,0 L7,2.5 L0,5 Z" fill="#C7D2FE"/>
       </marker>`;
     this.svg.appendChild(defs);
 
     // 임시 연결선
     this.tempPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     this.tempPath.setAttribute('fill', 'none');
-    this.tempPath.setAttribute('stroke', '#8b5cf6');
-    this.tempPath.setAttribute('stroke-width', '2');
+    this.tempPath.setAttribute('stroke', '#C7D2FE');
+    this.tempPath.setAttribute('stroke-width', '1.5');
     this.tempPath.setAttribute('stroke-dasharray', '6,3');
     this.tempPath.style.display = 'none';
     this.svg.appendChild(this.tempPath);
@@ -114,10 +108,11 @@ export class Graph {
   _makeNode(task, color, dim) {
     const st = STATUS[task.status] || STATUS.todo;
     const el = document.createElement('div');
-    el.className = 'task-node' + (dim ? ' dim' : '') + (task.status === 'pending' ? ' is-pending' : '') + (task.status === 'done' ? ' is-done' : '');
+    el.className = 'task-node' + (dim ? ' dim' : '');
     el.dataset.id = task.id;
     el.style.cssText = `left:${task.x}px;top:${task.y}px;`;
     el.style.setProperty('--pc', color);
+    el.style.setProperty('--sc', st.bar);
 
     const sub = task.subtasks || [];
     const subDone = sub.filter(s => s.status === 'done').length;
@@ -137,7 +132,7 @@ export class Graph {
         </div>
         <div class="node-mid">
           <span class="node-assignee">${task.assignee || '미배정'}</span>
-          <span class="node-status" style="color:${st.color};background:${st.color}1a">${st.label}</span>
+          <span class="node-status" style="background:${st.bg};color:${st.text}">${st.label}</span>
         </div>
         ${subLine}
         ${actionBtn}
@@ -199,19 +194,12 @@ export class Graph {
       const x2 = to.x,           y2 = to.y   + NODE_H / 2;
       const cx = (x1 + x2) / 2;
 
-      let stroke = '#cbd5e1', markerId = 'arr';
-      if (from.status === 'done' && to.status === 'done') {
-        stroke = '#10b981'; markerId = 'arr-done';
-      } else if (from.status === 'pending' || to.status === 'pending') {
-        stroke = '#8b5cf6'; markerId = 'arr-pending';
-      }
-
       const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
       path.setAttribute('d', `M${x1},${y1} C${cx},${y1} ${cx},${y2} ${x2},${y2}`);
       path.setAttribute('fill', 'none');
-      path.setAttribute('stroke', stroke);
-      path.setAttribute('stroke-width', '2');
-      path.setAttribute('marker-end', `url(#${markerId})`);
+      path.setAttribute('stroke', '#C7D2FE');
+      path.setAttribute('stroke-width', '1.5');
+      path.setAttribute('marker-end', 'url(#arr)');
       path.style.pointerEvents = 'stroke';
       path.style.cursor = 'pointer';
       path.addEventListener('click', () => {
