@@ -80,7 +80,7 @@ export function addTask(data, { name, projectId, x = 100, y = 100 }) {
     projectId: projectId || data.projects[0]?.id || '',
     name: name || '새 업무',
     assignee: '',
-    status: 'todo',
+    status: 'pending',
     note: '',
     subtasks: [],
     x, y

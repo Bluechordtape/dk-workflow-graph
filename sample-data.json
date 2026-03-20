@@ -11,31 +11,31 @@
     },
     {
       "id": "t2", "projectId": "p1", "name": "슬라이드 작성",
-      "assignee": "창규", "status": "wip", "note": "",
+      "assignee": "창규", "status": "doing", "note": "",
       "subtasks": [
         { "id": "s1", "name": "표지 디자인", "status": "done" },
-        { "id": "s2", "name": "내용 정리", "status": "wip" }
+        { "id": "s2", "name": "내용 정리", "status": "pending" }
       ],
       "x": 340, "y": 80
     },
     {
       "id": "t3", "projectId": "p1", "name": "발표 리허설",
-      "assignee": "서영", "status": "todo", "note": "", "subtasks": [],
+      "assignee": "서영", "status": "pending", "note": "", "subtasks": [],
       "x": 600, "y": 80
     },
     {
       "id": "t4", "projectId": "p2", "name": "디자인 시안",
-      "assignee": "지민", "status": "pending", "note": "검토 부탁드립니다", "subtasks": [],
+      "assignee": "지민", "status": "review", "note": "검토 부탁드립니다", "subtasks": [],
       "x": 80, "y": 280
     },
     {
       "id": "t5", "projectId": "p2", "name": "퍼블리싱",
-      "assignee": "재호", "status": "todo", "note": "", "subtasks": [],
+      "assignee": "재호", "status": "pending", "note": "", "subtasks": [],
       "x": 340, "y": 280
     },
     {
       "id": "t6", "projectId": "p2", "name": "QA 테스트",
-      "assignee": "창규", "status": "todo", "note": "", "subtasks": [],
+      "assignee": "창규", "status": "pending", "note": "", "subtasks": [],
       "x": 600, "y": 280
     }
   ],

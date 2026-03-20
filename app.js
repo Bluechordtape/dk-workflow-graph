@@ -76,7 +76,7 @@ function buildFilters() {
   ps.value = ppv;
 
   // 컨펌 대기 뱃지
-  const pending = data.tasks.filter(t => t.status === 'pending').length;
+  const pending = data.tasks.filter(t => t.status === 'review').length;
   document.getElementById('pending-badge').textContent = pending > 0 ? pending : '';
   document.getElementById('pending-badge').style.display = pending > 0 ? '' : 'none';
 }
@@ -178,7 +178,7 @@ function renderSubtasks(task) {
       <input type="text" class="sub-name" value="${s.name}">
       <button class="sub-del">×</button>`;
     row.querySelector('input[type=checkbox]').addEventListener('change', (e) => {
-      s.status = e.target.checked ? 'done' : 'todo';
+      s.status = e.target.checked ? 'done' : 'pending';
       saveData(data); graph.setData(data);
     });
     row.querySelector('.sub-name').addEventListener('change', (e) => {
@@ -198,7 +198,7 @@ function addSubtask() {
   const task = data.tasks.find(t => t.id === activeTaskId);
   if (!task) return;
   if (!task.subtasks) task.subtasks = [];
-  task.subtasks.push({ id: `s_${Date.now()}`, name: '새 세부업무', status: 'todo' });
+  task.subtasks.push({ id: `s_${Date.now()}`, name: '새 세부업무', status: 'pending' });
   saveData(data); graph.setData(data);
   renderSubtasks(task);
 }
