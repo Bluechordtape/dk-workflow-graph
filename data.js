@@ -30,6 +30,7 @@ function normalize(d) {
   if (!d.projects) d.projects = [];
   if (!d.tasks)    d.tasks    = [];
   if (!d.flows)    d.flows    = [];
+  if (!d.groups)   d.groups   = [];
   return d;
 }
 
@@ -37,6 +38,17 @@ function normalize(d) {
 export function saveData(data) {
   fetch('/api/data', { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data) })
     .catch(err => console.error('저장 실패:', err));
+}
+
+// ── 팀원 제한 업무 저장 ───────────────────────────────────
+export async function updateTaskMember(taskId, updates) {
+  const res = await fetch('/api/data/task', {
+    method: 'PATCH',
+    headers: authHeaders(),
+    body: JSON.stringify({ taskId, updates })
+  });
+  if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || '저장 실패'); }
+  return res.json();
 }
 
 // ── 상태만 변경 (member 전용) ─────────────────────────────
@@ -174,6 +186,21 @@ export function updateTask(data, taskId, updates) {
 export function deleteTask(data, taskId) {
   data.tasks = data.tasks.filter(t => t.id !== taskId);
   data.flows = data.flows.filter(f => f.from !== taskId && f.to !== taskId);
+}
+
+// ── 그룹 ─────────────────────────────────────────────────
+export const GROUP_COLORS = ['#6366F1','#0EA5E9','#10B981','#F59E0B','#EF4444','#EC4899','#8B5CF6','#14B8A6'];
+
+export function addGroup(data, name, color) {
+  const g = { id: generateId('g'), name, color };
+  if (!data.groups) data.groups = [];
+  data.groups.push(g);
+  return g;
+}
+
+export function deleteGroup(data, groupId) {
+  data.groups = (data.groups || []).filter(g => g.id !== groupId);
+  data.tasks.forEach(t => { if (t.groupId === groupId) t.groupId = null; });
 }
 
 // ── 연결 ─────────────────────────────────────────────────

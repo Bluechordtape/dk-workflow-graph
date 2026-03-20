@@ -26,11 +26,16 @@ async function initDB() {
       email         TEXT UNIQUE NOT NULL,
       password_hash TEXT NOT NULL,
       name          TEXT NOT NULL,
-      role          TEXT NOT NULL DEFAULT 'member'
-                    CHECK (role IN ('admin','manager','member')),
+      role          TEXT NOT NULL DEFAULT 'member',
       created_at    TIMESTAMP DEFAULT NOW()
     )
   `);
+  // 역할 체크 제약 갱신 (leader 추가)
+  await pool.query(`
+    ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
+    ALTER TABLE users ADD CONSTRAINT users_role_check
+      CHECK (role IN ('admin','leader','manager','member'));
+  `).catch(() => {});
 
   // admin 계정이 없으면 자동 생성
   const { rows } = await pool.query(

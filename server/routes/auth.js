@@ -72,7 +72,7 @@ module.exports = function () {
     const { email, password, name, role } = req.body;
     if (!email || !password || !name || !role)
       return res.status(400).json({ error: '모든 필드를 입력하세요' });
-    if (!['admin', 'manager', 'member'].includes(role))
+    if (!['admin', 'leader', 'manager', 'member'].includes(role))
       return res.status(400).json({ error: '올바른 역할을 선택하세요' });
 
     try {

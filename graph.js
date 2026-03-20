@@ -141,8 +141,13 @@ export class Graph {
     const role   = this.userCtx?.role;
     const myName = this.userCtx?.name;
     const isMine = task.assignee === myName;
-    const canReq = task.status === 'doing' && (role === 'admin' || role === 'manager' || isMine);
-    const canCfm = task.status === 'review' && (role === 'admin' || role === 'manager');
+    const isMgmt = ['admin', 'leader', 'manager'].includes(role);
+    const canReq = task.status === 'doing'  && (isMgmt || isMine);
+    const canCfm = task.status === 'review' && isMgmt;
+    const group  = this.data.groups?.find(g => g.id === task.groupId);
+    const groupBadge = group
+      ? `<span style="font-size:10px;font-weight:600;padding:1px 7px;border-radius:3px;background:${group.color}1A;color:${group.color};border:1px solid ${group.color}44;white-space:nowrap">${group.name}</span>`
+      : '';
     const actionBtn = canReq
       ? `<button class="node-action btn-req" data-id="${task.id}">완료 요청</button>`
       : canCfm
@@ -169,7 +174,8 @@ export class Graph {
       <div class="node-inner" style="${innerStyle}">
         <div class="node-top">
           <span class="node-dot" style="width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:3px;background:${st.bar}"></span>
-          <span class="node-name" style="font-size:13px;font-weight:600;color:#212121;line-height:1.35;letter-spacing:-0.2px">${task.name}</span>
+          <span class="node-name" style="font-size:13px;font-weight:600;color:#212121;line-height:1.35;letter-spacing:-0.2px;flex:1">${task.name}</span>
+          ${groupBadge}
         </div>
         <div class="node-mid" style="display:flex;align-items:center;justify-content:space-between;gap:6px">
           <span class="node-assignee" style="font-size:11px;color:#9E9E9E">${task.assignee || '미배정'}</span>
@@ -190,7 +196,7 @@ export class Graph {
     // 완료 요청
     el.querySelector('.btn-req')?.addEventListener('click', (e) => {
       e.stopPropagation();
-      this.cb.onStatusChange?.(task.id, 'pending');
+      this.cb.onStatusChange?.(task.id, 'review');
     });
 
     // 컨펌

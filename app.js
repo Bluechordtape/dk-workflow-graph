@@ -5,6 +5,8 @@ import {
   addProject, deleteProject,
   addTask, updateTask, deleteTask,
   addFlow, deleteFlow,
+  updateTaskMember,
+  addGroup, deleteGroup, GROUP_COLORS,
   fetchTemplates, saveTemplate, deleteTemplate,
   fetchBackups, createBackup, restoreBackup, deleteBackup
 } from './data.js';
@@ -135,7 +137,7 @@ async function startApp() {
         deleteFlow(data, flowId); saveData(data); graph.setData(data);
       },
       onStatusChange: async (taskId, st) => {
-        if (currentUser.role === 'member') {
+        if (!canWrite()) {
           try {
             const result = await saveTaskStatus(taskId, st);
             data = result.data;
@@ -167,43 +169,47 @@ async function startApp() {
 
 // ── 역할 권한 헬퍼 ────────────────────────────────────────
 function canWrite() {
-  return currentUser?.role === 'admin' || currentUser?.role === 'manager';
+  return ['admin', 'leader', 'manager'].includes(currentUser?.role);
 }
 function isAdmin() { return currentUser?.role === 'admin'; }
 
 // ── 역할별 UI 제어 ────────────────────────────────────────
 function applyRoleUI() {
   const role = currentUser?.role;
+  const isMember = role === 'member';
 
-  // member/manager: 업무·프로젝트 추가 숨김
-  const hideCreate = role === 'member' || role === 'manager';
-  document.getElementById('btn-add-task').style.display    = hideCreate ? 'none' : '';
-  document.getElementById('btn-add-project').style.display = hideCreate ? 'none' : '';
-  document.getElementById('btn-import').style.display         = isAdmin()  ? '' : 'none';
-  document.getElementById('btn-export').style.display         = isAdmin()  ? '' : 'none';
-  document.getElementById('btn-backup').style.display         = isAdmin()  ? '' : 'none';
-  document.getElementById('btn-template-save').style.display  = isAdmin()  ? '' : 'none';
-  document.getElementById('btn-template-load').style.display  = '';
+  // 툴바 버튼
+  document.getElementById('btn-add-task').style.display        = canWrite() ? '' : 'none';
+  document.getElementById('btn-add-project').style.display     = canWrite() ? '' : 'none';
+  document.getElementById('btn-import').style.display          = isAdmin()  ? '' : 'none';
+  document.getElementById('btn-export').style.display          = isAdmin()  ? '' : 'none';
+  document.getElementById('btn-backup').style.display          = isAdmin()  ? '' : 'none';
+  document.getElementById('btn-template-save').style.display   = isAdmin()  ? '' : 'none';
+  document.getElementById('btn-template-load').style.display   = '';
 
-  // 패널 저장/삭제 버튼
-  document.getElementById('btn-save-task').style.display   = canWrite() ? '' : 'none';
-  document.getElementById('btn-delete-task').style.display = isAdmin()  ? '' : 'none';
+  // 패널 버튼 — 팀원도 저장 가능 (제한적)
+  document.getElementById('btn-save-task').style.display   = '';
+  document.getElementById('btn-delete-task').style.display = isAdmin() ? '' : 'none';
 
-  // member: 업무명·담당자·상태 수정 불가 (메모만 가능)
-  const readOnly = role === 'member';
+  // 패널 필드 읽기전용 (팀원)
   ['task-name', 'task-assignee'].forEach(id => {
-    document.getElementById(id).readOnly = readOnly;
-    document.getElementById(id).style.background = readOnly ? '#F5F5F5' : '';
+    document.getElementById(id).readOnly = isMember;
+    document.getElementById(id).style.background = isMember ? '#F5F5F5' : '';
   });
-  document.getElementById('task-project').disabled = readOnly;
-  document.getElementById('task-status').disabled  = readOnly;
-  document.getElementById('btn-add-subtask').style.display = canWrite() ? '' : 'none';
+  document.getElementById('task-project').disabled  = isMember;
+  document.getElementById('task-due-date').readOnly = isMember;
+  document.getElementById('task-group').disabled    = isMember;
+
+  // 팀원: 상태 활성화 (openPanel에서 done 옵션 제어)
+  document.getElementById('task-status').disabled = false;
+  document.getElementById('btn-add-subtask').style.display   = canWrite() ? '' : 'none';
+  document.getElementById('btn-manage-groups').style.display = canWrite() ? '' : 'none';
 }
 
 // ── 툴바 유저 버튼 ────────────────────────────────────────
 function updateUserBtn() {
   const btn = document.getElementById('btn-switch-user');
-  const roleLabel = { admin: '관리자', manager: '매니저', member: '멤버' };
+  const roleLabel = { admin: '관리자', leader: '팀장', manager: '과장', member: '팀원' };
   btn.innerHTML = `
     ${currentUser?.name || '?'}
     <span class="role-badge ${currentUser?.role}">${roleLabel[currentUser?.role] || ''}</span>
@@ -293,7 +299,10 @@ function updateOverview() {
 }
 
 // ── 툴바 ─────────────────────────────────────────────────
+let toolbarSetup = false;
 function setupToolbar() {
+  if (toolbarSetup) return;
+  toolbarSetup = true;
   ['filter-assignee','filter-project','filter-status'].forEach(id =>
     document.getElementById(id).addEventListener('change', applyFilter)
   );
@@ -320,7 +329,7 @@ function setupToolbar() {
     graph.setData(data);
     openPanel(task);
   });
-  document.getElementById('btn-switch-user').addEventListener('click', () => {
+  document.getElementById('btn-logout').addEventListener('click', () => {
     if (confirm(`${currentUser?.name}님, 로그아웃 하시겠습니까?`)) logout();
   });
 }
@@ -342,30 +351,72 @@ function openPanel(task) {
   document.getElementById('task-name').value     = task.name;
   document.getElementById('task-project').value  = task.projectId;
   document.getElementById('task-assignee').value = task.assignee;
-  document.getElementById('task-status').value   = task.status;
   document.getElementById('task-due-date').value = task.dueDate || '';
   document.getElementById('task-note').value     = task.note || '';
+
+  // 그룹 셀렉트 채우기
+  const gs = document.getElementById('task-group');
+  gs.innerHTML = '<option value="">그룹 없음</option>';
+  (data.groups || []).forEach(g => {
+    const o = document.createElement('option');
+    o.value = g.id; o.textContent = g.name;
+    gs.appendChild(o);
+  });
+  gs.value = task.groupId || '';
+  updateGroupSwatch(task.groupId);
+
+  // 상태 드롭다운 — 팀원은 'done' 옵션 숨김
+  const statusEl = document.getElementById('task-status');
+  const doneOpt = statusEl.querySelector('option[value="done"]');
+  if (doneOpt) doneOpt.style.display = canWrite() ? '' : 'none';
+  statusEl.value = task.status;
+
   renderSubtasks(task);
 }
+
+function updateGroupSwatch(groupId) {
+  const g = (data.groups || []).find(g => g.id === groupId);
+  const sw = document.getElementById('task-group-swatch');
+  if (g) { sw.style.background = g.color; sw.style.display = ''; }
+  else   { sw.style.display = 'none'; }
+}
+
+document.getElementById('task-group')?.addEventListener('change', e => {
+  updateGroupSwatch(e.target.value);
+});
 
 function closePanel() {
   document.getElementById('side-panel').classList.remove('open');
   activeTaskId = null;
 }
 
-function saveTask() {
-  if (!activeTaskId || !canWrite()) return;
-  updateTask(data, activeTaskId, {
-    name:      document.getElementById('task-name').value,
-    projectId: document.getElementById('task-project').value,
-    assignee:  document.getElementById('task-assignee').value,
-    status:    document.getElementById('task-status').value,
-    dueDate:   document.getElementById('task-due-date').value || null,
-    note:      document.getElementById('task-note').value
-  });
-  saveData(data);
-  graph.setData(data);
-  buildFilters();
+async function saveTask() {
+  if (!activeTaskId) return;
+  if (canWrite()) {
+    updateTask(data, activeTaskId, {
+      name:      document.getElementById('task-name').value,
+      projectId: document.getElementById('task-project').value,
+      assignee:  document.getElementById('task-assignee').value,
+      status:    document.getElementById('task-status').value,
+      dueDate:   document.getElementById('task-due-date').value || null,
+      groupId:   document.getElementById('task-group').value || null,
+      note:      document.getElementById('task-note').value
+    });
+    saveData(data);
+    graph.setData(data);
+    buildFilters();
+  } else {
+    // 팀원: 메모 + 상태만 저장 (서버에서 권한 검증)
+    try {
+      const result = await updateTaskMember(activeTaskId, {
+        note:   document.getElementById('task-note').value,
+        status: document.getElementById('task-status').value
+      });
+      data = result.data;
+      graph.setData(data);
+      buildFilters();
+    } catch (err) { alert(err.message); }
+  }
 }
 
 function deleteTaskBtn() {
@@ -439,6 +490,78 @@ function addSubtask() {
   saveData(data);
   graph.setData(data);
 }
+
+// ── 그룹 관리 ────────────────────────────────────────────
+let _selectedGroupColor = GROUP_COLORS[0];
+
+function buildGroupColorPalette() {
+  const el = document.getElementById('grp-color-palette');
+  el.innerHTML = '';
+  GROUP_COLORS.forEach(c => {
+    const dot = document.createElement('div');
+    dot.style.cssText = `width:24px;height:24px;border-radius:50%;background:${c};cursor:pointer;border:3px solid transparent;box-sizing:border-box;transition:border-color 0.1s`;
+    if (c === _selectedGroupColor) dot.style.borderColor = '#212121';
+    dot.addEventListener('click', () => {
+      _selectedGroupColor = c;
+      el.querySelectorAll('div').forEach(d => d.style.borderColor = 'transparent');
+      dot.style.borderColor = '#212121';
+    });
+    el.appendChild(dot);
+  });
+}
+
+function renderGroupList() {
+  const list = document.getElementById('group-list');
+  list.innerHTML = '';
+  if (!(data.groups || []).length) {
+    list.innerHTML = '<div style="color:#9E9E9E;font-size:13px;padding:8px 0">생성된 그룹이 없습니다.</div>';
+    return;
+  }
+  (data.groups || []).forEach(g => {
+    const item = document.createElement('div');
+    item.className = 'tmpl-item';
+    item.style.cursor = 'default';
+    item.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;flex:1">
+        <span style="width:12px;height:12px;border-radius:3px;background:${g.color};flex-shrink:0"></span>
+        <span class="tmpl-item-name">${g.name}</span>
+      </div>
+      <button class="tmpl-del" data-id="${g.id}">×</button>
+    `;
+    item.querySelector('.tmpl-del').addEventListener('click', () => {
+      if (!confirm(`"${g.name}" 그룹을 삭제할까요?`)) return;
+      deleteGroup(data, g.id);
+      saveData(data);
+      graph.setData(data);
+      buildFilters();
+      renderGroupList();
+    });
+    list.appendChild(item);
+  });
+}
+
+document.getElementById('btn-manage-groups').addEventListener('click', () => {
+  renderGroupList();
+  openModal('modal-groups');
+});
+
+document.getElementById('btn-open-group-create').addEventListener('click', () => {
+  _selectedGroupColor = GROUP_COLORS[0];
+  document.getElementById('grp-name').value = '';
+  buildGroupColorPalette();
+  openModal('modal-group-create');
+});
+
+document.getElementById('btn-grp-save').addEventListener('click', () => {
+  const name = document.getElementById('grp-name').value.trim();
+  if (!name) { alert('그룹 이름을 입력하세요.'); return; }
+  addGroup(data, name, _selectedGroupColor);
+  saveData(data);
+  graph.setData(data);
+  buildFilters();
+  closeModal('modal-group-create');
+  renderGroupList();
+});
 
 // ── 템플릿 ──────────────────────────────────────────────
 let _selectedTemplateId = null;

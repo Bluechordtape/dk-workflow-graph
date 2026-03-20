@@ -27,8 +27,8 @@ module.exports = function (io) {
     }
   });
 
-  // PUT /api/data — admin, manager만 가능 (member는 서버에서 차단)
-  router.put('/data', authenticateToken, requireRole('admin', 'manager'), async (req, res) => {
+  // PUT /api/data — admin, leader, manager 가능
+  router.put('/data', authenticateToken, requireRole('admin', 'leader', 'manager'), async (req, res) => {
     try {
       const data = req.body;
       await pool.query(`
@@ -51,7 +51,50 @@ module.exports = function (io) {
     }
   });
 
-  // PATCH /api/data/task-status — member 전용: 자기 담당 업무 상태 변경
+  // PATCH /api/data/task — 팀원용: 메모+상태만 저장 (자기 담당 업무)
+  router.patch('/data/task', authenticateToken, async (req, res) => {
+    const { taskId, updates } = req.body;
+    if (!taskId || !updates) return res.status(400).json({ error: 'taskId, updates 필요' });
+
+    const canComplete = ['admin', 'leader', 'manager'].includes(req.user.role);
+    if (updates.status === 'done' && !canComplete)
+      return res.status(403).json({ error: '완료 처리 권한이 없습니다' });
+
+    try {
+      const result = await pool.query('SELECT data FROM workflow_data WHERE id = 1');
+      if (result.rows.length === 0) return res.status(404).json({ error: '데이터 없음' });
+
+      const data = result.rows[0].data;
+      const task = data.tasks?.find(t => t.id === taskId);
+      if (!task) return res.status(404).json({ error: '업무를 찾을 수 없습니다' });
+
+      if (!canComplete && task.assignee !== req.user.name)
+        return res.status(403).json({ error: '담당 업무만 수정할 수 있습니다' });
+
+      // member는 note, status만 허용
+      const allowed = canComplete ? updates : {
+        ...(updates.note    !== undefined && { note:   updates.note }),
+        ...(updates.status  !== undefined && { status: updates.status }),
+      };
+      Object.assign(task, allowed);
+
+      await pool.query(`
+        INSERT INTO workflow_data (id, data, updated_at) VALUES (1, $1, NOW())
+        ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()
+      `, [JSON.stringify(data)]);
+
+      const socketId = req.headers['x-socket-id'];
+      if (socketId) io.except(socketId).emit('data:updated', data);
+      else          io.emit('data:updated', data);
+
+      res.json({ ok: true, data });
+    } catch (err) {
+      console.error('[API] PATCH /data/task 오류:', err.message);
+      res.status(500).json({ error: '서버 오류' });
+    }
+  });
+
+  // PATCH /api/data/task-status — 자기 담당 업무 상태 변경
   router.patch('/data/task-status', authenticateToken, async (req, res) => {
     const { taskId, status } = req.body;
     const allowedStatuses = ['pending', 'doing', 'review'];
@@ -59,8 +102,9 @@ module.exports = function (io) {
     if (!taskId || !status)
       return res.status(400).json({ error: 'taskId, status 필요' });
 
-    // member는 done 상태로 직접 변경 불가 (admin/manager만 컨펌 가능)
-    if (req.user.role === 'member' && status === 'done')
+    // member는 done 상태로 직접 변경 불가 (admin/leader/manager만 컨펌 가능)
+    const canComplete = ['admin', 'leader', 'manager'].includes(req.user.role);
+    if (!canComplete && status === 'done')
       return res.status(403).json({ error: '컨펌 권한이 없습니다' });
 
     if (!allowedStatuses.concat(['done']).includes(status))
@@ -78,7 +122,7 @@ module.exports = function (io) {
       if (!task) return res.status(404).json({ error: '업무를 찾을 수 없습니다' });
 
       // member는 자기 담당 업무만 변경 가능
-      if (req.user.role === 'member' && task.assignee !== req.user.name)
+      if (!canComplete && task.assignee !== req.user.name)
         return res.status(403).json({ error: '담당 업무만 변경할 수 있습니다' });
 
       task.status = status;

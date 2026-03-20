@@ -138,8 +138,38 @@ body {
   letter-spacing: 0;
 }
 .role-badge.admin   { background: #212121; color: #FFFFFF; }
+.role-badge.leader  { background: #6366F1; color: #FFFFFF; }
 .role-badge.manager { background: #EEEEEE; color: #424242; }
 .role-badge.member  { background: #F5F5F5; color: #757575; }
+
+.logout-btn {
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid #E0E0E0;
+  border-radius: 6px;
+  background: #FAFAFA;
+  font-size: 12px;
+  font-family: inherit;
+  font-weight: 500;
+  color: #757575;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.12s, color 0.12s;
+}
+.logout-btn:hover { background: #FFF5F7; color: #C8102E; border-color: #FFCDD2; }
+
+.label-action-btn {
+  padding: 1px 6px;
+  border: 1px solid #E0E0E0;
+  border-radius: 4px;
+  background: none;
+  font-size: 10px;
+  font-family: inherit;
+  color: #9E9E9E;
+  cursor: pointer;
+  transition: color 0.12s;
+}
+.label-action-btn:hover { color: #212121; border-color: #BDBDBD; }
 
 /* ── 툴바 ─────────────────────────────────────────────── */
 #toolbar {
