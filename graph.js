@@ -187,6 +187,10 @@ export class Graph {
       </div>
       <div class="nh nh-r" data-id="${task.id}" data-side="right"></div>`;
 
+    // 호버 하이라이트
+    el.querySelector('.node-inner').addEventListener('mouseenter', () => this._applyHover(task.id));
+    el.querySelector('.node-inner').addEventListener('mouseleave', () => this._clearHover());
+
     // 클릭 → 패널 열기
     el.querySelector('.node-inner').addEventListener('click', (e) => {
       if (e.target.closest('.node-action')) return;
@@ -248,6 +252,7 @@ export class Graph {
       path.setAttribute('stroke', '#BDBDBD');
       path.setAttribute('stroke-width', '1.5');
       path.setAttribute('marker-end', 'url(#arr)');
+      path.dataset.flowId = flow.id;
       path.style.pointerEvents = 'stroke';
       path.style.cursor = 'pointer';
       path.addEventListener('click', () => {
@@ -255,6 +260,54 @@ export class Graph {
       });
       this.svg.insertBefore(path, this.tempPath);
     }
+  }
+
+  // ── 호버 하이라이트 ────────────────────────────────────
+  _getConnected(taskId, depth = 2) {
+    const visited = new Set([taskId]);
+    let frontier = [taskId];
+    for (let d = 0; d < depth; d++) {
+      const next = [];
+      for (const fid of frontier) {
+        for (const flow of (this.data.flows || [])) {
+          if (flow.from === fid && !visited.has(flow.to))   { visited.add(flow.to);   next.push(flow.to); }
+          if (flow.to   === fid && !visited.has(flow.from)) { visited.add(flow.from); next.push(flow.from); }
+        }
+      }
+      frontier = next;
+    }
+    return visited;
+  }
+
+  _applyHover(taskId) {
+    const connected = this._getConnected(taskId);
+    const connectedFlows = new Set(
+      (this.data.flows || []).filter(f => connected.has(f.from) && connected.has(f.to)).map(f => f.id)
+    );
+    this.nodesEl.querySelectorAll('.task-node').forEach(n => {
+      const isConn = connected.has(n.dataset.id);
+      n.classList.toggle('dim-hover', !isConn);
+      n.classList.toggle('highlight-hover', isConn && n.dataset.id !== taskId);
+    });
+    Array.from(this.svg.children).forEach(c => {
+      if (c.tagName !== 'defs' && c !== this.tempPath) {
+        const isConn = connectedFlows.has(c.dataset?.flowId);
+        c.style.opacity = isConn ? '1' : '0.08';
+        if (isConn) c.setAttribute('stroke', '#424242');
+      }
+    });
+  }
+
+  _clearHover() {
+    this.nodesEl.querySelectorAll('.task-node').forEach(n => {
+      n.classList.remove('dim-hover', 'highlight-hover');
+    });
+    Array.from(this.svg.children).forEach(c => {
+      if (c.tagName !== 'defs' && c !== this.tempPath) {
+        c.style.opacity = '';
+        c.setAttribute('stroke', '#BDBDBD');
+      }
+    });
   }
 
   // ── 인터랙션 ──────────────────────────────────────────

@@ -11,7 +11,11 @@ module.exports = function () {
     try {
       const result = await pool.query(`
         SELECT id, name, created_by, created_at, is_auto,
-               jsonb_array_length(data->'tasks') AS task_count
+               COALESCE(
+                 jsonb_array_length(data->'tasks'),
+                 (SELECT SUM(jsonb_array_length(s->'tasks'))::int
+                  FROM jsonb_array_elements(data->'sheets') AS s)
+               ) AS task_count
         FROM backups
         ORDER BY created_at DESC
         LIMIT 30

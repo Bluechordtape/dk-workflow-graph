@@ -65,16 +65,26 @@ module.exports = function (io) {
       if (result.rows.length === 0) return res.status(404).json({ error: '데이터 없음' });
 
       const data = result.rows[0].data;
-      const task = data.tasks?.find(t => t.id === taskId);
+      // sheets 구조와 구버전 모두 지원
+      let task = null;
+      if (data.sheets) {
+        for (const sheet of data.sheets) {
+          task = sheet.tasks?.find(t => t.id === taskId);
+          if (task) break;
+        }
+      } else {
+        task = data.tasks?.find(t => t.id === taskId);
+      }
       if (!task) return res.status(404).json({ error: '업무를 찾을 수 없습니다' });
 
       if (!canComplete && task.assignee !== req.user.name)
         return res.status(403).json({ error: '담당 업무만 수정할 수 있습니다' });
 
-      // member는 note, status만 허용
+      // member는 note, status, subtasks만 허용
       const allowed = canComplete ? updates : {
-        ...(updates.note    !== undefined && { note:   updates.note }),
-        ...(updates.status  !== undefined && { status: updates.status }),
+        ...(updates.note     !== undefined && { note:     updates.note }),
+        ...(updates.status   !== undefined && { status:   updates.status }),
+        ...(updates.subtasks !== undefined && { subtasks: updates.subtasks }),
       };
       Object.assign(task, allowed);
 
@@ -118,7 +128,15 @@ module.exports = function (io) {
         return res.status(404).json({ error: '데이터 없음' });
 
       const data = result.rows[0].data;
-      const task = data.tasks?.find(t => t.id === taskId);
+      let task = null;
+      if (data.sheets) {
+        for (const sheet of data.sheets) {
+          task = sheet.tasks?.find(t => t.id === taskId);
+          if (task) break;
+        }
+      } else {
+        task = data.tasks?.find(t => t.id === taskId);
+      }
       if (!task) return res.status(404).json({ error: '업무를 찾을 수 없습니다' });
 
       // member는 자기 담당 업무만 변경 가능

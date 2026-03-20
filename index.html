@@ -90,6 +90,7 @@
   </button>
   <button id="btn-template-load">템플릿</button>
   <button id="btn-template-save">템플릿 저장</button>
+  <button id="btn-manage-projects">프로젝트 관리</button>
   <button id="btn-backup">백업</button>
   <button id="btn-import">가져오기</button>
   <button id="btn-export">내보내기</button>
@@ -97,6 +98,9 @@
 
 <!-- ── 오버뷰 바 ── -->
 <div id="overview-bar" style="display:none"></div>
+
+<!-- ── 시트 탭 ── -->
+<div id="sheet-tabs"></div>
 
 <!-- ── 메인 ── -->
 <div id="main">
@@ -128,9 +132,9 @@
       <div class="form-group">
         <label>상태</label>
         <select id="task-status">
-          <option value="todo">대기</option>
-          <option value="wip">진행중</option>
-          <option value="pending">완료요청</option>
+          <option value="pending">대기</option>
+          <option value="doing">진행중</option>
+          <option value="review">완료요청</option>
           <option value="done">완료</option>
         </select>
       </div>
@@ -166,6 +170,7 @@
         <button id="btn-save-task" class="primary">저장</button>
         <button id="btn-delete-task" class="danger">삭제</button>
       </div>
+      <button id="btn-copy-task" class="btn-small" style="display:none">↗ 다른 시트로 복제</button>
 
     </div>
   </div>
@@ -272,6 +277,42 @@
     <div class="modal-footer">
       <button class="btn-cancel" data-modal="modal-load-template">취소</button>
       <button id="btn-tmpl-load-confirm" class="primary">불러오기</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 프로젝트 관리 모달 ── -->
+<div id="modal-projects" class="modal-overlay hidden">
+  <div class="modal-card modal-card-wide">
+    <div class="modal-header">
+      <h3>프로젝트 관리</h3>
+      <button class="modal-close" data-modal="modal-projects">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="project-list" class="tmpl-list"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" data-modal="modal-projects">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 업무 복제 모달 ── -->
+<div id="modal-copy-task" class="modal-overlay hidden">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3>다른 시트로 복제</h3>
+      <button class="modal-close" data-modal="modal-copy-task">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>대상 시트</label>
+        <select id="copy-task-sheet"></select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" data-modal="modal-copy-task">취소</button>
+      <button id="btn-copy-task-confirm" class="primary">복제</button>
     </div>
   </div>
 </div>

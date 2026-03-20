@@ -19,18 +19,42 @@ export async function loadData() {
     const res = await fetch('/api/data', { headers: authHeaders() });
     if (res.ok) {
       const d = await res.json();
-      if (d && d.tasks) return normalize(d);
+      if (d) return normalize(d);
     }
     if (res.status === 401 || res.status === 403) return null; // 인증 실패 신호
   } catch {}
   return null;
 }
 
-function normalize(d) {
-  if (!d.projects) d.projects = [];
-  if (!d.tasks)    d.tasks    = [];
-  if (!d.flows)    d.flows    = [];
-  if (!d.groups)   d.groups   = [];
+export function normalize(d) {
+  // 구버전 포맷 → sheets 구조로 마이그레이션
+  if (!d.sheets) {
+    const sheetId = generateId('sheet');
+    d.sheets = [{
+      id: sheetId,
+      name: '기본 시트',
+      projects: d.projects || [],
+      tasks:    d.tasks    || [],
+      flows:    d.flows    || [],
+      groups:   d.groups   || []
+    }];
+    d.activeSheetId = sheetId;
+    delete d.projects; delete d.tasks; delete d.flows; delete d.groups;
+  }
+  if (!d.activeSheetId || !d.sheets.find(s => s.id === d.activeSheetId)) {
+    d.activeSheetId = d.sheets[0]?.id;
+  }
+  for (const sheet of d.sheets) {
+    if (!sheet.projects) sheet.projects = [];
+    if (!sheet.tasks)    sheet.tasks    = [];
+    if (!sheet.flows)    sheet.flows    = [];
+    if (!sheet.groups)   sheet.groups   = [];
+    // 구버전 상태값 정규화
+    for (const task of sheet.tasks) {
+      if (task.status === 'todo') task.status = 'pending';
+      if (task.status === 'wip')  task.status = 'doing';
+    }
+  }
   return d;
 }
 
@@ -133,7 +157,7 @@ export function importJSON(callback) {
   input.onchange = async (e) => {
     const text = await e.target.files[0]?.text();
     if (!text) return;
-    try { const d = JSON.parse(text); saveData(d); callback(d); }
+    try { const d = normalize(JSON.parse(text)); saveData(d); callback(d); }
     catch { alert('파일을 읽을 수 없습니다.'); }
   };
   input.click();
@@ -214,4 +238,31 @@ export function addFlow(data, fromId, toId) {
 
 export function deleteFlow(data, flowId) {
   data.flows = data.flows.filter(f => f.id !== flowId);
+}
+
+// ── 시트 ─────────────────────────────────────────────────
+export function addSheet(data, name) {
+  const sheet = { id: generateId('sheet'), name, projects: [], tasks: [], flows: [], groups: [] };
+  data.sheets.push(sheet);
+  data.activeSheetId = sheet.id;
+  return sheet;
+}
+
+export function deleteSheet(data, sheetId) {
+  data.sheets = data.sheets.filter(s => s.id !== sheetId);
+  if (data.activeSheetId === sheetId) data.activeSheetId = data.sheets[0]?.id;
+}
+
+export function copyTaskToSheet(data, taskId, targetSheetId) {
+  let sourceTask = null;
+  for (const sheet of data.sheets) {
+    sourceTask = sheet.tasks.find(t => t.id === taskId);
+    if (sourceTask) break;
+  }
+  if (!sourceTask) return null;
+  const target = data.sheets.find(s => s.id === targetSheetId);
+  if (!target) return null;
+  const newTask = { ...JSON.parse(JSON.stringify(sourceTask)), id: generateId('t'), x: sourceTask.x + 20, y: sourceTask.y + 20 };
+  target.tasks.push(newTask);
+  return newTask;
 }
