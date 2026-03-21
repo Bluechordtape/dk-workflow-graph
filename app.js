@@ -1,5 +1,5 @@
 // app.js
-const VERSION = 'v2.0';
+const VERSION = 'v2.1';
 
 
   loadData, saveData, saveTaskStatus, exportJSON, importJSON,
@@ -165,6 +165,7 @@ function initSocket() {
 
 // ── 앱 시작 (로그인 후) ───────────────────────────────────
 async function startApp() {
+  document.getElementById('login-overlay')?.classList.add('hidden');
   if (!graph) {
     initSocket();
 

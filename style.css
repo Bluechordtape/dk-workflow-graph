@@ -20,20 +20,26 @@ body {
   align-items: center;
   justify-content: center;
   z-index: 2000;
+  /* JS 실패 시 15초 후 CSS 폴백으로 자동 소멸 */
+  animation: loading-pulse 1.2s ease-in-out infinite, loading-fadeout 0.5s ease forwards 15s;
+  pointer-events: none;
 }
 .app-loading-inner {
   display: flex;
+  flex-direction: column;
   align-items: center;
   gap: 10px;
   font-size: 22px;
   font-weight: 800;
   color: #212121;
   letter-spacing: -0.5px;
-  animation: loading-pulse 1.2s ease-in-out infinite;
 }
 @keyframes loading-pulse {
   0%, 100% { opacity: 1; }
   50%       { opacity: 0.4; }
+}
+@keyframes loading-fadeout {
+  to { opacity: 0; pointer-events: none; }
 }
 
 /* ── 로그인 오버레이 ──────────────────────────────────── */
