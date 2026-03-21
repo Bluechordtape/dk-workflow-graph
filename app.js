@@ -1,5 +1,5 @@
 // app.js
-const VERSION = 'v1.7';
+const VERSION = 'v1.8';
 
 
   loadData, saveData, saveTaskStatus, exportJSON, importJSON,
@@ -1333,6 +1333,7 @@ async function init() {
   await loadLoginNames();
 
   currentUser = await checkAuth();
+  document.getElementById('app-loading')?.remove();
   if (!currentUser) {
     showLoginOverlay();
   } else {

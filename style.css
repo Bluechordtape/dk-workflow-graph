@@ -11,6 +11,31 @@ body {
   overflow: hidden;
 }
 
+/* ── 앱 로딩 스플래시 ────────────────────────────────── */
+#app-loading {
+  position: fixed;
+  inset: 0;
+  background: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+.app-loading-inner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 22px;
+  font-weight: 800;
+  color: #212121;
+  letter-spacing: -0.5px;
+  animation: loading-pulse 1.2s ease-in-out infinite;
+}
+@keyframes loading-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
 /* ── 로그인 오버레이 ──────────────────────────────────── */
 #login-overlay {
   position: fixed;
