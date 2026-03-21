@@ -1,5 +1,5 @@
 // app.js
-const VERSION = 'v1.8';
+const VERSION = 'v1.9';
 
 
   loadData, saveData, saveTaskStatus, exportJSON, importJSON,
@@ -1330,10 +1330,13 @@ async function init() {
     if (e.key === 'Enter') doLogin();
   });
 
-  await loadLoginNames();
+  try {
+    await loadLoginNames();
+    currentUser = await checkAuth();
+  } finally {
+    document.getElementById('app-loading')?.remove();
+  }
 
-  currentUser = await checkAuth();
-  document.getElementById('app-loading')?.remove();
   if (!currentUser) {
     showLoginOverlay();
   } else {
@@ -1343,5 +1346,6 @@ async function init() {
 
 init().catch(err => {
   console.error('[init 오류]', err);
+  document.getElementById('app-loading')?.remove();
   document.getElementById('login-overlay')?.classList.remove('hidden');
 });
