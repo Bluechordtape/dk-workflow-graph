@@ -434,7 +434,6 @@ function renderCalendar() {
 // ── 필터 ─────────────────────────────────────────────────
 function buildFilters() {
   const sheet = cs();
-  const assignees = new Set(sheet.tasks.map(t => t.assignee).filter(Boolean));
   const hasUnassigned = sheet.tasks.some(t => !t.assignee);
   const asel = document.getElementById('filter-assignee');
   const av = asel.value;
@@ -442,7 +441,8 @@ function buildFilters() {
   if (hasUnassigned) {
     const o = document.createElement('option'); o.value = '__unassigned__'; o.textContent = '미배정'; asel.appendChild(o);
   }
-  assignees.forEach(a => { const o = document.createElement('option'); o.value = a; o.textContent = a; asel.appendChild(o); });
+  // 등록된 전체 사용자 목록 사용 (패널과 동일)
+  userNames.forEach(a => { const o = document.createElement('option'); o.value = a; o.textContent = a; asel.appendChild(o); });
   asel.value = av;
 
   const psel = document.getElementById('filter-project');
