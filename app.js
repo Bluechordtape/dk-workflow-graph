@@ -1,5 +1,7 @@
 // app.js
-import {
+const VERSION = 'v1.7';
+
+
   loadData, saveData, saveTaskStatus, exportJSON, importJSON,
   setSocketId, setToken,
   addProject, deleteProject,
@@ -1317,6 +1319,12 @@ async function loadLoginNames() {
 }
 
 async function init() {
+  // 버전 표시
+  const vEl = document.getElementById('toolbar-version');
+  const lEl = document.getElementById('login-version');
+  if (vEl) vEl.textContent = VERSION;
+  if (lEl) lEl.textContent = VERSION;
+
   document.getElementById('login-submit').addEventListener('click', doLogin);
   document.getElementById('login-password').addEventListener('keydown', e => {
     if (e.key === 'Enter') doLogin();
