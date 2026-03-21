@@ -1,5 +1,5 @@
 // app.js
-const VERSION = 'v1.9';
+const VERSION = 'v2.0';
 
 
   loadData, saveData, saveTaskStatus, exportJSON, importJSON,
@@ -1330,10 +1330,25 @@ async function init() {
     if (e.key === 'Enter') doLogin();
   });
 
+  // 10초 안에 응답 없으면 로그인 화면으로 강제 이동
+  const loadingGuard = setTimeout(() => {
+    document.getElementById('app-loading')?.remove();
+    showLoginOverlay();
+  }, 10000);
+
   try {
-    await loadLoginNames();
-    currentUser = await checkAuth();
+    await Promise.race([
+      loadLoginNames(),
+      new Promise(r => setTimeout(r, 8000)) // 8초 타임아웃
+    ]);
+    currentUser = await Promise.race([
+      checkAuth(),
+      new Promise(r => setTimeout(r, 8000)) // 8초 타임아웃
+    ]);
+  } catch {
+    currentUser = null;
   } finally {
+    clearTimeout(loadingGuard);
     document.getElementById('app-loading')?.remove();
   }
 
