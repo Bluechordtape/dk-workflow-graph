@@ -1302,7 +1302,7 @@ async function loadLoginNames() {
   try {
     const names = await fetchUserNames();
     const sel = document.getElementById('login-name-select');
-    sel.innerHTML = '<option value="">— 선택하세요 —</option>';
+    sel.innerHTML = '<option value="">이름을 선택하세요</option>';
     names.forEach(n => {
       const o = document.createElement('option');
       o.value = n; o.textContent = n;
