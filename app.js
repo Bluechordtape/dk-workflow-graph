@@ -822,50 +822,47 @@ function deleteTaskBtn() {
 }
 
 // ── 세부업무 ─────────────────────────────────────────────
-function renderSubtasks(task, focusLast = false) {
-  const list = document.getElementById('subtask-list');
-  list.innerHTML = '';
-  (task.subtasks || []).forEach((s, i) => {
-    const row = document.createElement('div');
-    row.className = 'subtask-row';
+function makeSubtaskRow(task, s) {
+  const row = document.createElement('div');
+  row.className = 'subtask-row';
 
-    const cb = document.createElement('input');
-    cb.type = 'checkbox';
-    cb.checked = s.status === 'done';
-    cb.addEventListener('change', (e) => {
-      s.status = e.target.checked ? 'done' : 'pending';
-      if (canWrite()) saveData(data);
-    });
-
-    const nameInput = document.createElement('input');
-    nameInput.type = 'text';
-    nameInput.className = 'sub-name';
-    nameInput.value = s.name;
-    nameInput.placeholder = '세부업무 이름';
-    nameInput.addEventListener('input', (e) => { s.name = e.target.value; });
-    nameInput.addEventListener('blur', () => { if (canWrite()) saveData(data); });
-
-    const delBtn = document.createElement('button');
-    delBtn.className = 'sub-del';
-    delBtn.textContent = '×';
-    delBtn.style.display = canWrite() ? '' : 'none';
-    delBtn.addEventListener('click', () => {
-      task.subtasks.splice(i, 1);
-      saveData(data);
-      graph.setData(cs());
-      renderSubtasks(task);
-    });
-
-    row.appendChild(cb);
-    row.appendChild(nameInput);
-    row.appendChild(delBtn);
-    list.appendChild(row);
+  const cb = document.createElement('input');
+  cb.type = 'checkbox';
+  cb.checked = s.status === 'done';
+  cb.addEventListener('change', (e) => {
+    s.status = e.target.checked ? 'done' : 'pending';
+    saveData(data);
   });
 
-  if (focusLast && list.lastChild) {
-    const input = list.lastChild.querySelector('.sub-name');
-    if (input) setTimeout(() => { input.focus(); input.select(); }, 0);
-  }
+  const nameInput = document.createElement('input');
+  nameInput.type = 'text';
+  nameInput.className = 'sub-name';
+  nameInput.value = s.name;
+  nameInput.placeholder = '세부업무 이름';
+  nameInput.addEventListener('input', (e) => { s.name = e.target.value; });
+  nameInput.addEventListener('change', (e) => { s.name = e.target.value; saveData(data); });
+
+  const delBtn = document.createElement('button');
+  delBtn.className = 'sub-del';
+  delBtn.textContent = '×';
+  delBtn.style.display = canWrite() ? '' : 'none';
+  delBtn.addEventListener('click', () => {
+    const idx = task.subtasks.indexOf(s);
+    if (idx !== -1) task.subtasks.splice(idx, 1);
+    saveData(data);
+    row.remove();
+  });
+
+  row.appendChild(cb);
+  row.appendChild(nameInput);
+  row.appendChild(delBtn);
+  return row;
+}
+
+function renderSubtasks(task) {
+  const list = document.getElementById('subtask-list');
+  list.innerHTML = '';
+  (task.subtasks || []).forEach(s => list.appendChild(makeSubtaskRow(task, s)));
 }
 
 function addSubtask() {
@@ -873,9 +870,17 @@ function addSubtask() {
   const task = cs().tasks.find(t => t.id === activeTaskId);
   if (!task) return;
   if (!task.subtasks) task.subtasks = [];
-  task.subtasks.push({ id: `s_${Date.now()}`, name: '', status: 'pending' });
-  renderSubtasks(task, true);
+
+  const s = { id: `s_${Date.now()}`, name: '', status: 'pending' };
+  task.subtasks.push(s);
   saveData(data);
+
+  // 전체 재렌더링 없이 새 행만 추가 후 포커스
+  const list = document.getElementById('subtask-list');
+  const row = makeSubtaskRow(task, s);
+  list.appendChild(row);
+  const input = row.querySelector('.sub-name');
+  requestAnimationFrame(() => input.focus());
 }
 
 // ── 업무 복제 (다른 시트로) ───────────────────────────────
