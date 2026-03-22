@@ -1,7 +1,5 @@
 // app.js
-const VERSION = 'v2.3';
-
-
+import {
   loadData, saveData, saveTaskStatus, exportJSON, importJSON,
   setSocketId, setToken,
   addProject, deleteProject,
@@ -15,6 +13,8 @@ const VERSION = 'v2.3';
   fetchUserNames, fetchUsers, updateUserRole, resetUserPassword, createUser
 } from './data.js';
 import { Graph } from './graph.js';
+
+const VERSION = 'v2.3';
 
 let data = null;
 let graph = null;
