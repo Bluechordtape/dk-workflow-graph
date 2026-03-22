@@ -1,5 +1,5 @@
 // app.js
-const VERSION = 'v2.1';
+const VERSION = 'v2.2';
 
 
   loadData, saveData, saveTaskStatus, exportJSON, importJSON,

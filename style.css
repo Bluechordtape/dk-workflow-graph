@@ -22,7 +22,6 @@ body {
   z-index: 2000;
   /* JS 실패 시 15초 후 CSS 폴백으로 자동 소멸 */
   animation: loading-pulse 1.2s ease-in-out infinite, loading-fadeout 0.5s ease forwards 15s;
-  pointer-events: none;
 }
 .app-loading-inner {
   display: flex;
