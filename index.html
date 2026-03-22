@@ -56,7 +56,7 @@
       <input type="password" id="login-password" placeholder="비밀번호 입력" autocomplete="current-password">
     </div>
     <button id="login-submit" type="button" onclick="window.__doLogin && window.__doLogin()">로그인</button>
-    <div style="text-align:center;margin-top:16px;font-size:11px;color:#BDBDBD" id="login-version">v2.2</div>
+    <div style="text-align:center;margin-top:16px;font-size:11px;color:#BDBDBD" id="login-version">v2.3</div>
   </div>
 </div>
 
@@ -82,7 +82,7 @@
       <rect x="23" y="23" width="5" height="5" rx="1.2" fill="#EBEBEB"/>
     </svg>
     <span>Loom</span>
-    <span id="loading-version" style="font-size:11px;color:#BDBDBD;margin-top:4px">v2.2</span>
+    <span id="loading-version" style="font-size:11px;color:#BDBDBD;margin-top:4px">v2.3</span>
   </div>
 </div>
 
@@ -446,13 +446,27 @@
 </div>
 
 <script>
+  // 모듈 로드 실패 포함 모든 상황에서 12초 후 로딩화면 강제 제거
+  window.__loadingGuard = setTimeout(function() {
+    var el = document.getElementById('app-loading');
+    if (el) el.remove();
+    var login = document.getElementById('login-overlay');
+    if (login) login.classList.remove('hidden');
+  }, 12000);
+
+  // 모듈 오류 발생 시 즉시 로딩화면 제거
   window.addEventListener('error', function(e) {
-    console.error('[모듈 오류]', e.message, e.filename, e.lineno);
+    console.error('[오류]', e.message, e.filename, e.lineno);
+    clearTimeout(window.__loadingGuard);
+    var el = document.getElementById('app-loading');
+    if (el) el.remove();
+    var login = document.getElementById('login-overlay');
+    if (login) login.classList.remove('hidden');
   });
   window.addEventListener('unhandledrejection', function(e) {
     console.error('[Promise 오류]', e.reason);
   });
 </script>
-<script type="module" src="app.js?v=2.1"></script>
+<script type="module" src="app.js?v=2.2"></script>
 </body>
 </html>

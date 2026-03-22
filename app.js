@@ -1,5 +1,5 @@
 // app.js
-const VERSION = 'v2.2';
+const VERSION = 'v2.3';
 
 
   loadData, saveData, saveTaskStatus, exportJSON, importJSON,
@@ -1331,25 +1331,19 @@ async function init() {
     if (e.key === 'Enter') doLogin();
   });
 
-  // 10초 안에 응답 없으면 로그인 화면으로 강제 이동
-  const loadingGuard = setTimeout(() => {
-    document.getElementById('app-loading')?.remove();
-    showLoginOverlay();
-  }, 10000);
-
   try {
     await Promise.race([
       loadLoginNames(),
-      new Promise(r => setTimeout(r, 8000)) // 8초 타임아웃
+      new Promise(r => setTimeout(r, 8000))
     ]);
     currentUser = await Promise.race([
       checkAuth(),
-      new Promise(r => setTimeout(r, 8000)) // 8초 타임아웃
+      new Promise(r => setTimeout(r, 8000))
     ]);
   } catch {
     currentUser = null;
   } finally {
-    clearTimeout(loadingGuard);
+    clearTimeout(window.__loadingGuard);
     document.getElementById('app-loading')?.remove();
   }
 
@@ -1362,6 +1356,7 @@ async function init() {
 
 init().catch(err => {
   console.error('[init 오류]', err);
+  clearTimeout(window.__loadingGuard);
   document.getElementById('app-loading')?.remove();
   document.getElementById('login-overlay')?.classList.remove('hidden');
 });
