@@ -22,6 +22,12 @@ const io = new Server(server, {
 // ── 미들웨어 ──────────────────────────────────────────────
 app.use(express.json({ limit: '10mb' }));
 
+// index.html은 항상 최신 버전 제공 (캐시 금지)
+app.get('/', (req, res) => {
+  res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.sendFile(path.join(__dirname, '../index.html'));
+});
+
 // 프론트엔드 정적 파일 제공
 app.use(express.static(path.join(__dirname, '..')));
 
@@ -33,6 +39,7 @@ app.use('/api',           dataRouter(io));
 
 // SPA 폴백
 app.get('*', (req, res) => {
+  res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
   res.sendFile(path.join(__dirname, '../index.html'));
 });
 
