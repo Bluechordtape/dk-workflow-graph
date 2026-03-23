@@ -1039,6 +1039,7 @@ function addSubtask() {
 
 // ── 그룹 관리 ────────────────────────────────────────────
 let _selectedGroupColor = GROUP_COLORS[0];
+let _editingGroupId = null; // null = 신규, string = 편집 중인 그룹 id
 
 function buildGroupColorPalette() {
   const el = document.getElementById('grp-color-palette');
@@ -1071,15 +1072,19 @@ function renderGroupList() {
     item.className = 'tmpl-item';
     item.style.cursor = 'default';
     item.innerHTML = `
-      <div style="display:flex;align-items:center;gap:8px;flex:1">
+      <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">
         <span style="width:12px;height:12px;border-radius:3px;background:${g.color};flex-shrink:0"></span>
         <span class="tmpl-item-name">${g.name}</span>
-        ${projectName ? `<span style="font-size:10px;color:#9E9E9E">${projectName}</span>` : ''}
+        ${projectName ? `<span style="font-size:10px;color:#9E9E9E;white-space:nowrap">${projectName}</span>` : ''}
       </div>
-      <button class="tmpl-del" data-id="${g.id}">×</button>
+      <div style="display:flex;gap:6px;flex-shrink:0">
+        <button class="btn-grp-edit" style="height:26px;padding:0 10px;border-radius:5px;border:1px solid #E0E0E0;background:#FAFAFA;font-size:11px;font-weight:600;font-family:inherit;cursor:pointer">편집</button>
+        <button class="tmpl-del" data-id="${g.id}">×</button>
+      </div>
     `;
+    item.querySelector('.btn-grp-edit').addEventListener('click', () => openGroupModal(g));
     item.querySelector('.tmpl-del').addEventListener('click', () => {
-      if (!confirm(`"${g.name}" 그룹을 삭제할까요?`)) return;
+      if (!confirm(`"${g.name}" 묶음을 삭제할까요?`)) return;
       pushUndo();
       deleteGroup(data, g.id);
       saveData(data);
@@ -1096,39 +1101,61 @@ document.getElementById('btn-manage-groups').addEventListener('click', () => {
   openModal('modal-groups');
 });
 
-document.getElementById('btn-open-group-create').addEventListener('click', () => {
-  _selectedGroupColor = GROUP_COLORS[0];
-  document.getElementById('grp-name').value = '';
+function openGroupModal(group = null) {
+  _editingGroupId = group?.id || null;
+  document.getElementById('grp-modal-title').textContent = group ? '묶음 수정' : '묶음 추가';
+  document.getElementById('grp-name').value = group?.name || '';
+  _selectedGroupColor = group?.color || GROUP_COLORS[0];
+
   // 프로젝트 셀렉트 채우기
   const sel = document.getElementById('grp-project');
-  sel.innerHTML = '';
+  sel.innerHTML = '<option value="">프로젝트 없음 (태그 전용)</option>';
   data.projects.filter(p => !p.archived).forEach(p => {
     const o = document.createElement('option'); o.value = p.id; o.textContent = p.name;
     sel.appendChild(o);
   });
-  const fp = document.getElementById('filter-project').value;
-  if (fp) sel.value = fp;
+  if (group) {
+    sel.value = group.projectId || '';
+  } else {
+    const fp = document.getElementById('filter-project').value;
+    if (fp) sel.value = fp;
+  }
+
   buildGroupColorPalette();
   openModal('modal-group-create');
-});
+  setTimeout(() => document.getElementById('grp-name').focus(), 50);
+}
+
+document.getElementById('btn-open-group-create').addEventListener('click', () => openGroupModal(null));
 
 document.getElementById('btn-grp-save').addEventListener('click', () => {
   const name = document.getElementById('grp-name').value.trim();
   if (!name) { alert('묶음 이름을 입력하세요.'); return; }
   const projectId = document.getElementById('grp-project')?.value || null;
   pushUndo();
-  // 새 묶음의 초기 x/y: 해당 프로젝트 bbox 안 적당한 위치
-  let gx = 200, gy = 200;
-  if (projectId) {
-    const project = data.projects.find(p => p.id === projectId);
-    if (project) {
-      // 기존 묶음 아래쪽에 배치
-      const existingGroups = (data.groups || []).filter(g => g.projectId === projectId);
-      gx = (project.x ?? 200) + 30;
-      gy = (project.y ?? 200) + 80 + existingGroups.length * 200;
+
+  if (_editingGroupId) {
+    // ── 편집 모드
+    const g = (data.groups || []).find(g => g.id === _editingGroupId);
+    if (g) {
+      g.name      = name;
+      g.color     = _selectedGroupColor;
+      g.projectId = projectId;
     }
+  } else {
+    // ── 신규 추가
+    let gx = 200, gy = 200;
+    if (projectId) {
+      const project = data.projects.find(p => p.id === projectId);
+      if (project) {
+        const existingGroups = (data.groups || []).filter(g => g.projectId === projectId);
+        gx = (project.x ?? 200) + 30;
+        gy = (project.y ?? 200) + 80 + existingGroups.length * 200;
+      }
+    }
+    addGroup(data, name, _selectedGroupColor, projectId, gx, gy);
   }
-  addGroup(data, name, _selectedGroupColor, projectId, gx, gy);
+
   saveData(data);
   graph.setData(filteredData());
   buildFilters();
@@ -1136,7 +1163,7 @@ document.getElementById('btn-grp-save').addEventListener('click', () => {
   renderGroupList();
   if (activeTaskId) {
     const task = data.tasks.find(t => t.id === activeTaskId);
-    if (task) openPanel(task); // 패널 열려 있으면 묶음 셀렉트 갱신
+    if (task) openPanel(task);
   }
 });
 
