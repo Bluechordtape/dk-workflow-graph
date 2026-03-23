@@ -97,11 +97,18 @@ export function normalize(d) {
     d.activeViewId = null;
   }
 
-  // ── Phase 4: 상태값 정규화
+  // ── Phase 4: 상태값 정규화 (5가지 체계로 통합)
+  const STATUS_MAP = {
+    todo: 'pending', pre: 'pending', wip: 'doing',
+    waiting: 'doing', inactive: 'pending',
+    closed: 'done', terminated: 'done', ended: 'done', finish: 'done',
+  };
   for (const task of d.tasks) {
-    if (task.status === 'todo')    task.status = 'pre';
-    if (task.status === 'wip')     task.status = 'doing';
-    if (task.status === 'pending') task.status = 'pre';
+    if (STATUS_MAP[task.status]) task.status = STATUS_MAP[task.status];
+    // 유효하지 않은 상태는 pending으로
+    if (!['pending','doing','delayed','review','done'].includes(task.status)) {
+      task.status = 'pending';
+    }
   }
 
   return d;
@@ -251,9 +258,8 @@ export function addTask(data, { name, projectId, groupId = null, assignee = '', 
     groupId,
     name: name || '새 업무',
     assignee,
-    status: 'pre',
+    status: 'pending',
     note: '',
-    subtasks: [],
     x, y
   };
   data.tasks.push(task);

@@ -16,19 +16,11 @@ const MIN_GROUP_W      = 270;
 const MIN_GROUP_H      = 100;
 
 const STATUS = {
-  // 구버전 호환
-  todo:     { label: '착수전',   bar: '#9E9E9E', bg: '#F3F4F6', text: '#4B5563', bdg: '#D1D5DB' },
-  pending:  { label: '착수전',   bar: '#9E9E9E', bg: '#F3F4F6', text: '#4B5563', bdg: '#D1D5DB' },
-  wip:      { label: '진행 중',  bar: '#212121', bg: '#EDE9FE', text: '#5B21B6', bdg: '#C4B5FD' },
-  // 새 상태
-  pre:      { label: '착수전',   bar: '#9E9E9E', bg: '#F3F4F6', text: '#4B5563', bdg: '#D1D5DB' },
-  doing:    { label: '진행 중',  bar: '#212121', bg: '#EDE9FE', text: '#5B21B6', bdg: '#C4B5FD' },
-  waiting:  { label: '대기',     bar: '#D97706', bg: '#FEF9C3', text: '#854D0E', bdg: '#FCD34D' },
-  delayed:  { label: '지연',     bar: '#DC2626', bg: '#FEF2F2', text: '#991B1B', bdg: '#FECACA' },
-  review:   { label: '완료요청', bar: '#7C3AED', bg: '#FEF9C3', text: '#854D0E', bdg: '#FCD34D' },
-  inactive: { label: '미진행',   bar: '#616161', bg: '#F3F4F6', text: '#6B7280', bdg: '#D1D5DB' },
-  done:     { label: '완료',     bar: '#059669', bg: '#DCFCE7', text: '#15803D', bdg: '#86EFAC' },
-  closed:   { label: '종결',     bar: '#212121', bg: '#212121', text: '#FFFFFF', bdg: '#424242' },
+  pending: { label: '착수전',   bar: '#D1D5DB', bg: '#F3F4F6', text: '#4B5563', bdg: '#E5E7EB' },
+  doing:   { label: '진행 중',  bar: '#7C3AED', bg: '#EDE9FE', text: '#5B21B6', bdg: '#C4B5FD' },
+  delayed: { label: '지연',     bar: '#EF4444', bg: '#FEE2E2', text: '#991B1B', bdg: '#FECACA' },
+  review:  { label: '완료요청', bar: '#EAB308', bg: '#FEF9C3', text: '#854D0E', bdg: '#FCD34D' },
+  done:    { label: '완료',     bar: '#22C55E', bg: '#DCFCE7', text: '#15803D', bdg: '#86EFAC' },
 };
 
 export class Graph {
@@ -371,7 +363,7 @@ export class Graph {
 
   // ── 태스크 노드 ───────────────────────────────────────
   _dday(task) {
-    if (!task.dueDate || task.status === 'done') return null;
+    if (!task.dueDate || task.status === 'done' || task.status === 'closed') return null;
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const due   = new Date(task.dueDate); due.setHours(0, 0, 0, 0);
     const diff  = Math.round((due - today) / 86400000);
@@ -397,15 +389,18 @@ export class Graph {
     const canAct  = isMgmt || isMine;
     const st2 = task.status;
 
+    const isLeader = ['admin', 'leader'].includes(role);
     let actionBtn = '';
-    if      (st2 === 'pre' && canAct)
+    if (st2 === 'pending' && canAct)
       actionBtn = `<button class="node-action btn-start" data-id="${task.id}">▶ 시작</button>`;
-    else if ((st2 === 'doing' || st2 === 'waiting' || st2 === 'delayed') && canAct)
+    else if ((st2 === 'doing' || st2 === 'delayed') && canAct)
       actionBtn = `<button class="node-action btn-req" data-id="${task.id}">완료 요청</button>`;
-    else if (st2 === 'review' && isMgmt)
-      actionBtn = `<button class="node-action btn-cfm" data-id="${task.id}">✓ 완료 확정</button>`;
-    else if (st2 === 'inactive' && isMgmt)
-      actionBtn = `<button class="node-action btn-close" data-id="${task.id}">✓ 종결</button>`;
+    else if (st2 === 'review' && isLeader)
+      actionBtn = `
+        <button class="node-action btn-cfm" data-id="${task.id}">✓ 완료 확정</button>
+        <button class="node-action btn-rej" data-id="${task.id}">반려</button>`;
+    else if (st2 === 'review' && canAct)
+      actionBtn = `<button class="node-action btn-req" data-id="${task.id}">완료 요청</button>`;
 
     const dday = this._dday(task);
 
@@ -446,7 +441,7 @@ export class Graph {
     el.querySelector('.btn-start')?.addEventListener('click', (e) => { e.stopPropagation(); this.cb.onStatusChange?.(task.id, 'doing'); });
     el.querySelector('.btn-req')?.addEventListener('click',   (e) => { e.stopPropagation(); this.cb.onStatusChange?.(task.id, 'review'); });
     el.querySelector('.btn-cfm')?.addEventListener('click',   (e) => { e.stopPropagation(); this.cb.onStatusChange?.(task.id, 'done'); });
-    el.querySelector('.btn-close')?.addEventListener('click', (e) => { e.stopPropagation(); this.cb.onStatusChange?.(task.id, 'closed'); });
+    el.querySelector('.btn-rej')?.addEventListener('click',   (e) => { e.stopPropagation(); this.cb.onStatusChange?.(task.id, 'doing'); });
 
     el.querySelectorAll('.nh').forEach(h => {
       h.addEventListener('mousedown', (e) => {

@@ -675,7 +675,9 @@ body {
   transition: color 0.12s;
 }
 .node-action:hover { color: #212121; }
-.btn-start, .btn-req, .btn-cfm, .btn-close { /* 텍스트 링크 스타일 통일 */ }
+.btn-start, .btn-req, .btn-cfm, .btn-rej { /* 텍스트 링크 스타일 통일 */ }
+.btn-rej { color: #EF4444 !important; }
+.btn-rej:hover { color: #B91C1C !important; }
 
 /* ── 사이드 패널 ──────────────────────────────────────── */
 #side-panel {

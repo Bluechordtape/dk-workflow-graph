@@ -15,7 +15,7 @@ import {
 } from './data.js';
 import { Graph } from './graph.js';
 
-const VERSION = 'v2.20';
+const VERSION = 'v2.21';
 
 let data = null;
 let graph = null;
@@ -434,7 +434,7 @@ function applyRoleUI() {
   document.getElementById('task-status').disabled   = false;
   const statusSel = document.getElementById('task-status');
   statusSel.querySelectorAll('option').forEach(opt => {
-    if (opt.value === 'done' || opt.value === 'closed') {
+    if (opt.value === 'done') {
       opt.style.display = canDone ? '' : 'none';
     }
   });
@@ -662,7 +662,7 @@ function buildFilters() {
   });
   ps.value = ppv;
 
-  const pendingCount = fd.tasks.filter(t => t.status === 'review' || t.status === 'inactive').length;
+  const pendingCount = fd.tasks.filter(t => t.status === 'review').length;
   document.getElementById('pending-badge').textContent = pendingCount > 0 ? pendingCount : '';
   document.getElementById('pending-badge').style.display = pendingCount > 0 ? '' : 'none';
 
@@ -692,14 +692,12 @@ function updateOverview() {
 
   if (tasks.length === 0) { bar.style.display = 'none'; return; }
 
-  const total    = tasks.length;
-  const done     = tasks.filter(t => t.status === 'done' || t.status === 'closed').length;
-  const doing    = tasks.filter(t => t.status === 'doing').length;
-  const review   = tasks.filter(t => t.status === 'review').length;
-  const pre      = tasks.filter(t => t.status === 'pre' || t.status === 'pending').length;
-  const waiting  = tasks.filter(t => t.status === 'waiting').length;
-  const delayed  = tasks.filter(t => t.status === 'delayed').length;
-  const inactive = tasks.filter(t => t.status === 'inactive').length;
+  const total   = tasks.length;
+  const done    = tasks.filter(t => t.status === 'done').length;
+  const doing   = tasks.filter(t => t.status === 'doing').length;
+  const review  = tasks.filter(t => t.status === 'review').length;
+  const pending = tasks.filter(t => t.status === 'pending').length;
+  const delayed = tasks.filter(t => t.status === 'delayed').length;
 
   const donePct  = Math.round(done  / total * 100);
   const doingPct = Math.round(doing / total * 100);
@@ -709,13 +707,11 @@ function updateOverview() {
     : (activeView()?.name || '전체 프로젝트');
 
   const metaParts = [];
-  if (done)     metaParts.push(`완료 ${done}개`);
-  if (doing)    metaParts.push(`진행 중 ${doing}개`);
-  if (review)   metaParts.push(`완료요청 ${review}개`);
-  if (waiting)  metaParts.push(`대기 ${waiting}개`);
-  if (delayed)  metaParts.push(`지연 ${delayed}개`);
-  if (inactive) metaParts.push(`미진행 ${inactive}개`);
-  if (pre)      metaParts.push(`착수전 ${pre}개`);
+  if (done)    metaParts.push(`완료 ${done}개`);
+  if (doing)   metaParts.push(`진행 중 ${doing}개`);
+  if (review)  metaParts.push(`완료요청 ${review}개`);
+  if (delayed) metaParts.push(`지연 ${delayed}개`);
+  if (pending) metaParts.push(`착수전 ${pending}개`);
 
   bar.style.display = '';
   bar.innerHTML = `
@@ -1150,7 +1146,7 @@ function openPanel(task) {
 
   const statusEl = document.getElementById('task-status');
   statusEl.querySelectorAll('option').forEach(opt => {
-    if (opt.value === 'done' || opt.value === 'closed') opt.style.display = can('confirmDone') ? '' : 'none';
+    if (opt.value === 'done') opt.style.display = can('confirmDone') ? '' : 'none';
   });
   statusEl.value = task.status || 'pre';
 

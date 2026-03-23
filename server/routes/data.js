@@ -57,7 +57,7 @@ module.exports = function (io) {
     if (!taskId || !updates) return res.status(400).json({ error: 'taskId, updates 필요' });
 
     const canComplete = ['admin', 'leader'].includes(req.user.role);
-    if ((updates.status === 'done' || updates.status === 'closed') && !canComplete)
+    if (updates.status === 'done' && !canComplete)
       return res.status(403).json({ error: '완료/종결 처리 권한이 없습니다' });
 
     try {
@@ -105,11 +105,10 @@ module.exports = function (io) {
   // PATCH /api/data/task-status — 자기 담당 업무 상태 변경
   router.patch('/data/task-status', authenticateToken, async (req, res) => {
     const { taskId, status } = req.body;
-    // 팀원이 설정 가능한 상태 (착수전→진행중→대기→지연→완료요청→미진행)
-    const memberStatuses = ['pre', 'doing', 'waiting', 'delayed', 'review', 'inactive',
-                            'pending']; // 구버전 호환
-    // 관리자급만 가능한 상태
-    const mgmtStatuses = ['done', 'closed'];
+    // 팀원이 설정 가능한 상태
+    const memberStatuses = ['pending', 'doing', 'delayed', 'review'];
+    // admin/leader만 가능한 상태
+    const mgmtStatuses = ['done'];
     const allAllowed = [...memberStatuses, ...mgmtStatuses];
 
     if (!taskId || !status)
