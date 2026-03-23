@@ -9,26 +9,41 @@ import {
   addGroup, deleteGroup, GROUP_COLORS,
   fetchTemplates, saveTemplate, deleteTemplate,
   fetchBackups, createBackup, restoreBackup, deleteBackup,
-  addSheet, deleteSheet, copyTaskToSheet, normalize,
+  addView, updateView, deleteView, normalize,
   fetchUserNames, fetchUsers, updateUserRole, resetUserPassword, createUser
 } from './data.js';
 import { Graph } from './graph.js';
 
-const VERSION = 'v2.3';
+const VERSION = 'v2.4';
 
 let data = null;
 let graph = null;
 let activeTaskId = null;
 let currentUser = null; // { id, email, name, role }
 let userNames = [];     // 전체 팀원 이름 목록
-let calendarDate = new Date(); // 현재 캘린더 월
+let calendarDate = new Date();
 let viewMode = 'graph'; // 'graph' | 'calendar'
 
 const TOKEN_KEY = 'dk_jwt';
 
-// ── 현재 시트 헬퍼 ────────────────────────────────────────
-function cs() {
-  return data.sheets.find(s => s.id === data.activeSheetId) || data.sheets[0];
+// ── 뷰 필터 헬퍼 ──────────────────────────────────────────
+// activeViewId = null → 전체 보기, 특정 id → 해당 프로젝트만
+function activeView() {
+  if (!data.activeViewId) return null;
+  return (data.views || []).find(v => v.id === data.activeViewId) || null;
+}
+
+function filteredData() {
+  const view = activeView();
+  if (!view || !view.projectIds?.length) {
+    return { projects: data.projects, tasks: data.tasks, flows: data.flows, groups: data.groups };
+  }
+  const projects = data.projects.filter(p => view.projectIds.includes(p.id));
+  const pSet = new Set(projects.map(p => p.id));
+  const tasks = data.tasks.filter(t => pSet.has(t.projectId));
+  const tSet = new Set(tasks.map(t => t.id));
+  const flows = data.flows.filter(f => tSet.has(f.from) && tSet.has(f.to));
+  return { projects, tasks, flows, groups: data.groups };
 }
 
 // ── 언도/리두 ─────────────────────────────────────────────
@@ -47,11 +62,11 @@ function undo() {
   if (redoStack.length > 30) redoStack.shift();
   data = normalize(undoStack.pop());
   saveData(data);
-  graph.setData(cs());
+  graph.setData(filteredData());
   buildFilters();
-  renderSheetTabs();
+  renderSidebar();
   if (activeTaskId) {
-    const t = cs().tasks.find(t => t.id === activeTaskId);
+    const t = data.tasks.find(t => t.id === activeTaskId);
     if (t) openPanel(t); else closePanel();
   }
 }
@@ -61,11 +76,11 @@ function redo() {
   undoStack.push(JSON.parse(JSON.stringify(data)));
   data = normalize(redoStack.pop());
   saveData(data);
-  graph.setData(cs());
+  graph.setData(filteredData());
   buildFilters();
-  renderSheetTabs();
+  renderSidebar();
   if (activeTaskId) {
-    const t = cs().tasks.find(t => t.id === activeTaskId);
+    const t = data.tasks.find(t => t.id === activeTaskId);
     if (t) openPanel(t); else closePanel();
   }
 }
@@ -156,9 +171,9 @@ function initSocket() {
   socket.on('connect', () => setSocketId(socket.id));
   socket.on('data:updated', (newData) => {
     data = normalize(newData);
-    graph.setData(cs());
+    graph.setData(filteredData());
     buildFilters();
-    renderSheetTabs();
+    renderSidebar();
     if (viewMode === 'calendar') renderCalendar();
   });
 }
@@ -174,39 +189,45 @@ async function startApp() {
       onNodeCreate: (x, y) => {
         if (!canWrite()) return;
         pushUndo();
-        const task = addTask(cs(), {
+        const fd = filteredData();
+        const task = addTask(data, {
           x, y,
-          projectId: document.getElementById('filter-project').value || cs().projects[0]?.id,
+          projectId: document.getElementById('filter-project').value || fd.projects[0]?.id,
           assignee: currentUser.name
         });
+        // 필터 뷰에서 생성 시, 해당 뷰의 projectIds에 없는 프로젝트라면 추가
+        const view = activeView();
+        if (view && view.projectIds.length > 0 && task.projectId && !view.projectIds.includes(task.projectId)) {
+          view.projectIds.push(task.projectId);
+        }
         saveData(data);
-        graph.setData(cs());
+        graph.setData(filteredData());
         openPanel(task);
       },
       onFlowCreate: (fromId, toId) => {
         if (!canWrite()) return;
         pushUndo();
-        addFlow(cs(), fromId, toId); saveData(data); graph.setData(cs());
+        addFlow(data, fromId, toId); saveData(data); graph.setData(filteredData());
       },
       onFlowDelete: (flowId) => {
         if (!canWrite()) return;
         pushUndo();
-        deleteFlow(cs(), flowId); saveData(data); graph.setData(cs());
+        deleteFlow(data, flowId); saveData(data); graph.setData(filteredData());
       },
       onStatusChange: async (taskId, st) => {
         if (!canWrite()) {
           try {
             const result = await saveTaskStatus(taskId, st);
             data = normalize(result.data);
-            graph.setData(cs());
+            graph.setData(filteredData());
             buildFilters();
             if (activeTaskId === taskId) document.getElementById('task-status').value = st;
           } catch (err) { alert(err.message); }
         } else {
           pushUndo();
-          updateTask(cs(), taskId, { status: st });
+          updateTask(data, taskId, { status: st });
           saveData(data);
-          graph.setData(cs());
+          graph.setData(filteredData());
           buildFilters();
           if (activeTaskId === taskId) document.getElementById('task-status').value = st;
         }
@@ -214,7 +235,7 @@ async function startApp() {
       onNodeMoved: () => { if (canWrite()) saveData(data); }
     });
 
-    // 키보드 단축키 (텍스트 입력 중에는 브라우저 기본 동작 유지)
+    // 키보드 단축키
     document.addEventListener('keydown', e => {
       const tag = e.target.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target.isContentEditable) return;
@@ -227,20 +248,20 @@ async function startApp() {
     });
   }
 
-  // 팀원 이름 목록 로드
   try { userNames = await fetchUserNames(); } catch { userNames = []; }
 
   data = await loadData();
   if (!data) { logout(); return; }
 
-  graph.setData(cs());
+  graph.setData(filteredData());
   graph.setUserContext(currentUser);
   buildFilters();
   setupToolbar();
   setupPanel();
+  setupViewSidebar();
   applyRoleUI();
   updateUserBtn();
-  renderSheetTabs();
+  renderSidebar();
   populateAssigneeSelect();
 }
 
@@ -249,6 +270,7 @@ function canWrite() {
   return ['admin', 'leader', 'manager'].includes(currentUser?.role);
 }
 function isAdmin() { return currentUser?.role === 'admin'; }
+function isPrivileged() { return ['admin', 'leader'].includes(currentUser?.role); }
 
 // ── 역할별 UI 제어 ────────────────────────────────────────
 function applyRoleUI() {
@@ -275,7 +297,6 @@ function applyRoleUI() {
   document.getElementById('task-due-date').readOnly = isMember;
   document.getElementById('task-group').disabled    = isMember;
   document.getElementById('task-status').disabled = false;
-  // 관리자급만 완료/종결 설정 가능
   const statusSel = document.getElementById('task-status');
   statusSel.querySelectorAll('option').forEach(opt => {
     if (opt.value === 'done' || opt.value === 'closed') {
@@ -284,6 +305,10 @@ function applyRoleUI() {
   });
   document.getElementById('btn-add-subtask').style.display   = canWrite() ? '' : 'none';
   document.getElementById('btn-manage-groups').style.display = canWrite() ? '' : 'none';
+
+  // 사이드바 + 새 시트 버튼
+  const addViewBtn = document.getElementById('btn-add-view');
+  if (addViewBtn) addViewBtn.style.display = isPrivileged() ? '' : 'none';
 }
 
 // ── 툴바 유저 버튼 ────────────────────────────────────────
@@ -343,15 +368,16 @@ function renderCalendar() {
   });
   grid.appendChild(header);
 
-  // 모든 시트의 태스크를 날짜별로 종합
+  // 현재 뷰에서 보이는 프로젝트의 업무만 캘린더에 표시
+  const fd = filteredData();
+  const pSet = new Set(fd.projects.map(p => p.id));
   const tasksByDate = {};
-  for (const sheet of data.sheets) {
-    for (const task of sheet.tasks) {
-      if (!task.dueDate) continue;
-      const key = task.dueDate.slice(0, 10); // YYYY-MM-DD
-      if (!tasksByDate[key]) tasksByDate[key] = [];
-      tasksByDate[key].push({ task, sheet });
-    }
+  for (const task of data.tasks) {
+    if (!task.dueDate) continue;
+    if (!pSet.has(task.projectId)) continue;
+    const key = task.dueDate.slice(0, 10);
+    if (!tasksByDate[key]) tasksByDate[key] = [];
+    tasksByDate[key].push(task);
   }
 
   const today = new Date();
@@ -402,24 +428,16 @@ function renderCalendar() {
       cell.appendChild(dayNum);
 
       const entries = tasksByDate[cellStr] || [];
-      entries.forEach(({ task, sheet: taskSheet }) => {
-        const project = taskSheet.projects.find(p => p.id === task.projectId);
+      entries.forEach(task => {
+        const project = data.projects.find(p => p.id === task.projectId);
         const chip = document.createElement('div');
         chip.className = 'cal-task-chip';
         chip.textContent = task.name;
         chip.style.background = (project?.color || '#9E9E9E') + '22';
         chip.style.color = project?.color || '#424242';
         chip.style.borderLeft = `3px solid ${project?.color || '#9E9E9E'}`;
-        chip.title = `[${taskSheet.name}] ${task.name} (${task.assignee || '미배정'})`;
+        chip.title = `${task.name} (${task.assignee || '미배정'})`;
         chip.addEventListener('click', () => {
-          // 해당 업무의 시트로 전환 후 패널 열기
-          if (data.activeSheetId !== taskSheet.id) {
-            data.activeSheetId = taskSheet.id;
-            saveData(data);
-            graph.setData(cs());
-            buildFilters();
-            renderSheetTabs();
-          }
           setViewMode('graph');
           setTimeout(() => openPanel(task), 100);
         });
@@ -436,25 +454,24 @@ function renderCalendar() {
 
 // ── 필터 ─────────────────────────────────────────────────
 function buildFilters() {
-  const sheet = cs();
-  const hasUnassigned = sheet.tasks.some(t => !t.assignee);
+  const fd = filteredData();
+  const hasUnassigned = fd.tasks.some(t => !t.assignee);
   const asel = document.getElementById('filter-assignee');
   const av = asel.value;
   asel.innerHTML = '<option value="">담당자 전체</option>';
   if (hasUnassigned) {
     const o = document.createElement('option'); o.value = '__unassigned__'; o.textContent = '미배정'; asel.appendChild(o);
   }
-  // 등록된 전체 사용자 목록 사용 (패널과 동일)
   userNames.forEach(a => { const o = document.createElement('option'); o.value = a; o.textContent = a; asel.appendChild(o); });
   asel.value = av;
 
   const psel = document.getElementById('filter-project');
   const pv = psel.value;
   psel.innerHTML = '<option value="">프로젝트 전체</option>';
-  sheet.projects.filter(p => !p.archived).forEach(p => {
+  fd.projects.filter(p => !p.archived).forEach(p => {
     const o = document.createElement('option'); o.value = p.id; o.textContent = p.name; psel.appendChild(o);
   });
-  const archived = sheet.projects.filter(p => p.archived);
+  const archived = fd.projects.filter(p => p.archived);
   if (archived.length) {
     const sep = document.createElement('option'); sep.disabled = true; sep.textContent = '── 보관됨 ──'; psel.appendChild(sep);
     archived.forEach(p => {
@@ -466,12 +483,12 @@ function buildFilters() {
   const ps = document.getElementById('task-project');
   const ppv = ps.value;
   ps.innerHTML = '';
-  sheet.projects.filter(p => !p.archived).forEach(p => {
+  fd.projects.filter(p => !p.archived).forEach(p => {
     const o = document.createElement('option'); o.value = p.id; o.textContent = p.name; ps.appendChild(o);
   });
   ps.value = ppv;
 
-  const pendingCount = sheet.tasks.filter(t => t.status === 'review' || t.status === 'inactive').length;
+  const pendingCount = fd.tasks.filter(t => t.status === 'review' || t.status === 'inactive').length;
   document.getElementById('pending-badge').textContent = pendingCount > 0 ? pendingCount : '';
   document.getElementById('pending-badge').style.display = pendingCount > 0 ? '' : 'none';
 
@@ -489,13 +506,13 @@ function applyFilter() {
 
 function updateOverview() {
   const bar = document.getElementById('overview-bar');
-  const sheet = cs();
-  if (!sheet?.tasks) { bar.style.display = 'none'; return; }
+  const fd = filteredData();
+  if (!fd?.tasks) { bar.style.display = 'none'; return; }
 
   const projectFilter  = document.getElementById('filter-project').value;
   const assigneeFilter = document.getElementById('filter-assignee').value;
 
-  let tasks = sheet.tasks;
+  let tasks = fd.tasks;
   if (projectFilter)  tasks = tasks.filter(t => t.projectId === projectFilter);
   if (assigneeFilter) tasks = tasks.filter(t => t.assignee  === assigneeFilter);
 
@@ -514,8 +531,8 @@ function updateOverview() {
   const doingPct = Math.round(doing / total * 100);
 
   const projectName = projectFilter
-    ? (sheet.projects.find(p => p.id === projectFilter)?.name || '프로젝트')
-    : '전체 프로젝트';
+    ? (fd.projects.find(p => p.id === projectFilter)?.name || '프로젝트')
+    : (activeView()?.name || '전체 프로젝트');
 
   const metaParts = [];
   if (done)     metaParts.push(`완료 ${done}개`);
@@ -539,82 +556,164 @@ function updateOverview() {
   `;
 }
 
-// ── 시트 탭 ──────────────────────────────────────────────
-function renderSheetTabs() {
-  const container = document.getElementById('sheet-tabs');
-  container.innerHTML = '';
+// ── 사이드바 시트 ─────────────────────────────────────────
+let _viewDropdown = null;
 
-  data.sheets.forEach(sheet => {
-    const tab = document.createElement('div');
-    tab.className = 'sheet-tab' + (sheet.id === data.activeSheetId ? ' active' : '');
-    tab.dataset.id = sheet.id;
+function closeViewDropdown() {
+  if (_viewDropdown) { _viewDropdown.remove(); _viewDropdown = null; }
+}
 
-    const nameSpan = document.createElement('span');
-    nameSpan.className = 'sheet-tab-name';
-    nameSpan.textContent = sheet.name;
-    nameSpan.addEventListener('dblclick', () => {
-      if (!canWrite()) return;
-      const newName = prompt('시트 이름:', sheet.name);
-      if (newName?.trim()) {
+function setActiveView(viewId) {
+  data.activeViewId = viewId;
+  saveData(data);
+  graph.setData(filteredData());
+  buildFilters();
+  applyFilter();
+  renderSidebar();
+  if (viewMode === 'calendar') renderCalendar();
+}
+
+function makeSidebarItem(view, isAll) {
+  const isActive = isAll ? !data.activeViewId : data.activeViewId === view.id;
+  const item = document.createElement('div');
+  item.className = 'view-item' + (isActive ? ' active' : '');
+
+  const nameSpan = document.createElement('span');
+  nameSpan.className = 'view-item-name';
+  nameSpan.textContent = view.name;
+  item.appendChild(nameSpan);
+
+  if (!isAll && isPrivileged()) {
+    const menuBtn = document.createElement('button');
+    menuBtn.className = 'view-item-menu';
+    menuBtn.textContent = '⋯';
+    menuBtn.title = '편집/삭제';
+    menuBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeViewDropdown();
+
+      const rect = menuBtn.getBoundingClientRect();
+      const dd = document.createElement('div');
+      dd.className = 'view-dropdown';
+      dd.style.top  = `${rect.bottom + 4}px`;
+      dd.style.left = `${rect.left}px`;
+
+      const editItem = document.createElement('div');
+      editItem.className = 'view-dropdown-item';
+      editItem.textContent = '편집';
+      editItem.addEventListener('click', () => { closeViewDropdown(); openViewModal(view); });
+
+      const delItem = document.createElement('div');
+      delItem.className = 'view-dropdown-item danger';
+      delItem.textContent = '삭제';
+      delItem.addEventListener('click', () => {
+        closeViewDropdown();
+        if (!confirm(`"${view.name}" 시트를 삭제할까요?`)) return;
         pushUndo();
-        sheet.name = newName.trim();
+        deleteView(data, view.id);
         saveData(data);
-        renderSheetTabs();
-      }
-    });
-    tab.appendChild(nameSpan);
-
-    if (canWrite() && data.sheets.length > 1) {
-      const del = document.createElement('button');
-      del.className = 'sheet-tab-del';
-      del.textContent = '×';
-      del.title = '시트 삭제';
-      del.addEventListener('click', e => {
-        e.stopPropagation();
-        if (!confirm(`"${sheet.name}" 시트를 삭제할까요?\n시트 내 모든 업무가 삭제됩니다.`)) return;
-        pushUndo();
-        deleteSheet(data, sheet.id);
-        saveData(data);
-        graph.setData(cs());
+        graph.setData(filteredData());
         buildFilters();
-        renderSheetTabs();
-        applyRoleUI();
+        renderSidebar();
       });
-      tab.appendChild(del);
-    }
 
-    tab.addEventListener('click', () => {
-      if (data.activeSheetId === sheet.id) return;
-      data.activeSheetId = sheet.id;
-      saveData(data);
-      graph.setData(cs());
-      buildFilters();
-      applyFilter();
-      renderSheetTabs();
-      applyRoleUI();
-      if (viewMode === 'calendar') renderCalendar();
+      dd.appendChild(editItem);
+      dd.appendChild(delItem);
+      document.body.appendChild(dd);
+      _viewDropdown = dd;
     });
+    item.appendChild(menuBtn);
+  }
 
-    container.appendChild(tab);
+  item.addEventListener('click', () => {
+    closeViewDropdown();
+    setActiveView(isAll ? null : view.id);
   });
 
-  if (canWrite() && data.sheets.length < 10) {
-    const addBtn = document.createElement('button');
-    addBtn.className = 'sheet-tab-add';
-    addBtn.textContent = '+ 시트';
-    addBtn.addEventListener('click', () => {
-      const name = prompt('새 시트 이름:', `시트 ${data.sheets.length + 1}`);
-      if (!name) return;
-      pushUndo();
-      addSheet(data, name.trim());
-      saveData(data);
-      graph.setData(cs());
-      buildFilters();
-      renderSheetTabs();
-      applyRoleUI();
-    });
-    container.appendChild(addBtn);
-  }
+  return item;
+}
+
+function renderSidebar() {
+  const list = document.getElementById('view-list');
+  if (!list) return;
+  list.innerHTML = '';
+
+  // 전체 보기 (항상 첫 번째)
+  list.appendChild(makeSidebarItem({ id: null, name: '전체 보기', projectIds: [] }, true));
+
+  // 사용자 정의 뷰 목록 (sortOrder 순)
+  const sorted = [...(data.views || [])].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+  sorted.forEach(view => list.appendChild(makeSidebarItem(view, false)));
+
+  // + 새 시트 버튼 표시 제어
+  const btn = document.getElementById('btn-add-view');
+  if (btn) btn.style.display = isPrivileged() ? '' : 'none';
+}
+
+// ── 뷰 시트 생성/편집 모달 ───────────────────────────────
+let _editingViewId = null; // null = 신규 생성
+
+function openViewModal(view = null) {
+  _editingViewId = view?.id || null;
+  document.getElementById('view-modal-title').textContent = view ? '시트 편집' : '새 시트';
+  document.getElementById('view-name-input').value = view?.name || '';
+
+  const checksEl = document.getElementById('view-project-checks');
+  checksEl.innerHTML = '';
+  const currentIds = view?.projectIds || [];
+
+  data.projects.filter(p => !p.archived).forEach(p => {
+    const label = document.createElement('label');
+    label.className = 'view-check-item';
+
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.value = p.id;
+    cb.checked = currentIds.includes(p.id);
+
+    const dot = document.createElement('span');
+    dot.style.cssText = `width:10px;height:10px;border-radius:2px;background:${p.color};flex-shrink:0`;
+
+    const nameSpan = document.createElement('span');
+    nameSpan.textContent = p.name;
+
+    label.appendChild(cb);
+    label.appendChild(dot);
+    label.appendChild(nameSpan);
+    checksEl.appendChild(label);
+  });
+
+  openModal('modal-view');
+  setTimeout(() => document.getElementById('view-name-input').focus(), 50);
+}
+
+function setupViewSidebar() {
+  document.getElementById('btn-add-view')?.addEventListener('click', () => openViewModal(null));
+
+  document.getElementById('btn-view-confirm')?.addEventListener('click', () => {
+    const name = document.getElementById('view-name-input').value.trim();
+    if (!name) { alert('시트 이름을 입력하세요.'); return; }
+
+    const checked = [...document.querySelectorAll('#view-project-checks input[type=checkbox]:checked')];
+    const projectIds = checked.map(cb => cb.value);
+
+    pushUndo();
+    if (_editingViewId) {
+      updateView(data, _editingViewId, { name, projectIds });
+    } else {
+      addView(data, name, projectIds);
+    }
+    saveData(data);
+    graph.setData(filteredData());
+    buildFilters();
+    renderSidebar();
+    closeModal('modal-view');
+  });
+
+  // 드롭다운 닫기 (바깥 클릭)
+  document.addEventListener('click', (e) => {
+    if (_viewDropdown && !_viewDropdown.contains(e.target)) closeViewDropdown();
+  });
 }
 
 // ── 툴바 ─────────────────────────────────────────────────
@@ -629,16 +728,20 @@ function setupToolbar() {
   document.getElementById('btn-reset-view').addEventListener('click', () => graph.resetView());
   document.getElementById('btn-export').addEventListener('click', () => exportJSON(data));
   document.getElementById('btn-import').addEventListener('click', () =>
-    importJSON(d => { data = d; graph.setData(cs()); buildFilters(); closePanel(); renderSheetTabs(); })
+    importJSON(d => { data = d; graph.setData(filteredData()); buildFilters(); closePanel(); renderSidebar(); })
   );
   document.getElementById('btn-add-project').addEventListener('click', () => {
     if (!canWrite()) return;
     const name = prompt('새 프로젝트 이름:');
     if (!name?.trim()) return;
     pushUndo();
-    addProject(cs(), name.trim());
+    const p = addProject(data, name.trim());
+    // 현재 필터 뷰에 있으면 신규 프로젝트를 해당 뷰에 추가
+    const view = activeView();
+    if (view && view.projectIds.length > 0) view.projectIds.push(p.id);
     saveData(data);
     buildFilters();
+    renderSidebar();
   });
   document.getElementById('btn-manage-projects').addEventListener('click', openProjectsModal);
   document.getElementById('btn-backup').addEventListener('click', openBackupModal);
@@ -647,9 +750,15 @@ function setupToolbar() {
   document.getElementById('btn-add-task').addEventListener('click', () => {
     if (!canWrite()) return;
     pushUndo();
-    const task = addTask(cs(), { x: 120 + Math.random() * 200, y: 120 + Math.random() * 200, assignee: currentUser.name });
+    const fd = filteredData();
+    const task = addTask(data, {
+      x: 120 + Math.random() * 200,
+      y: 120 + Math.random() * 200,
+      projectId: fd.projects[0]?.id,
+      assignee: currentUser.name
+    });
     saveData(data);
-    graph.setData(cs());
+    graph.setData(filteredData());
     openPanel(task);
   });
   document.getElementById('btn-logout').addEventListener('click', () => {
@@ -677,12 +786,11 @@ function openProjectsModal() {
 function renderProjectList() {
   const list = document.getElementById('project-list');
   list.innerHTML = '';
-  const sheet = cs();
-  if (!sheet.projects.length) {
+  if (!data.projects.length) {
     list.innerHTML = '<div style="color:#9E9E9E;font-size:13px;padding:8px 0">생성된 프로젝트가 없습니다.</div>';
     return;
   }
-  sheet.projects.forEach(p => {
+  data.projects.forEach(p => {
     const item = document.createElement('div');
     item.className = 'tmpl-item';
     item.style.cursor = 'default';
@@ -703,18 +811,19 @@ function renderProjectList() {
       pushUndo();
       p.archived = !p.archived;
       saveData(data);
-      graph.setData(cs());
+      graph.setData(filteredData());
       buildFilters();
       renderProjectList();
     });
     item.querySelector('.tmpl-del').addEventListener('click', () => {
       if (!confirm(`"${p.name}" 프로젝트를 삭제할까요?\n모든 업무와 연결이 삭제됩니다.`)) return;
       pushUndo();
-      deleteProject(cs(), p.id);
+      deleteProject(data, p.id);
       saveData(data);
-      graph.setData(cs());
+      graph.setData(filteredData());
       buildFilters();
       renderProjectList();
+      renderSidebar(); // 뷰의 projectIds에서도 제거됨
     });
     list.appendChild(item);
   });
@@ -729,7 +838,6 @@ function setupPanel() {
   document.getElementById('btn-save-task').addEventListener('click', saveTask);
   document.getElementById('btn-delete-task').addEventListener('click', deleteTaskBtn);
   document.getElementById('btn-add-subtask').addEventListener('click', addSubtask);
-  document.getElementById('btn-copy-task').addEventListener('click', openCopyTaskModal);
 }
 
 function openPanel(task) {
@@ -743,7 +851,7 @@ function openPanel(task) {
 
   const gs = document.getElementById('task-group');
   gs.innerHTML = '<option value="">그룹 없음</option>';
-  (cs().groups || []).forEach(g => {
+  (data.groups || []).forEach(g => {
     const o = document.createElement('option');
     o.value = g.id; o.textContent = g.name;
     gs.appendChild(o);
@@ -752,20 +860,19 @@ function openPanel(task) {
   updateGroupSwatch(task.groupId);
 
   const statusEl = document.getElementById('task-status');
-  // 관리자급만 완료/종결 설정 가능
   statusEl.querySelectorAll('option').forEach(opt => {
     if (opt.value === 'done' || opt.value === 'closed') opt.style.display = canWrite() ? '' : 'none';
   });
   statusEl.value = task.status || 'pre';
 
-  document.getElementById('btn-copy-task').style.display =
-    canWrite() && data.sheets.length > 1 ? '' : 'none';
+  // 다른 시트로 복제 버튼 — 시트 개념이 없어졌으므로 숨김
+  document.getElementById('btn-copy-task').style.display = 'none';
 
   renderSubtasks(task);
 }
 
 function updateGroupSwatch(groupId) {
-  const g = (cs().groups || []).find(g => g.id === groupId);
+  const g = (data.groups || []).find(g => g.id === groupId);
   const sw = document.getElementById('task-group-swatch');
   if (g) { sw.style.background = g.color; sw.style.display = ''; }
   else   { sw.style.display = 'none'; }
@@ -784,7 +891,7 @@ async function saveTask() {
   if (!activeTaskId) return;
   pushUndo();
   if (canWrite()) {
-    updateTask(cs(), activeTaskId, {
+    updateTask(data, activeTaskId, {
       name:      document.getElementById('task-name').value,
       projectId: document.getElementById('task-project').value,
       assignee:  document.getElementById('task-assignee').value,
@@ -794,18 +901,18 @@ async function saveTask() {
       note:      document.getElementById('task-note').value
     });
     saveData(data);
-    graph.setData(cs());
+    graph.setData(filteredData());
     buildFilters();
   } else {
     try {
-      const task = cs().tasks.find(t => t.id === activeTaskId);
+      const task = data.tasks.find(t => t.id === activeTaskId);
       const result = await updateTaskMember(activeTaskId, {
         note:     document.getElementById('task-note').value,
         status:   document.getElementById('task-status').value,
         subtasks: task?.subtasks
       });
-      data = result.data;
-      graph.setData(cs());
+      data = normalize(result.data);
+      graph.setData(filteredData());
       buildFilters();
     } catch (err) { alert(err.message); return; }
   }
@@ -814,12 +921,12 @@ async function saveTask() {
 
 function deleteTaskBtn() {
   if (!activeTaskId || !isAdmin()) return;
-  const task = cs().tasks.find(t => t.id === activeTaskId);
+  const task = data.tasks.find(t => t.id === activeTaskId);
   if (!confirm(`"${task?.name}" 업무를 삭제할까요?`)) return;
   pushUndo();
-  deleteTask(cs(), activeTaskId);
+  deleteTask(data, activeTaskId);
   saveData(data);
-  graph.setData(cs());
+  graph.setData(filteredData());
   buildFilters();
   closePanel();
 }
@@ -870,7 +977,7 @@ function renderSubtasks(task) {
 
 function addSubtask() {
   if (!activeTaskId || !canWrite()) return;
-  const task = cs().tasks.find(t => t.id === activeTaskId);
+  const task = data.tasks.find(t => t.id === activeTaskId);
   if (!task) return;
   if (!task.subtasks) task.subtasks = [];
 
@@ -878,34 +985,12 @@ function addSubtask() {
   task.subtasks.push(s);
   saveData(data);
 
-  // 전체 재렌더링 없이 새 행만 추가 후 포커스
   const list = document.getElementById('subtask-list');
   const row = makeSubtaskRow(task, s);
   list.appendChild(row);
   const input = row.querySelector('.sub-name');
   requestAnimationFrame(() => input.focus());
 }
-
-// ── 업무 복제 (다른 시트로) ───────────────────────────────
-function openCopyTaskModal() {
-  if (!activeTaskId) return;
-  const sel = document.getElementById('copy-task-sheet');
-  sel.innerHTML = '';
-  data.sheets.filter(s => s.id !== data.activeSheetId).forEach(s => {
-    const o = document.createElement('option'); o.value = s.id; o.textContent = s.name; sel.appendChild(o);
-  });
-  openModal('modal-copy-task');
-}
-
-document.getElementById('btn-copy-task-confirm').addEventListener('click', () => {
-  const targetSheetId = document.getElementById('copy-task-sheet').value;
-  if (!targetSheetId || !activeTaskId) return;
-  pushUndo();
-  copyTaskToSheet(data, activeTaskId, targetSheetId);
-  saveData(data);
-  closeModal('modal-copy-task');
-  alert('복제됐습니다.');
-});
 
 // ── 그룹 관리 ────────────────────────────────────────────
 let _selectedGroupColor = GROUP_COLORS[0];
@@ -929,11 +1014,11 @@ function buildGroupColorPalette() {
 function renderGroupList() {
   const list = document.getElementById('group-list');
   list.innerHTML = '';
-  if (!(cs().groups || []).length) {
+  if (!(data.groups || []).length) {
     list.innerHTML = '<div style="color:#9E9E9E;font-size:13px;padding:8px 0">생성된 그룹이 없습니다.</div>';
     return;
   }
-  (cs().groups || []).forEach(g => {
+  (data.groups || []).forEach(g => {
     const item = document.createElement('div');
     item.className = 'tmpl-item';
     item.style.cursor = 'default';
@@ -947,9 +1032,9 @@ function renderGroupList() {
     item.querySelector('.tmpl-del').addEventListener('click', () => {
       if (!confirm(`"${g.name}" 그룹을 삭제할까요?`)) return;
       pushUndo();
-      deleteGroup(cs(), g.id);
+      deleteGroup(data, g.id);
       saveData(data);
-      graph.setData(cs());
+      graph.setData(filteredData());
       buildFilters();
       renderGroupList();
     });
@@ -973,20 +1058,19 @@ document.getElementById('btn-grp-save').addEventListener('click', () => {
   const name = document.getElementById('grp-name').value.trim();
   if (!name) { alert('그룹 이름을 입력하세요.'); return; }
   pushUndo();
-  addGroup(cs(), name, _selectedGroupColor);
+  addGroup(data, name, _selectedGroupColor);
   saveData(data);
-  graph.setData(cs());
+  graph.setData(filteredData());
   buildFilters();
   closeModal('modal-group-create');
   renderGroupList();
-  // 패널이 열려 있으면 그룹 선택 목록 갱신
   if (activeTaskId) {
-    const task = cs().tasks.find(t => t.id === activeTaskId);
+    const task = data.tasks.find(t => t.id === activeTaskId);
     if (task) {
       const gs = document.getElementById('task-group');
       const prev = gs.value;
       gs.innerHTML = '<option value="">그룹 없음</option>';
-      (cs().groups || []).forEach(g => {
+      (data.groups || []).forEach(g => {
         const o = document.createElement('option');
         o.value = g.id; o.textContent = g.name;
         gs.appendChild(o);
@@ -1009,7 +1093,7 @@ async function renderUserList() {
     const users = await fetchUsers();
     list.innerHTML = '';
     const roleLabel = { admin: '관리자', leader: '팀장', manager: '과장', member: '팀원' };
-    const roleColor = { admin: '#212121', leader: '#6366F1', manager: '#9E9E9E', member: '#BDBDBD' };
+    const roleColor = { admin: '#212121', leader: '#C8102E', manager: '#9E9E9E', member: '#BDBDBD' };
     const roles = ['admin', 'leader', 'manager', 'member'];
 
     users.forEach(u => {
@@ -1043,7 +1127,6 @@ async function renderUserList() {
         </div>
       `;
 
-      // 권한 저장 (최적화: 전체 재렌더링 없이 해당 아이템만 업데이트)
       item.querySelector('.btn-role-save').addEventListener('click', async (e) => {
         const btn = e.target;
         const role = item.querySelector('.user-role-sel').value;
@@ -1051,7 +1134,6 @@ async function renderUserList() {
         try {
           await updateUserRole(u.id, role);
           u.role = role;
-          // 아이템 뱃지 + 아바타 색상만 갱신
           item.querySelector('.role-badge').className = `role-badge ${role}`;
           item.querySelector('.role-badge').textContent = roleLabel[role];
           item.querySelector('.user-item-avatar').style.background = `${roleColor[role]}22`;
@@ -1067,7 +1149,6 @@ async function renderUserList() {
         } catch (err) { alert(err.message); btn.textContent = '권한 저장'; btn.disabled = false; }
       });
 
-      // 비밀번호 변경
       const pwChange = async () => {
         const pw = prompt(`${u.name}의 새 비밀번호 (4자 이상):`);
         if (!pw) return;
@@ -1108,7 +1189,6 @@ document.getElementById('btn-add-user-confirm').addEventListener('click', async 
     await createUser(name, email, password, role);
     closeModal('modal-add-user');
     await renderUserList();
-    // 담당자 목록 + 로그인 드롭다운 갱신
     try { userNames = await fetchUserNames(); } catch {}
     populateAssigneeSelect();
     await loadLoginNames();
@@ -1133,13 +1213,13 @@ document.getElementById('btn-tmpl-save-confirm').addEventListener('click', async
   const desc = document.getElementById('tmpl-save-desc').value.trim();
   if (!name) { alert('템플릿 이름을 입력하세요.'); return; }
 
-  const sheet = cs();
+  const fd = filteredData();
   const templateData = {
-    tasks: sheet.tasks.map(t => ({
+    tasks: fd.tasks.map(t => ({
       id: t.id, name: t.name, x: t.x, y: t.y,
       status: 'pending', assignee: '', note: '', subtasks: [], dueDate: null
     })),
-    flows: sheet.flows.map(f => ({ id: f.id, from: f.from, to: f.to }))
+    flows: fd.flows.map(f => ({ id: f.id, from: f.from, to: f.to }))
   };
 
   try {
@@ -1211,18 +1291,22 @@ document.getElementById('btn-tmpl-load-confirm').addEventListener('click', async
     if (!tmpl) { alert('템플릿을 찾을 수 없습니다.'); return; }
 
     pushUndo();
-    const project = addProject(cs(), projectName);
+    const project = addProject(data, projectName);
+    // 현재 필터 뷰에 있으면 신규 프로젝트를 해당 뷰에 추가
+    const view = activeView();
+    if (view && view.projectIds.length > 0) view.projectIds.push(project.id);
+
     const idMap = {};
     for (const t of tmpl.data.tasks) {
-      const newTask = addTask(cs(), { name: t.name, projectId: project.id, x: t.x, y: t.y });
+      const newTask = addTask(data, { name: t.name, projectId: project.id, x: t.x, y: t.y });
       idMap[t.id] = newTask.id;
     }
     for (const f of tmpl.data.flows) {
-      if (idMap[f.from] && idMap[f.to]) addFlow(cs(), idMap[f.from], idMap[f.to]);
+      if (idMap[f.from] && idMap[f.to]) addFlow(data, idMap[f.from], idMap[f.to]);
     }
 
     saveData(data);
-    graph.setData(cs());
+    graph.setData(filteredData());
     buildFilters();
     document.getElementById('filter-project').value = project.id;
     applyFilter();
@@ -1275,9 +1359,9 @@ async function refreshBackupList() {
         try {
           const result = await restoreBackup(b.id);
           data = normalize(result.data);
-          graph.setData(cs());
+          graph.setData(filteredData());
           buildFilters();
-          renderSheetTabs();
+          renderSidebar();
           closeModal('modal-backup');
           alert('복구가 완료됐습니다.');
         } catch (err) { alert(err.message); }
@@ -1320,7 +1404,6 @@ async function loadLoginNames() {
 }
 
 async function init() {
-  // 버전 표시
   const vEl = document.getElementById('toolbar-version');
   const lEl = document.getElementById('login-version');
   if (vEl) vEl.textContent = VERSION;

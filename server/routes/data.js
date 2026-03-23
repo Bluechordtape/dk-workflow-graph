@@ -65,15 +65,13 @@ module.exports = function (io) {
       if (result.rows.length === 0) return res.status(404).json({ error: '데이터 없음' });
 
       const data = result.rows[0].data;
-      // sheets 구조와 구버전 모두 지원
-      let task = null;
-      if (data.sheets) {
+      // 신규 global 구조 우선, 구버전 sheets 구조 fallback
+      let task = data.tasks?.find(t => t.id === taskId);
+      if (!task && data.sheets) {
         for (const sheet of data.sheets) {
           task = sheet.tasks?.find(t => t.id === taskId);
           if (task) break;
         }
-      } else {
-        task = data.tasks?.find(t => t.id === taskId);
       }
       if (!task) return res.status(404).json({ error: '업무를 찾을 수 없습니다' });
 
@@ -132,14 +130,12 @@ module.exports = function (io) {
         return res.status(404).json({ error: '데이터 없음' });
 
       const data = result.rows[0].data;
-      let task = null;
-      if (data.sheets) {
+      let task = data.tasks?.find(t => t.id === taskId);
+      if (!task && data.sheets) {
         for (const sheet of data.sheets) {
           task = sheet.tasks?.find(t => t.id === taskId);
           if (task) break;
         }
-      } else {
-        task = data.tasks?.find(t => t.id === taskId);
       }
       if (!task) return res.status(404).json({ error: '업무를 찾을 수 없습니다' });
 

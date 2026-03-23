@@ -813,77 +813,121 @@ body {
 }
 .tmpl-del:hover { background: #F5F5F5; color: #C8102E; }
 
-/* ── 시트 탭 ────────────────────────────────────────────── */
-#sheet-tabs {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  padding: 0 12px;
-  height: 36px;
+/* ── 뷰 사이드바 ─────────────────────────────────────────── */
+#view-sidebar {
+  width: 200px;
   background: #FAFAFA;
-  border-bottom: 1px solid #E0E0E0;
+  border-right: 1px solid #E5E7EB;
+  display: flex;
+  flex-direction: column;
+  padding: 14px 0 12px;
   flex-shrink: 0;
-  overflow-x: auto;
-  scrollbar-width: none;
+  overflow-y: auto;
 }
-#sheet-tabs::-webkit-scrollbar { display: none; }
 
-.sheet-tab {
+.sidebar-title {
+  font-size: 10px;
+  font-weight: 700;
+  color: #9CA3AF;
+  letter-spacing: 1px;
+  padding: 0 14px 8px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.view-item {
   display: flex;
   align-items: center;
+  padding: 7px 10px 7px 14px;
+  margin: 1px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #374151;
+  transition: background 0.1s;
+  min-height: 34px;
   gap: 6px;
-  padding: 0 10px;
-  height: 26px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 500;
-  color: #757575;
-  background: transparent;
-  border: 1px solid transparent;
-  transition: background 0.12s, color 0.12s;
-  white-space: nowrap;
-  flex-shrink: 0;
 }
-.sheet-tab:hover { background: #F0F0F0; color: #212121; }
-.sheet-tab.active {
-  background: #FFFFFF;
+.view-item:hover { background: #F3F4F6; }
+.view-item.active {
+  background: #F3F4F6;
+  font-weight: 600;
   color: #212121;
-  border-color: #E0E0E0;
-  font-weight: 600;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
 }
-
-.sheet-tab-name { pointer-events: none; }
-.sheet-tab.active .sheet-tab-name { pointer-events: auto; }
-
-.sheet-tab-del {
-  width: 16px; height: 16px;
-  border: none; background: none;
-  color: #BDBDBD; font-size: 13px;
-  cursor: pointer; border-radius: 3px;
-  display: flex; align-items: center; justify-content: center;
-  line-height: 1; padding: 0;
-  transition: background 0.1s, color 0.1s;
-}
-.sheet-tab-del:hover { background: #E0E0E0; color: #C8102E; }
-
-.sheet-tab-add {
-  height: 26px;
-  padding: 0 10px;
-  border: 1px dashed #BDBDBD;
-  border-radius: 6px;
-  background: transparent;
-  font-size: 11px;
-  font-weight: 600;
-  font-family: inherit;
-  color: #9E9E9E;
-  cursor: pointer;
+.view-item-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
+}
+.view-item-menu {
+  opacity: 0;
+  border: none;
+  background: none;
+  font-size: 15px;
+  cursor: pointer;
+  color: #9CA3AF;
+  border-radius: 4px;
+  padding: 1px 4px;
+  flex-shrink: 0;
+  line-height: 1;
+  transition: color 0.1s, background 0.1s;
+}
+.view-item:hover .view-item-menu { opacity: 1; }
+.view-item-menu:hover { color: #212121; background: #E5E7EB; }
+
+/* 뷰 메뉴 드롭다운 */
+.view-dropdown {
+  position: fixed;
+  background: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  z-index: 500;
+  min-width: 120px;
+  overflow: hidden;
+}
+.view-dropdown-item {
+  padding: 9px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  color: #374151;
+  transition: background 0.1s;
+}
+.view-dropdown-item:hover { background: #F3F4F6; }
+.view-dropdown-item.danger { color: #C8102E; }
+.view-dropdown-item.danger:hover { background: #FFF5F7; }
+
+#btn-add-view {
+  margin: 10px 8px 0;
+  padding: 7px 14px;
+  border: 1px dashed #D1D5DB;
+  border-radius: 6px;
+  background: none;
+  font-size: 12px;
+  font-family: inherit;
+  color: #6B7280;
+  cursor: pointer;
+  text-align: left;
   flex-shrink: 0;
   transition: border-color 0.12s, color 0.12s;
 }
-.sheet-tab-add:hover { border-color: #424242; color: #424242; }
+#btn-add-view:hover { border-color: #9CA3AF; color: #374151; }
+
+/* 뷰 프로젝트 체크박스 */
+.view-check-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #212121;
+  transition: background 0.1s;
+}
+.view-check-item:hover { background: #F3F4F6; }
+.view-check-item input[type=checkbox] { accent-color: #C8102E; flex-shrink: 0; }
 
 /* ── 캘린더 뷰 ───────────────────────────────────────────── */
 #calendar-view {

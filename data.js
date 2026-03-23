@@ -21,41 +21,76 @@ export async function loadData() {
       const d = await res.json();
       if (d) return normalize(d);
     }
-    if (res.status === 401 || res.status === 403) return null; // 인증 실패 신호
+    if (res.status === 401 || res.status === 403) return null;
   } catch {}
   return null;
 }
 
 export function normalize(d) {
-  // 구버전 포맷 → sheets 구조로 마이그레이션
-  if (!d.sheets) {
-    const sheetId = generateId('sheet');
-    d.sheets = [{
+  // ── Phase 1: 구버전 flat → sheets 구조 마이그레이션 (sheets도 views도 없는 경우)
+  if (!d.sheets && !d.views && (d.tasks || d.projects)) {
+    const sheetId = generateId('view');
+    d.views = [{
       id: sheetId,
       name: '기본 시트',
-      projects: d.projects || [],
-      tasks:    d.tasks    || [],
-      flows:    d.flows    || [],
-      groups:   d.groups   || []
+      projectIds: (d.projects || []).map(p => p.id),
+      sortOrder: 0
     }];
-    d.activeSheetId = sheetId;
-    delete d.projects; delete d.tasks; delete d.flows; delete d.groups;
+    d.activeViewId = null; // 전체 보기
+    // projects/tasks/flows/groups는 이미 루트에 있으므로 그대로 유지
   }
-  if (!d.activeSheetId || !d.sheets.find(s => s.id === d.activeSheetId)) {
-    d.activeSheetId = d.sheets[0]?.id;
-  }
-  for (const sheet of d.sheets) {
-    if (!sheet.projects) sheet.projects = [];
-    if (!sheet.tasks)    sheet.tasks    = [];
-    if (!sheet.flows)    sheet.flows    = [];
-    if (!sheet.groups)   sheet.groups   = [];
-    // 구버전 상태값 정규화 (새 상태 시스템으로 마이그레이션)
-    for (const task of sheet.tasks) {
-      if (task.status === 'todo')    task.status = 'pre';
-      if (task.status === 'wip')     task.status = 'doing';
-      if (task.status === 'pending') task.status = 'pre';
+
+  // ── Phase 2: sheets 구조 → global 구조 마이그레이션
+  if (d.sheets) {
+    const projectMap = new Map();
+    const groupMap   = new Map();
+    const tasks      = [];
+    const flows      = [];
+
+    for (const sheet of d.sheets) {
+      for (const p of (sheet.projects || [])) projectMap.set(p.id, p);
+      for (const g of (sheet.groups   || [])) groupMap.set(g.id, g);
+      tasks.push(...(sheet.tasks || []));
+      flows.push(...(sheet.flows || []));
     }
+
+    d.projects = [...projectMap.values()];
+    d.groups   = [...groupMap.values()];
+    d.tasks    = tasks;
+    d.flows    = flows;
+
+    // 기존 sheets → views 변환 (각 sheet의 프로젝트 ID 목록 보존)
+    d.views = d.sheets.map((s, i) => ({
+      id:         s.id,
+      name:       s.name,
+      projectIds: (s.projects || []).map(p => p.id),
+      sortOrder:  i
+    }));
+    d.activeViewId = null; // 마이그레이션 후 전체 보기로 초기화
+
+    delete d.sheets;
+    delete d.activeSheetId;
   }
+
+  // ── Phase 3: global 구조 기본값 보장
+  if (!d.projects) d.projects = [];
+  if (!d.tasks)    d.tasks    = [];
+  if (!d.flows)    d.flows    = [];
+  if (!d.groups)   d.groups   = [];
+  if (!d.views)    d.views    = [];
+
+  // activeViewId 유효성 검사 (null = 전체 보기)
+  if (d.activeViewId && !d.views.find(v => v.id === d.activeViewId)) {
+    d.activeViewId = null;
+  }
+
+  // ── Phase 4: 상태값 정규화
+  for (const task of d.tasks) {
+    if (task.status === 'todo')    task.status = 'pre';
+    if (task.status === 'wip')     task.status = 'doing';
+    if (task.status === 'pending') task.status = 'pre';
+  }
+
   return d;
 }
 
@@ -169,7 +204,7 @@ export function generateId(p = 'id') {
   return `${p}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
 }
 
-// ── 프로젝트 ──────────────────────────────────────────────
+// ── 프로젝트 (루트 data 객체에 직접 작업) ─────────────────
 const COLORS = ['#0D9488','#0891B2','#059669','#DC2626','#D97706','#EA580C','#2563EB','#16A34A'];
 let ci = 0;
 
@@ -184,6 +219,10 @@ export function deleteProject(data, projectId) {
   const removed = new Set(data.tasks.filter(t => t.projectId === projectId).map(t => t.id));
   data.tasks = data.tasks.filter(t => t.projectId !== projectId);
   data.flows = data.flows.filter(f => !removed.has(f.from) && !removed.has(f.to));
+  // 뷰의 projectIds에서도 제거
+  for (const view of (data.views || [])) {
+    view.projectIds = (view.projectIds || []).filter(id => id !== projectId);
+  }
 }
 
 // ── 업무 ─────────────────────────────────────────────────
@@ -241,6 +280,27 @@ export function deleteFlow(data, flowId) {
   data.flows = data.flows.filter(f => f.id !== flowId);
 }
 
+// ── 뷰 (사이드바 시트) ────────────────────────────────────
+export function addView(data, name, projectIds = []) {
+  const maxOrder = (data.views || []).reduce((m, v) => Math.max(m, v.sortOrder || 0), 0);
+  const view = { id: generateId('view'), name, projectIds, sortOrder: maxOrder + 1 };
+  if (!data.views) data.views = [];
+  data.views.push(view);
+  data.activeViewId = view.id;
+  return view;
+}
+
+export function updateView(data, viewId, updates) {
+  const view = (data.views || []).find(v => v.id === viewId);
+  if (view) Object.assign(view, updates);
+  return view;
+}
+
+export function deleteView(data, viewId) {
+  data.views = (data.views || []).filter(v => v.id !== viewId);
+  if (data.activeViewId === viewId) data.activeViewId = null;
+}
+
 // ── 사용자 API ────────────────────────────────────────────
 export async function fetchUserNames() {
   const res = await fetch('/api/auth/names');
@@ -278,31 +338,4 @@ export async function resetUserPassword(userId, password) {
   });
   if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || '변경 실패'); }
   return res.json();
-}
-
-// ── 시트 ─────────────────────────────────────────────────
-export function addSheet(data, name) {
-  const sheet = { id: generateId('sheet'), name, projects: [], tasks: [], flows: [], groups: [] };
-  data.sheets.push(sheet);
-  data.activeSheetId = sheet.id;
-  return sheet;
-}
-
-export function deleteSheet(data, sheetId) {
-  data.sheets = data.sheets.filter(s => s.id !== sheetId);
-  if (data.activeSheetId === sheetId) data.activeSheetId = data.sheets[0]?.id;
-}
-
-export function copyTaskToSheet(data, taskId, targetSheetId) {
-  let sourceTask = null;
-  for (const sheet of data.sheets) {
-    sourceTask = sheet.tasks.find(t => t.id === taskId);
-    if (sourceTask) break;
-  }
-  if (!sourceTask) return null;
-  const target = data.sheets.find(s => s.id === targetSheetId);
-  if (!target) return null;
-  const newTask = { ...JSON.parse(JSON.stringify(sourceTask)), id: generateId('t'), x: sourceTask.x + 20, y: sourceTask.y + 20 };
-  target.tasks.push(newTask);
-  return newTask;
 }
