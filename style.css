@@ -415,10 +415,10 @@ body {
 .project-box-header {
   position: absolute;
   top: 0; left: 0; right: 0;
-  height: 44px;
+  height: 48px;
   display: flex;
   align-items: center;
-  padding: 0 14px;
+  padding: 0 18px;
   pointer-events: auto;
   cursor: grab;
   user-select: none;
@@ -439,10 +439,10 @@ body {
 .group-box-header {
   position: absolute;
   top: 0; left: 0; right: 0;
-  height: 32px;
+  height: 36px;
   display: flex;
   align-items: center;
-  padding: 0 10px;
+  padding: 0 12px;
   pointer-events: auto;
   cursor: grab;
   user-select: none;
@@ -472,7 +472,7 @@ body {
 /* ── 태스크 노드 ──────────────────────────────────────── */
 .task-node {
   position: absolute;
-  width: 190px;
+  width: 220px;
   display: flex;
   align-items: center;
   transition: opacity 0.15s;
@@ -508,7 +508,7 @@ body {
   border-radius: 8px;
   border: 1px solid #E0E0E0;
   border-left: 3px solid var(--sc, #BDBDBD);
-  padding: 10px 12px;
+  padding: 12px 14px;
   cursor: pointer;
   user-select: none;
   height: 110px;
@@ -536,7 +536,7 @@ body {
   margin-top: 3px;
 }
 .node-name {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: #212121;
   line-height: 1.35;
@@ -550,14 +550,14 @@ body {
   gap: 6px;
 }
 .node-assignee {
-  font-size: 11px;
+  font-size: 12px;
   color: #9E9E9E;
   font-weight: 400;
 }
 .node-status {
   font-size: 12px;
   font-weight: 700;
-  padding: 4px 12px;
+  padding: 3px 10px;
   border-radius: 4px;
   white-space: nowrap;
   letter-spacing: -0.1px;
@@ -565,23 +565,23 @@ body {
 }
 
 .node-sub {
-  font-size: 10px;
+  font-size: 11px;
   color: #9E9E9E;
   font-weight: 400;
 }
 
 .node-dday {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: -0.1px;
 }
 
 .node-action {
   flex-shrink: 0;
-  height: 22px;
+  height: 24px;
   padding: 0 10px;
   border-radius: 4px;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 500;
   font-family: inherit;
   cursor: pointer;

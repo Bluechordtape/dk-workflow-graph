@@ -1,12 +1,12 @@
 // graph.js — 3-tier hierarchy: Project > Group(Category) > Task
 
-export const NODE_W = 190;
+export const NODE_W = 220;
 export const NODE_H = 110;
 
 // Layout constants
-const PROJECT_HEADER_H = 44;
+const PROJECT_HEADER_H = 48;
 const PROJECT_PAD      = 22;
-const GROUP_HEADER_H   = 32;
+const GROUP_HEADER_H   = 36;
 const GROUP_PAD        = 14;
 const MIN_PROJECT_W    = 300;
 const MIN_PROJECT_H    = 160;
@@ -230,7 +230,7 @@ export class Graph {
       padding:3px 10px;border-radius:100px;
       background:${project.color}1A;color:${project.color};
       border:1px solid ${project.color}44;
-      font-size:11px;font-weight:700;letter-spacing:0.3px;
+      font-size:12px;font-weight:700;letter-spacing:0.3px;
     `;
     pill.appendChild(colorDot);
     pill.appendChild(document.createTextNode(project.name));
@@ -278,7 +278,7 @@ export class Graph {
     colorBar.style.background = group.color;
 
     const nameSpan = document.createElement('span');
-    nameSpan.style.cssText = 'font-size:12px;font-weight:600;color:#374151;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
+    nameSpan.style.cssText = 'font-size:13px;font-weight:600;color:#374151;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
     nameSpan.textContent = group.name;
 
     header.appendChild(colorBar);
@@ -380,7 +380,7 @@ export class Graph {
       'border-radius: 8px',
       'background: #FFFFFF',
       'box-shadow: 0 1px 4px rgba(0,0,0,0.07)',
-      'padding: 10px 12px',
+      'padding: 12px 14px',
       `height: ${NODE_H}px`,
       'overflow: hidden',
       'display: flex',
@@ -395,11 +395,11 @@ export class Graph {
       <div class="node-inner" style="${innerStyle}">
         <div class="node-top">
           <span class="node-dot" style="width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:3px;background:${st.bar}"></span>
-          <span class="node-name" style="font-size:13px;font-weight:600;color:#212121;line-height:1.35;letter-spacing:-0.2px;flex:1">${task.name}</span>
+          <span class="node-name" style="font-size:14px;font-weight:600;color:#212121;line-height:1.35;letter-spacing:-0.2px;flex:1">${task.name}</span>
         </div>
         <div class="node-mid" style="display:flex;align-items:center;gap:5px">
-          <span class="node-assignee" style="font-size:11px;color:#9E9E9E;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${task.assignee || '미배정'}</span>
-          <span style="font-size:12px;font-weight:700;padding:4px 12px;border-radius:4px;white-space:nowrap;flex-shrink:0;background:${st.bg};color:${st.text};border:1px solid ${st.bdg}">${st.label}</span>
+          <span class="node-assignee" style="font-size:12px;color:#9E9E9E;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${task.assignee || '미배정'}</span>
+          <span style="font-size:12px;font-weight:700;padding:3px 10px;border-radius:4px;white-space:nowrap;flex-shrink:0;background:${st.bg};color:${st.text};border:1px solid ${st.bdg}">${st.label}</span>
           ${actionBtn}
         </div>
         ${subLine}
