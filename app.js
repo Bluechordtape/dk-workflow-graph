@@ -1028,13 +1028,18 @@ function addSubtask() {
 
   const s = { id: `s_${Date.now()}`, name: '', status: 'pending' };
   task.subtasks.push(s);
-  saveData(data);
+  // saveData는 사용자가 내용 입력 후 blur 시점에 makeSubtaskRow 내부에서 호출됨
+  // 여기서 즉시 저장하면 소켓 브로드캐스트로 data 객체가 교체되어 s 참조가 끊어질 수 있음
 
   const list = document.getElementById('subtask-list');
   const row = makeSubtaskRow(task, s);
   list.appendChild(row);
   const input = row.querySelector('.sub-name');
-  requestAnimationFrame(() => input.focus());
+  requestAnimationFrame(() => {
+    input.focus();
+    // 패널이 스크롤 가능하면 새 입력창이 보이도록 스크롤
+    input.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  });
 }
 
 // ── 그룹 관리 ────────────────────────────────────────────
