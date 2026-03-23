@@ -247,6 +247,8 @@ body {
   white-space: nowrap;
   letter-spacing: -0.5px;
   flex-shrink: 0;
+  cursor: pointer;
+  user-select: none;
 }
 
 .sep {

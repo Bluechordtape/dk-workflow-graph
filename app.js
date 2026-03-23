@@ -1027,6 +1027,7 @@ function setupToolbar() {
   document.getElementById('btn-undo').addEventListener('click', undo);
   document.getElementById('btn-redo').addEventListener('click', redo);
   document.getElementById('btn-reset-view').addEventListener('click', () => graph.resetView());
+  document.querySelector('#toolbar .brand')?.addEventListener('click', () => setViewMode('graph'));
   document.getElementById('btn-export').addEventListener('click', () => exportJSON(data));
   document.getElementById('btn-import').addEventListener('click', () =>
     importJSON(d => { data = d; graph.setData(filteredData()); buildFilters(); closePanel(); renderSidebar(); })
