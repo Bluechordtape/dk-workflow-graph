@@ -15,7 +15,7 @@ import {
 } from './data.js';
 import { Graph } from './graph.js';
 
-const VERSION = 'v2.19';
+const VERSION = 'v2.20';
 
 let data = null;
 let graph = null;
@@ -371,6 +371,9 @@ async function startApp() {
   updateUserBtn();
   renderSidebar();
   populateAssigneeSelect();
+
+  // DOM 레이아웃 완료 후 전체 노드가 보이도록 fitView
+  requestAnimationFrame(() => graph.resetView());
 }
 
 // ── 권한 매트릭스 ─────────────────────────────────────────
@@ -742,6 +745,7 @@ function setActiveView(viewId) {
   applyFilter();
   renderSidebar();
   if (viewMode === 'calendar') renderCalendar();
+  else requestAnimationFrame(() => graph.resetView());
 }
 
 function makeSidebarItem(view, isAll) {
