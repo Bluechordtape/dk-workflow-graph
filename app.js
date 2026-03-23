@@ -1755,8 +1755,10 @@ async function loadLoginNames() {
 async function init() {
   const vEl = document.getElementById('toolbar-version');
   const lEl = document.getElementById('login-version');
-  if (vEl) vEl.textContent = VERSION;
-  if (lEl) lEl.textContent = VERSION;
+  const ldEl = document.getElementById('loading-version');
+  if (vEl)  vEl.textContent  = VERSION;
+  if (lEl)  lEl.textContent  = VERSION;
+  if (ldEl) ldEl.textContent = VERSION;
 
   document.getElementById('login-submit').addEventListener('click', doLogin);
   document.getElementById('login-password').addEventListener('keydown', e => {
