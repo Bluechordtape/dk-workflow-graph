@@ -371,15 +371,13 @@ export class Graph {
 
   // ── 태스크 노드 ───────────────────────────────────────
   _dday(task) {
-    if (!task.dueDate || task.status === 'done') return '';
+    if (!task.dueDate || task.status === 'done') return null;
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const due   = new Date(task.dueDate); due.setHours(0, 0, 0, 0);
     const diff  = Math.round((due - today) / 86400000);
-    let label, color;
-    if (diff > 0)       { label = `D-${diff}`;       color = diff <= 2 ? '#F97316' : '#9E9E9E'; }
-    else if (diff === 0){ label = 'D-day';             color = '#C8102E'; }
-    else                { label = `D+${-diff} 초과`; color = '#C8102E'; }
-    return `<div class="node-dday" style="color:${color}">${label}</div>`;
+    if (diff > 0)        return { label: `D-${diff}`,      color: diff <= 2 ? '#F97316' : '#9E9E9E' };
+    else if (diff === 0) return { label: 'D-day',           color: '#C8102E' };
+    else                 return { label: `D+${-diff} 초과`, color: '#C8102E' };
   }
 
   _makeNode(task, color, dim) {
@@ -393,8 +391,6 @@ export class Graph {
 
     const sub = task.subtasks || [];
     const subDone = sub.filter(s => s.status === 'done').length;
-    const subLine = sub.length ? `<div class="node-sub">${subDone}/${sub.length} 세부업무</div>` : '';
-    const ddayLine = this._dday(task);
 
     const role   = this.userCtx?.role;
     const myName = this.userCtx?.name;
@@ -413,36 +409,22 @@ export class Graph {
     else if (st2 === 'inactive' && isMgmt)
       actionBtn = `<button class="node-action btn-close" data-id="${task.id}">✓ 종결</button>`;
 
-    const innerStyle = [
-      'border: 1px solid #E0E0E0',
-      `border-left: 4px solid ${st.bar}`,
-      'border-radius: 8px',
-      'background: #FFFFFF',
-      'box-shadow: 0 1px 4px rgba(0,0,0,0.07)',
-      'padding: 12px 14px',
-      `min-height: ${NODE_H}px`,
-      'overflow: hidden',
-      'display: flex',
-      'flex-direction: column',
-      'gap: 5px',
-      'cursor: pointer',
-      'user-select: none',
-    ].join(';');
+    const dday = this._dday(task);
 
     el.innerHTML = `
       <div class="nh nh-l" data-id="${task.id}" data-side="left"></div>
-      <div class="node-inner" style="${innerStyle}">
-        <div class="node-top">
-          <span class="node-dot" style="width:9px;height:9px;border-radius:50%;flex-shrink:0;margin-top:3px;background:${st.bar}"></span>
-          <span class="node-name" style="font-size:16px;font-weight:800;color:#212121;line-height:1.3;letter-spacing:-0.5px;flex:1;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:keep-all">${task.name}</span>
+      <div class="node-inner">
+        <div class="node-row1">
+          <span class="node-dot" style="background:${st.bar}"></span>
+          <span class="node-name">${task.name}</span>
+          <span class="node-badge" style="background:${st.bg};color:${st.text};border:1px solid ${st.bdg}">${st.label}</span>
         </div>
-        <div class="node-mid" style="display:flex;align-items:center;gap:5px">
-          <span class="node-assignee" style="font-size:12px;color:#9E9E9E;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${task.assignee || '미배정'}</span>
-          <span style="font-size:12px;font-weight:700;padding:3px 10px;border-radius:4px;white-space:nowrap;flex-shrink:0;background:${st.bg};color:${st.text};border:1px solid ${st.bdg}">${st.label}</span>
-          ${actionBtn}
+        <div class="node-row2">
+          <span class="node-assignee">${task.assignee || '미배정'}</span>
+          ${dday ? `<span class="node-dday" style="color:${dday.color}">${dday.label}</span>` : ''}
         </div>
-        ${subLine}
-        ${ddayLine}
+        ${sub.length ? `<div class="node-sub">${subDone}/${sub.length} 세부업무</div>` : ''}
+        ${actionBtn ? `<div class="node-action-row">${actionBtn}</div>` : ''}
       </div>
       <div class="nh nh-r" data-id="${task.id}" data-side="right"></div>`;
 
