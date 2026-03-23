@@ -14,7 +14,7 @@ import {
 } from './data.js';
 import { Graph } from './graph.js';
 
-const VERSION = 'v2.4';
+const VERSION = 'v2.5';
 
 let data = null;
 let graph = null;
@@ -42,8 +42,14 @@ function filteredData() {
   const pSet = new Set(projects.map(p => p.id));
   const tasks = data.tasks.filter(t => pSet.has(t.projectId));
   const tSet = new Set(tasks.map(t => t.id));
-  const flows = data.flows.filter(f => tSet.has(f.from) && tSet.has(f.to));
-  return { projects, tasks, flows, groups: data.groups };
+  // 뷰에 포함된 프로젝트의 묶음만 표시 (projectId 없는 레거시 태그는 항상 포함)
+  const groups = (data.groups || []).filter(g => !g.projectId || pSet.has(g.projectId));
+  const gSet = new Set(groups.map(g => g.id));
+  // flow: task-task, task-group, group-group 모두 허용
+  const flows = (data.flows || []).filter(f =>
+    (tSet.has(f.from) || gSet.has(f.from)) && (tSet.has(f.to) || gSet.has(f.to))
+  );
+  return { projects, tasks, flows, groups };
 }
 
 // ── 언도/리두 ─────────────────────────────────────────────
@@ -186,13 +192,18 @@ async function startApp() {
 
     graph = new Graph(document.getElementById('graph-container'), {
       onNodeClick: (task) => openPanel(task),
-      onNodeCreate: (x, y) => {
+      onNodeCreate: (x, y, context = {}) => {
         if (!canWrite()) return;
         pushUndo();
         const fd = filteredData();
+        // context.projectId: 클릭한 프로젝트/묶음 영역, context.groupId: 클릭한 묶음
+        const projectId = context.projectId
+          || document.getElementById('filter-project').value
+          || fd.projects[0]?.id;
         const task = addTask(data, {
           x, y,
-          projectId: document.getElementById('filter-project').value || fd.projects[0]?.id,
+          projectId,
+          groupId:  context.groupId || null,
           assignee: currentUser.name
         });
         // 필터 뷰에서 생성 시, 해당 뷰의 projectIds에 없는 프로젝트라면 추가
@@ -276,6 +287,7 @@ function isPrivileged() { return ['admin', 'leader'].includes(currentUser?.role)
 function applyRoleUI() {
   const isMember = currentUser?.role === 'member';
 
+  document.getElementById('btn-add-group').style.display       = canWrite() ? '' : 'none';
   document.getElementById('btn-add-task').style.display        = canWrite() ? '' : 'none';
   document.getElementById('btn-add-project').style.display     = canWrite() ? '' : 'none';
   document.getElementById('btn-manage-projects').style.display = canWrite() ? '' : 'none';
@@ -747,6 +759,24 @@ function setupToolbar() {
   document.getElementById('btn-backup').addEventListener('click', openBackupModal);
   document.getElementById('btn-template-save').addEventListener('click', () => openModal('modal-save-template'));
   document.getElementById('btn-template-load').addEventListener('click', openTemplateLoadModal);
+  document.getElementById('btn-add-group').addEventListener('click', () => {
+    if (!canWrite()) return;
+    // 프로젝트 셀렉트 채우기
+    const sel = document.getElementById('grp-project');
+    sel.innerHTML = '';
+    data.projects.filter(p => !p.archived).forEach(p => {
+      const o = document.createElement('option');
+      o.value = p.id; o.textContent = p.name;
+      sel.appendChild(o);
+    });
+    // 현재 필터 프로젝트 기본 선택
+    const fp = document.getElementById('filter-project').value;
+    if (fp) sel.value = fp;
+    _selectedGroupColor = GROUP_COLORS[0];
+    document.getElementById('grp-name').value = '';
+    buildGroupColorPalette();
+    openModal('modal-group-create');
+  });
   document.getElementById('btn-add-task').addEventListener('click', () => {
     if (!canWrite()) return;
     pushUndo();
@@ -754,7 +784,7 @@ function setupToolbar() {
     const task = addTask(data, {
       x: 120 + Math.random() * 200,
       y: 120 + Math.random() * 200,
-      projectId: fd.projects[0]?.id,
+      projectId: document.getElementById('filter-project').value || fd.projects[0]?.id,
       assignee: currentUser.name
     });
     saveData(data);
@@ -850,10 +880,13 @@ function openPanel(task) {
   document.getElementById('task-note').value     = task.note || '';
 
   const gs = document.getElementById('task-group');
-  gs.innerHTML = '<option value="">그룹 없음</option>';
-  (data.groups || []).forEach(g => {
+  gs.innerHTML = '<option value="">묶음 없음</option>';
+  // 해당 프로젝트 소속 묶음 우선 표시, 그 다음 projectId 없는 레거시 태그
+  const projectGroups = (data.groups || []).filter(g => g.projectId === task.projectId);
+  const legacyGroups  = (data.groups || []).filter(g => !g.projectId);
+  [...projectGroups, ...legacyGroups].forEach(g => {
     const o = document.createElement('option');
-    o.value = g.id; o.textContent = g.name;
+    o.value = g.id; o.textContent = g.name + (g.projectId ? '' : ' (태그)');
     gs.appendChild(o);
   });
   gs.value = task.groupId || '';
@@ -1015,10 +1048,13 @@ function renderGroupList() {
   const list = document.getElementById('group-list');
   list.innerHTML = '';
   if (!(data.groups || []).length) {
-    list.innerHTML = '<div style="color:#9E9E9E;font-size:13px;padding:8px 0">생성된 그룹이 없습니다.</div>';
+    list.innerHTML = '<div style="color:#9E9E9E;font-size:13px;padding:8px 0">생성된 묶음이 없습니다.</div>';
     return;
   }
   (data.groups || []).forEach(g => {
+    const projectName = g.projectId
+      ? (data.projects.find(p => p.id === g.projectId)?.name || '')
+      : '태그 전용';
     const item = document.createElement('div');
     item.className = 'tmpl-item';
     item.style.cursor = 'default';
@@ -1026,6 +1062,7 @@ function renderGroupList() {
       <div style="display:flex;align-items:center;gap:8px;flex:1">
         <span style="width:12px;height:12px;border-radius:3px;background:${g.color};flex-shrink:0"></span>
         <span class="tmpl-item-name">${g.name}</span>
+        ${projectName ? `<span style="font-size:10px;color:#9E9E9E">${projectName}</span>` : ''}
       </div>
       <button class="tmpl-del" data-id="${g.id}">×</button>
     `;
@@ -1050,15 +1087,36 @@ document.getElementById('btn-manage-groups').addEventListener('click', () => {
 document.getElementById('btn-open-group-create').addEventListener('click', () => {
   _selectedGroupColor = GROUP_COLORS[0];
   document.getElementById('grp-name').value = '';
+  // 프로젝트 셀렉트 채우기
+  const sel = document.getElementById('grp-project');
+  sel.innerHTML = '';
+  data.projects.filter(p => !p.archived).forEach(p => {
+    const o = document.createElement('option'); o.value = p.id; o.textContent = p.name;
+    sel.appendChild(o);
+  });
+  const fp = document.getElementById('filter-project').value;
+  if (fp) sel.value = fp;
   buildGroupColorPalette();
   openModal('modal-group-create');
 });
 
 document.getElementById('btn-grp-save').addEventListener('click', () => {
   const name = document.getElementById('grp-name').value.trim();
-  if (!name) { alert('그룹 이름을 입력하세요.'); return; }
+  if (!name) { alert('묶음 이름을 입력하세요.'); return; }
+  const projectId = document.getElementById('grp-project')?.value || null;
   pushUndo();
-  addGroup(data, name, _selectedGroupColor);
+  // 새 묶음의 초기 x/y: 해당 프로젝트 bbox 안 적당한 위치
+  let gx = 200, gy = 200;
+  if (projectId) {
+    const project = data.projects.find(p => p.id === projectId);
+    if (project) {
+      // 기존 묶음 아래쪽에 배치
+      const existingGroups = (data.groups || []).filter(g => g.projectId === projectId);
+      gx = (project.x ?? 200) + 30;
+      gy = (project.y ?? 200) + 80 + existingGroups.length * 200;
+    }
+  }
+  addGroup(data, name, _selectedGroupColor, projectId, gx, gy);
   saveData(data);
   graph.setData(filteredData());
   buildFilters();
@@ -1066,17 +1124,7 @@ document.getElementById('btn-grp-save').addEventListener('click', () => {
   renderGroupList();
   if (activeTaskId) {
     const task = data.tasks.find(t => t.id === activeTaskId);
-    if (task) {
-      const gs = document.getElementById('task-group');
-      const prev = gs.value;
-      gs.innerHTML = '<option value="">그룹 없음</option>';
-      (data.groups || []).forEach(g => {
-        const o = document.createElement('option');
-        o.value = g.id; o.textContent = g.name;
-        gs.appendChild(o);
-      });
-      gs.value = prev;
-    }
+    if (task) openPanel(task); // 패널 열려 있으면 묶음 셀렉트 갱신
   }
 });
 

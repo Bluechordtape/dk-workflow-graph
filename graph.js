@@ -1,7 +1,17 @@
-// graph.js
+// graph.js — 3-tier hierarchy: Project > Group(Category) > Task
 
 export const NODE_W = 190;
 export const NODE_H = 110;
+
+// Layout constants
+const PROJECT_HEADER_H = 44;
+const PROJECT_PAD      = 22;
+const GROUP_HEADER_H   = 32;
+const GROUP_PAD        = 14;
+const MIN_PROJECT_W    = 300;
+const MIN_PROJECT_H    = 160;
+const MIN_GROUP_W      = 240;
+const MIN_GROUP_H      = 90;
 
 const STATUS = {
   // 구버전 호환
@@ -22,23 +32,27 @@ const STATUS = {
 export class Graph {
   constructor(container, cb) {
     this.container = container;
-    this.cb = cb; // { onNodeClick, onNodeCreate, onFlowCreate, onFlowDelete, onStatusChange, onNodeMoved }
+    this.cb = cb;
     this.data = null;
     this.filter = { assignee: '', project: '', status: '' };
     this.scale = 1;
     this.offsetX = 0;
     this.offsetY = 0;
-    this._drag = null;      // { taskId, startMouse, startPos }
-    this._pan = null;
-    this._conn = null;      // { fromId, x1, y1 } — connection being drawn
-    this.userCtx = null;    // { id, name, role }
-    this._physicsRaf = null;
+    this._drag = null;
+    this._pan  = null;
+    this._conn = null;
+    this.userCtx = null;
+
+    // DOM element maps for efficient drag updates
+    this._taskEls    = new Map(); // taskId    → el
+    this._groupEls   = new Map(); // groupId   → { el, group }
+    this._projectEls = new Map(); // projectId → { el, project }
+
     this._setup();
     this._bind();
-    this._startPhysics();
   }
 
-  // ── DOM ────────────────────────────────────────────────
+  // ── DOM 초기화 ─────────────────────────────────────────
   _setup() {
     this.container.innerHTML = '';
 
@@ -54,10 +68,12 @@ export class Graph {
     defs.innerHTML = `
       <marker id="arr" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto" markerUnits="strokeWidth">
         <path d="M0,0 L7,2.5 L0,5 Z" fill="#D1D5DB"/>
+      </marker>
+      <marker id="arr-group" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto" markerUnits="strokeWidth">
+        <path d="M0,0 L7,2.5 L0,5 Z" fill="#BDBDBD"/>
       </marker>`;
     this.svg.appendChild(defs);
 
-    // 임시 연결선
     this.tempPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     this.tempPath.setAttribute('fill', 'none');
     this.tempPath.setAttribute('stroke', '#D1D5DB');
@@ -75,25 +91,10 @@ export class Graph {
   }
 
   // ── 공개 API ──────────────────────────────────────────
-  setData(data) {
-    this.data = data;
-    this.render();
-  }
-
-  setFilter(f) {
-    this.filter = { ...this.filter, ...f };
-    this.render();
-  }
-
-  setUserContext(user) {
-    this.userCtx = user;
-    if (this.data) this.render();
-  }
-
-  resetView() {
-    this.scale = 1; this.offsetX = 0; this.offsetY = 0;
-    this._transform();
-  }
+  setData(data) { this.data = data; this.render(); }
+  setFilter(f)  { this.filter = { ...this.filter, ...f }; this.render(); }
+  setUserContext(user) { this.userCtx = user; if (this.data) this.render(); }
+  resetView() { this.scale = 1; this.offsetX = 0; this.offsetY = 0; this._transform(); }
 
   render() {
     if (!this.data) return;
@@ -102,12 +103,64 @@ export class Graph {
     this._transform();
   }
 
-  // ── 노드 렌더링 ────────────────────────────────────────
+  // ── 바운딩 박스 계산 ──────────────────────────────────
+  _groupBBox(group) {
+    const tasks = (this.data.tasks || []).filter(t => t.groupId === group.id);
+    if (!tasks.length) {
+      const x = group.x ?? 200;
+      const y = group.y ?? 200;
+      return { x, y, w: MIN_GROUP_W, h: MIN_GROUP_H };
+    }
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const t of tasks) {
+      minX = Math.min(minX, t.x); minY = Math.min(minY, t.y);
+      maxX = Math.max(maxX, t.x + NODE_W); maxY = Math.max(maxY, t.y + NODE_H);
+    }
+    return {
+      x: minX - GROUP_PAD,
+      y: minY - GROUP_PAD - GROUP_HEADER_H,
+      w: Math.max(MIN_GROUP_W, (maxX - minX) + GROUP_PAD * 2),
+      h: (maxY - minY) + GROUP_PAD * 2 + GROUP_HEADER_H,
+    };
+  }
+
+  _projectBBox(project) {
+    const groups = (this.data.groups || []).filter(g => g.projectId === project.id);
+    const orphans = (this.data.tasks || []).filter(t => t.projectId === project.id && !t.groupId);
+
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    let hasContent = false;
+
+    for (const g of groups) {
+      const gb = this._groupBBox(g);
+      minX = Math.min(minX, gb.x); minY = Math.min(minY, gb.y);
+      maxX = Math.max(maxX, gb.x + gb.w); maxY = Math.max(maxY, gb.y + gb.h);
+      hasContent = true;
+    }
+    for (const t of orphans) {
+      minX = Math.min(minX, t.x); minY = Math.min(minY, t.y);
+      maxX = Math.max(maxX, t.x + NODE_W); maxY = Math.max(maxY, t.y + NODE_H);
+      hasContent = true;
+    }
+
+    if (!hasContent) {
+      const x = project.x ?? 100;
+      const y = project.y ?? 100;
+      return { x, y, w: MIN_PROJECT_W, h: MIN_PROJECT_H };
+    }
+    return {
+      x: minX - PROJECT_PAD,
+      y: minY - PROJECT_PAD - PROJECT_HEADER_H,
+      w: Math.max(MIN_PROJECT_W, (maxX - minX) + PROJECT_PAD * 2),
+      h: (maxY - minY) + PROJECT_PAD * 2 + PROJECT_HEADER_H,
+    };
+  }
+
+  // ── 노드 렌더링 ───────────────────────────────────────
   _taskVisible(task) {
     const { assignee, project, status } = this.filter;
-    if (assignee === '__unassigned__') {
-      if (task.assignee) return false;
-    } else if (assignee && task.assignee !== assignee) return false;
+    if (assignee === '__unassigned__') { if (task.assignee) return false; }
+    else if (assignee && task.assignee !== assignee) return false;
     if (project && task.projectId !== project) return false;
     if (status  && task.status   !== status)   return false;
     return true;
@@ -115,23 +168,176 @@ export class Graph {
 
   _renderNodes() {
     this.nodesEl.innerHTML = '';
-    for (const task of this.data.tasks) {
-      const project = this.data.projects.find(p => p.id === task.projectId);
+    this._taskEls.clear();
+    this._groupEls.clear();
+    this._projectEls.clear();
+
+    // 1. 프로젝트 박스 (z=1)
+    for (const project of (this.data.projects || [])) {
+      if (project.archived) continue;
+      const bbox = this._projectBBox(project);
+      const el = this._makeProjectBox(project, bbox);
+      el.style.zIndex = '1';
+      this.nodesEl.appendChild(el);
+      this._projectEls.set(project.id, { el, project });
+    }
+
+    // 2. 묶음 박스 (z=2) — projectId 있는 것만 박스로 표시
+    for (const group of (this.data.groups || [])) {
+      if (!group.projectId) continue;
+      const bbox = this._groupBBox(group);
+      const el = this._makeGroupBox(group, bbox);
+      el.style.zIndex = '2';
+      this.nodesEl.appendChild(el);
+      this._groupEls.set(group.id, { el, group });
+    }
+
+    // 3. 태스크 노드 (z=3)
+    for (const task of (this.data.tasks || [])) {
+      const project = (this.data.projects || []).find(p => p.id === task.projectId);
       const color = project?.color || '#94a3b8';
       const hasFilter = this.filter.assignee || this.filter.project || this.filter.status;
       const dim = hasFilter && !this._taskVisible(task);
-      this.nodesEl.appendChild(this._makeNode(task, color, dim));
+      const el = this._makeNode(task, color, dim);
+      el.style.zIndex = '3';
+      this.nodesEl.appendChild(el);
+      this._taskEls.set(task.id, el);
     }
   }
 
+  // ── 프로젝트 박스 ─────────────────────────────────────
+  _makeProjectBox(project, bbox) {
+    const el = document.createElement('div');
+    el.className = 'project-box';
+    el.dataset.projectId = project.id;
+    el.style.left   = `${bbox.x}px`;
+    el.style.top    = `${bbox.y}px`;
+    el.style.width  = `${bbox.w}px`;
+    el.style.height = `${bbox.h}px`;
+
+    // 헤더 (드래그 핸들)
+    const header = document.createElement('div');
+    header.className = 'project-box-header';
+
+    const colorDot = document.createElement('span');
+    colorDot.style.cssText = `width:8px;height:8px;border-radius:50%;background:${project.color};flex-shrink:0`;
+
+    const pill = document.createElement('span');
+    pill.className = 'project-label-pill';
+    pill.style.cssText = `
+      display:inline-flex;align-items:center;gap:6px;
+      padding:3px 10px;border-radius:100px;
+      background:${project.color}1A;color:${project.color};
+      border:1px solid ${project.color}44;
+      font-size:11px;font-weight:700;letter-spacing:0.3px;
+    `;
+    pill.appendChild(colorDot);
+    pill.appendChild(document.createTextNode(project.name));
+    header.appendChild(pill);
+
+    // 드래그
+    header.addEventListener('mousedown', (e) => {
+      if (e.button !== 0) return;
+      e.stopPropagation();
+      const projectTasks  = (this.data.tasks  || []).filter(t => t.projectId === project.id);
+      const projectGroups = (this.data.groups || []).filter(g => g.projectId === project.id);
+      const curBBox = this._projectBBox(project);
+      project.x = curBBox.x;
+      project.y = curBBox.y;
+      this._drag = {
+        type: 'project',
+        id:   project.id,
+        sm:   { x: e.clientX, y: e.clientY },
+        sp:   { x: project.x, y: project.y },
+        taskOffsets:  projectTasks.map(t  => ({ t, ox: t.x, oy: t.y })),
+        groupOffsets: projectGroups.map(g => ({ g, ox: g.x ?? 0, oy: g.y ?? 0 })),
+      };
+    });
+
+    el.appendChild(header);
+    return el;
+  }
+
+  // ── 묶음 박스 ─────────────────────────────────────────
+  _makeGroupBox(group, bbox) {
+    const el = document.createElement('div');
+    el.className = 'group-box';
+    el.dataset.groupId = group.id;
+    el.style.left   = `${bbox.x}px`;
+    el.style.top    = `${bbox.y}px`;
+    el.style.width  = `${bbox.w}px`;
+    el.style.height = `${bbox.h}px`;
+
+    // 헤더 (드래그 핸들)
+    const header = document.createElement('div');
+    header.className = 'group-box-header';
+
+    const colorBar = document.createElement('span');
+    colorBar.className = 'group-color-bar';
+    colorBar.style.background = group.color;
+
+    const nameSpan = document.createElement('span');
+    nameSpan.style.cssText = 'font-size:12px;font-weight:600;color:#374151;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
+    nameSpan.textContent = group.name;
+
+    header.appendChild(colorBar);
+    header.appendChild(nameSpan);
+
+    // 드래그
+    header.addEventListener('mousedown', (e) => {
+      if (e.button !== 0) return;
+      e.stopPropagation();
+      const groupTasks = (this.data.tasks || []).filter(t => t.groupId === group.id);
+      const curBBox = this._groupBBox(group);
+      group.x = curBBox.x;
+      group.y = curBBox.y;
+      this._drag = {
+        type: 'group',
+        id:   group.id,
+        sm:   { x: e.clientX, y: e.clientY },
+        sp:   { x: group.x, y: group.y },
+        taskOffsets: groupTasks.map(t => ({ t, ox: t.x, oy: t.y })),
+      };
+    });
+
+    // 연결 핸들 (묶음 간 연결)
+    const handleL = document.createElement('div');
+    handleL.className = 'nh nh-l group-nh';
+    handleL.dataset.id   = group.id;
+    handleL.dataset.side = 'left';
+
+    const handleR = document.createElement('div');
+    handleR.className = 'nh nh-r group-nh';
+    handleR.dataset.id   = group.id;
+    handleR.dataset.side = 'right';
+
+    [handleL, handleR].forEach(h => {
+      h.style.pointerEvents = 'auto';
+      h.addEventListener('mousedown', (e) => {
+        e.stopPropagation(); e.preventDefault();
+        const b = this._groupBBox(group);
+        const cx = h.dataset.side === 'right' ? b.x + b.w : b.x;
+        const cy = b.y + b.h / 2;
+        this._conn = { fromId: group.id, fromType: 'group', x: cx, y: cy };
+        this.tempPath.style.display = '';
+      });
+    });
+
+    el.appendChild(header);
+    el.appendChild(handleL);
+    el.appendChild(handleR);
+    return el;
+  }
+
+  // ── 태스크 노드 ───────────────────────────────────────
   _dday(task) {
     if (!task.dueDate || task.status === 'done') return '';
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const due   = new Date(task.dueDate); due.setHours(0, 0, 0, 0);
     const diff  = Math.round((due - today) / 86400000);
     let label, color;
-    if (diff > 0)       { label = `D-${diff}`;    color = diff <= 2 ? '#F97316' : '#9E9E9E'; }
-    else if (diff === 0){ label = 'D-day';          color = '#C8102E'; }
+    if (diff > 0)       { label = `D-${diff}`;       color = diff <= 2 ? '#F97316' : '#9E9E9E'; }
+    else if (diff === 0){ label = 'D-day';             color = '#C8102E'; }
     else                { label = `D+${-diff} 초과`; color = '#C8102E'; }
     return `<div class="node-dday" style="color:${color}">${label}</div>`;
   }
@@ -149,53 +355,46 @@ export class Graph {
     const subDone = sub.filter(s => s.status === 'done').length;
     const subLine = sub.length ? `<div class="node-sub">${subDone}/${sub.length} 세부업무</div>` : '';
     const ddayLine = this._dday(task);
+
     const role   = this.userCtx?.role;
     const myName = this.userCtx?.name;
     const isMine = task.assignee === myName;
     const isMgmt = ['admin', 'leader', 'manager'].includes(role);
-    const canAct  = isMgmt || isMine; // 담당자 or 관리자급
+    const canAct  = isMgmt || isMine;
     const st2 = task.status;
 
-    // 그래프 노드 액션 버튼
     let actionBtn = '';
-    if (st2 === 'pre' && canAct) {
+    if      (st2 === 'pre' && canAct)
       actionBtn = `<button class="node-action btn-start" data-id="${task.id}">▶ 시작</button>`;
-    } else if ((st2 === 'doing' || st2 === 'waiting' || st2 === 'delayed') && canAct) {
+    else if ((st2 === 'doing' || st2 === 'waiting' || st2 === 'delayed') && canAct)
       actionBtn = `<button class="node-action btn-req" data-id="${task.id}">완료 요청</button>`;
-    } else if (st2 === 'review' && isMgmt) {
+    else if (st2 === 'review' && isMgmt)
       actionBtn = `<button class="node-action btn-cfm" data-id="${task.id}">✓ 완료 확정</button>`;
-    } else if (st2 === 'inactive' && isMgmt) {
+    else if (st2 === 'inactive' && isMgmt)
       actionBtn = `<button class="node-action btn-close" data-id="${task.id}">✓ 종결</button>`;
-    }
 
-    const group  = this.data.groups?.find(g => g.id === task.groupId);
-    const groupBadge = group
-      ? `<span style="font-size:10px;font-weight:600;padding:1px 7px;border-radius:3px;background:${group.color}1A;color:${group.color};border:1px solid ${group.color}44;white-space:nowrap">${group.name}</span>`
-      : '';
-
-    // node-inner에 box-shadow와 border-left를 인라인으로 직접 지정
     const innerStyle = [
-      `border: 1px solid #E0E0E0`,
+      'border: 1px solid #E0E0E0',
       `border-left: 3px solid ${st.bar}`,
-      `border-radius: 8px`,
-      `background: #FFFFFF`,
-      `box-shadow: 0 1px 4px rgba(0,0,0,0.07)`,
-      `padding: 10px 12px`,
+      'border-radius: 8px',
+      'background: #FFFFFF',
+      'box-shadow: 0 1px 4px rgba(0,0,0,0.07)',
+      'padding: 10px 12px',
       `height: ${NODE_H}px`,
-      `overflow: hidden`,
-      `display: flex`,
-      `flex-direction: column`,
-      `gap: 5px`,
-      `cursor: pointer`,
-      `user-select: none`,
+      'overflow: hidden',
+      'display: flex',
+      'flex-direction: column',
+      'gap: 5px',
+      'cursor: pointer',
+      'user-select: none',
     ].join(';');
+
     el.innerHTML = `
       <div class="nh nh-l" data-id="${task.id}" data-side="left"></div>
       <div class="node-inner" style="${innerStyle}">
         <div class="node-top">
           <span class="node-dot" style="width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:3px;background:${st.bar}"></span>
           <span class="node-name" style="font-size:13px;font-weight:600;color:#212121;line-height:1.35;letter-spacing:-0.2px;flex:1">${task.name}</span>
-          ${groupBadge}
         </div>
         <div class="node-mid" style="display:flex;align-items:center;gap:5px">
           <span class="node-assignee" style="font-size:11px;color:#9E9E9E;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${task.assignee || '미배정'}</span>
@@ -207,51 +406,35 @@ export class Graph {
       </div>
       <div class="nh nh-r" data-id="${task.id}" data-side="right"></div>`;
 
-    // 호버 하이라이트
-    el.querySelector('.node-inner').addEventListener('mouseenter', () => this._applyHover(task.id));
-    el.querySelector('.node-inner').addEventListener('mouseleave', () => this._clearHover());
-
-    // 클릭 → 패널 열기
-    el.querySelector('.node-inner').addEventListener('click', (e) => {
+    const inner = el.querySelector('.node-inner');
+    inner.addEventListener('mouseenter', () => this._applyHover(task.id));
+    inner.addEventListener('mouseleave', () => this._clearHover());
+    inner.addEventListener('click', (e) => {
       if (e.target.closest('.node-action')) return;
       this.cb.onNodeClick?.(task);
     });
-
-    // 시작
-    el.querySelector('.btn-start')?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      this.cb.onStatusChange?.(task.id, 'doing');
-    });
-    // 완료 요청
-    el.querySelector('.btn-req')?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      this.cb.onStatusChange?.(task.id, 'review');
-    });
-    // 완료 확정
-    el.querySelector('.btn-cfm')?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      this.cb.onStatusChange?.(task.id, 'done');
-    });
-    // 종결
-    el.querySelector('.btn-close')?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      this.cb.onStatusChange?.(task.id, 'closed');
-    });
-
-    // 드래그 이동
-    el.querySelector('.node-inner').addEventListener('mousedown', (e) => {
+    inner.addEventListener('mousedown', (e) => {
       if (e.button !== 0 || e.target.closest('.node-action')) return;
       e.stopPropagation();
-      this._drag = { taskId: task.id, sm: { x: e.clientX, y: e.clientY }, sp: { x: task.x, y: task.y } };
+      this._drag = {
+        type: 'task',
+        id:   task.id,
+        sm:   { x: e.clientX, y: e.clientY },
+        sp:   { x: task.x, y: task.y },
+      };
     });
 
-    // 연결 핸들 드래그
+    el.querySelector('.btn-start')?.addEventListener('click', (e) => { e.stopPropagation(); this.cb.onStatusChange?.(task.id, 'doing'); });
+    el.querySelector('.btn-req')?.addEventListener('click',   (e) => { e.stopPropagation(); this.cb.onStatusChange?.(task.id, 'review'); });
+    el.querySelector('.btn-cfm')?.addEventListener('click',   (e) => { e.stopPropagation(); this.cb.onStatusChange?.(task.id, 'done'); });
+    el.querySelector('.btn-close')?.addEventListener('click', (e) => { e.stopPropagation(); this.cb.onStatusChange?.(task.id, 'closed'); });
+
     el.querySelectorAll('.nh').forEach(h => {
       h.addEventListener('mousedown', (e) => {
         e.stopPropagation(); e.preventDefault();
         const cx = h.dataset.side === 'right' ? task.x + NODE_W : task.x;
         const cy = task.y + NODE_H / 2;
-        this._conn = { fromId: task.id, x: cx, y: cy };
+        this._conn = { fromId: task.id, fromType: 'task', x: cx, y: cy };
         this.tempPath.style.display = '';
       });
     });
@@ -259,7 +442,7 @@ export class Graph {
     return el;
   }
 
-  // ── 엣지 렌더링 ────────────────────────────────────────
+  // ── 엣지 렌더링 ───────────────────────────────────────
   _renderEdges() {
     Array.from(this.svg.children).forEach(c => {
       if (c.tagName !== 'defs' && c !== this.tempPath) c.remove();
@@ -267,20 +450,38 @@ export class Graph {
     if (!this.data?.flows) return;
 
     for (const flow of this.data.flows) {
-      const from = this.data.tasks.find(t => t.id === flow.from);
-      const to   = this.data.tasks.find(t => t.id === flow.to);
-      if (!from || !to) continue;
+      const fromTask  = (this.data.tasks  || []).find(t => t.id === flow.from);
+      const toTask    = (this.data.tasks  || []).find(t => t.id === flow.to);
+      const fromGroup = (this.data.groups || []).find(g => g.id === flow.from);
+      const toGroup   = (this.data.groups || []).find(g => g.id === flow.to);
 
-      const x1 = from.x + NODE_W, y1 = from.y + NODE_H / 2;
-      const x2 = to.x,           y2 = to.y   + NODE_H / 2;
+      if (!fromTask && !fromGroup) continue;
+      if (!toTask   && !toGroup)   continue;
+
+      let x1, y1, x2, y2;
+      if (fromTask) {
+        x1 = fromTask.x + NODE_W; y1 = fromTask.y + NODE_H / 2;
+      } else {
+        const b = this._groupBBox(fromGroup);
+        x1 = b.x + b.w; y1 = b.y + b.h / 2;
+      }
+      if (toTask) {
+        x2 = toTask.x; y2 = toTask.y + NODE_H / 2;
+      } else {
+        const b = this._groupBBox(toGroup);
+        x2 = b.x; y2 = b.y + b.h / 2;
+      }
+
+      const isGroup = !fromTask || !toTask;
       const cx = (x1 + x2) / 2;
 
       const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
       path.setAttribute('d', `M${x1},${y1} C${cx},${y1} ${cx},${y2} ${x2},${y2}`);
       path.setAttribute('fill', 'none');
-      path.setAttribute('stroke', '#D1D5DB');
+      path.setAttribute('stroke', isGroup ? '#BDBDBD' : '#D1D5DB');
       path.setAttribute('stroke-width', '1.5');
-      path.setAttribute('marker-end', 'url(#arr)');
+      if (isGroup) path.setAttribute('stroke-dasharray', '4 4');
+      path.setAttribute('marker-end', isGroup ? 'url(#arr-group)' : 'url(#arr)');
       path.dataset.flowId = flow.id;
       path.style.pointerEvents = 'stroke';
       path.style.cursor = 'pointer';
@@ -291,7 +492,30 @@ export class Graph {
     }
   }
 
-  // ── 호버 하이라이트 ────────────────────────────────────
+  // ── 드래그 중 DOM 업데이트 (효율적) ──────────────────
+  _updateGroupEl(groupId) {
+    const entry = this._groupEls.get(groupId);
+    if (!entry) return;
+    const bbox = this._groupBBox(entry.group);
+    const el = entry.el;
+    el.style.left   = `${bbox.x}px`;
+    el.style.top    = `${bbox.y}px`;
+    el.style.width  = `${bbox.w}px`;
+    el.style.height = `${bbox.h}px`;
+  }
+
+  _updateProjectEl(projectId) {
+    const entry = this._projectEls.get(projectId);
+    if (!entry) return;
+    const bbox = this._projectBBox(entry.project);
+    const el = entry.el;
+    el.style.left   = `${bbox.x}px`;
+    el.style.top    = `${bbox.y}px`;
+    el.style.width  = `${bbox.w}px`;
+    el.style.height = `${bbox.h}px`;
+  }
+
+  // ── 호버 하이라이트 ───────────────────────────────────
   _getConnected(taskId, depth = 2) {
     const visited = new Set([taskId]);
     let frontier = [taskId];
@@ -316,94 +540,16 @@ export class Graph {
     this.nodesEl.querySelectorAll('.task-node').forEach(n => {
       const isConn = connected.has(n.dataset.id);
       const isSelf = n.dataset.id === taskId;
-      n.classList.toggle('highlight-self', isSelf);
+      n.classList.toggle('highlight-self',  isSelf);
       n.classList.toggle('highlight-hover', isConn && !isSelf);
-      n.classList.remove('dim-hover');
     });
     Array.from(this.svg.children).forEach(c => {
       if (c.tagName !== 'defs' && c !== this.tempPath) {
         const isConn = connectedFlows.has(c.dataset?.flowId);
         c.style.opacity = isConn ? '1' : '0.25';
-        if (isConn) {
-          c.setAttribute('stroke', '#212121');
-          c.setAttribute('stroke-width', '2');
-        }
+        if (isConn) { c.setAttribute('stroke', '#212121'); c.setAttribute('stroke-width', '2'); }
       }
     });
-  }
-
-  // ── 물리 애니메이션 ────────────────────────────────────
-  _startPhysics() {
-    const loop = () => {
-      this._physicsRaf = requestAnimationFrame(loop);
-      this._physicsStep();
-    };
-    this._physicsRaf = requestAnimationFrame(loop);
-  }
-
-  _physicsStep() {
-    if (!this.data?.tasks?.length) return;
-
-    const damping  = 0.88;  // 부드러운 감속 (높을수록 오래 지속)
-    const maxVel   = 0.28;  // 최대 속도 (느리게)
-    const springK  = 0.018; // 드래그시 스프링 강도
-    const driftAmp = 0.00035; // 유영 진폭 (아주 작게)
-    const now = Date.now() / 1000;
-    let moved = false;
-
-    for (const t of this.data.tasks) {
-      if (t._vx === undefined) { t._vx = 0; t._vy = 0; }
-      // 각 노드의 고유 위상 (id 기반)
-      if (t._phase === undefined) {
-        let h = 0;
-        for (let i = 0; i < t.id.length; i++) h = (h * 31 + t.id.charCodeAt(i)) & 0xFFFFFF;
-        t._phase = h / 0xFFFFFF * Math.PI * 2;
-      }
-    }
-
-    // 드래그 중인 노드에서 연결된 노드로 스프링 힘 전달
-    if (this._drag) {
-      const dragged = this.data.tasks.find(t => t.id === this._drag.taskId);
-      if (dragged) {
-        for (const flow of (this.data.flows || [])) {
-          let other = null;
-          if (flow.from === dragged.id) other = this.data.tasks.find(t => t.id === flow.to);
-          else if (flow.to === dragged.id) other = this.data.tasks.find(t => t.id === flow.from);
-          if (!other || this._drag.taskId === other.id) continue;
-          const dx = dragged.x - other.x, dy = dragged.y - other.y;
-          const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-          other._vx += (dx / dist) * springK * 3;
-          other._vy += (dy / dist) * springK * 3;
-        }
-      }
-    }
-
-    for (const t of this.data.tasks) {
-      if (this._drag?.taskId === t.id) { t._vx = 0; t._vy = 0; continue; }
-
-      // 물/우주 유영 — 각 노드마다 다른 주기·위상의 시누소이드 힘
-      const px = t._phase;
-      const py = t._phase + 1.3;
-      t._vx += Math.sin(now * 0.25 + px) * Math.cos(now * 0.17 + px * 0.5) * driftAmp;
-      t._vy += Math.cos(now * 0.20 + py) * Math.sin(now * 0.13 + py * 0.7) * driftAmp;
-
-      t._vx *= damping;
-      t._vy *= damping;
-      const spd = Math.sqrt(t._vx * t._vx + t._vy * t._vy);
-      if (spd > maxVel) { t._vx = (t._vx / spd) * maxVel; t._vy = (t._vy / spd) * maxVel; }
-      if (Math.abs(t._vx) > 0.003 || Math.abs(t._vy) > 0.003) {
-        t.x += t._vx; t.y += t._vy;
-        moved = true;
-      }
-    }
-
-    if (moved) {
-      for (const t of this.data.tasks) {
-        const el = this.nodesEl.querySelector(`[data-id="${t.id}"]`);
-        if (el) { el.style.left = t.x + 'px'; el.style.top = t.y + 'px'; }
-      }
-      this._renderEdges();
-    }
   }
 
   _clearHover() {
@@ -419,22 +565,50 @@ export class Graph {
     });
   }
 
-  // ── 인터랙션 ──────────────────────────────────────────
+  // ── 인터랙션 바인딩 ───────────────────────────────────
   _bind() {
     window.addEventListener('mousemove', (e) => {
-      // 노드 드래그
+      // 드래그 처리
       if (this._drag) {
-        const { taskId, sm, sp } = this._drag;
+        const { type, id, sm, sp, taskOffsets, groupOffsets } = this._drag;
         const dx = (e.clientX - sm.x) / this.scale;
         const dy = (e.clientY - sm.y) / this.scale;
-        const task = this.data.tasks.find(t => t.id === taskId);
-        if (task) {
-          task.x = sp.x + dx;
-          task.y = sp.y + dy;
-          const el = this.nodesEl.querySelector(`[data-id="${taskId}"]`);
-          if (el) { el.style.left = task.x + 'px'; el.style.top = task.y + 'px'; }
-          this._renderEdges();
+
+        if (type === 'task') {
+          const task = (this.data.tasks || []).find(t => t.id === id);
+          if (task) {
+            task.x = sp.x + dx;
+            task.y = sp.y + dy;
+            const el = this._taskEls.get(id);
+            if (el) { el.style.left = `${task.x}px`; el.style.top = `${task.y}px`; }
+            if (task.groupId)   this._updateGroupEl(task.groupId);
+            if (task.projectId) this._updateProjectEl(task.projectId);
+          }
+        } else if (type === 'group') {
+          for (const { t, ox, oy } of taskOffsets) {
+            t.x = ox + dx; t.y = oy + dy;
+            const el = this._taskEls.get(t.id);
+            if (el) { el.style.left = `${t.x}px`; el.style.top = `${t.y}px`; }
+          }
+          const group = (this.data.groups || []).find(g => g.id === id);
+          if (group) { group.x = sp.x + dx; group.y = sp.y + dy; }
+          this._updateGroupEl(id);
+          if (group?.projectId) this._updateProjectEl(group.projectId);
+        } else if (type === 'project') {
+          for (const { t, ox, oy } of taskOffsets) {
+            t.x = ox + dx; t.y = oy + dy;
+            const el = this._taskEls.get(t.id);
+            if (el) { el.style.left = `${t.x}px`; el.style.top = `${t.y}px`; }
+          }
+          for (const { g, ox, oy } of groupOffsets) {
+            g.x = ox + dx; g.y = oy + dy;
+            this._updateGroupEl(g.id);
+          }
+          const project = (this.data.projects || []).find(p => p.id === id);
+          if (project) { project.x = sp.x + dx; project.y = sp.y + dy; }
+          this._updateProjectEl(id);
         }
+        this._renderEdges();
         return;
       }
 
@@ -463,10 +637,14 @@ export class Graph {
         this._drag = null;
       }
       if (this._conn) {
-        const el = document.elementFromPoint(e.clientX, e.clientY)?.closest('.task-node');
-        if (el && el.dataset.id !== this._conn.fromId) {
-          this.cb.onFlowCreate?.(this._conn.fromId, el.dataset.id);
-        }
+        // 태스크 또는 묶음 박스로 연결 완료
+        const target = document.elementFromPoint(e.clientX, e.clientY);
+        const taskEl  = target?.closest('.task-node');
+        const groupEl = target?.closest('.group-box');
+        let toId = null;
+        if      (taskEl  && taskEl.dataset.id   !== this._conn.fromId) toId = taskEl.dataset.id;
+        else if (groupEl && groupEl.dataset.groupId !== this._conn.fromId) toId = groupEl.dataset.groupId;
+        if (toId) this.cb.onFlowCreate?.(this._conn.fromId, toId);
         this._conn = null;
         this.tempPath.style.display = 'none';
         this.tempPath.setAttribute('d', '');
@@ -475,7 +653,7 @@ export class Graph {
       this.container.style.cursor = '';
     });
 
-    // 배경 드래그 → 패닝
+    // 배경 패닝
     this.container.addEventListener('mousedown', (e) => {
       const onBg = e.target === this.container || e.target === this.canvas || e.target === this.svg;
       if (!onBg || e.button !== 0) return;
@@ -483,14 +661,40 @@ export class Graph {
       this.container.style.cursor = 'grabbing';
     });
 
-    // 더블클릭 → 새 업무 생성
+    // 더블클릭 → 컨텍스트 인식 업무 추가
     this.container.addEventListener('dblclick', (e) => {
-      const onBg = e.target === this.container || e.target === this.canvas || e.target === this.svg;
-      if (!onBg) return;
+      if (e.target.closest('.task-node')          ||
+          e.target.closest('.project-box-header') ||
+          e.target.closest('.group-box-header')   ||
+          e.target.closest('.nh')) return;
+
       const rect = this.container.getBoundingClientRect();
-      const x = (e.clientX - rect.left - this.offsetX) / this.scale - NODE_W / 2;
-      const y = (e.clientY - rect.top  - this.offsetY) / this.scale - NODE_H / 2;
-      this.cb.onNodeCreate?.(x, y);
+      const cx = (e.clientX - rect.left - this.offsetX) / this.scale;
+      const cy = (e.clientY - rect.top  - this.offsetY) / this.scale;
+      const x  = cx - NODE_W / 2;
+      const y  = cy - NODE_H / 2;
+
+      // 클릭 위치에 해당하는 묶음/프로젝트 감지
+      let context = {};
+      for (const group of (this.data.groups || [])) {
+        if (!group.projectId) continue;
+        const b = this._groupBBox(group);
+        if (cx >= b.x && cx <= b.x + b.w && cy >= b.y && cy <= b.y + b.h) {
+          context = { projectId: group.projectId, groupId: group.id };
+          break;
+        }
+      }
+      if (!context.projectId) {
+        for (const project of (this.data.projects || [])) {
+          if (project.archived) continue;
+          const b = this._projectBBox(project);
+          if (cx >= b.x && cx <= b.x + b.w && cy >= b.y && cy <= b.y + b.h) {
+            context = { projectId: project.id };
+            break;
+          }
+        }
+      }
+      this.cb.onNodeCreate?.(x, y, context);
     });
 
     // 줌

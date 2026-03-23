@@ -77,6 +77,19 @@ export function normalize(d) {
   if (!d.tasks)    d.tasks    = [];
   if (!d.flows)    d.flows    = [];
   if (!d.groups)   d.groups   = [];
+
+  // ── Phase 3b: 그룹 필드 정규화 (x, y, projectId, sortOrder 보장)
+  for (const g of d.groups) {
+    if (g.x         === undefined) g.x         = 200;
+    if (g.y         === undefined) g.y         = 200;
+    if (g.projectId === undefined) g.projectId = null;
+    if (g.sortOrder === undefined) g.sortOrder = 0;
+  }
+
+  // ── Phase 3c: task.groupId 기본값
+  for (const t of d.tasks) {
+    if (t.groupId === undefined) t.groupId = null;
+  }
   if (!d.views)    d.views    = [];
 
   // activeViewId 유효성 검사 (null = 전체 보기)
@@ -216,9 +229,14 @@ export function addProject(data, name) {
 
 export function deleteProject(data, projectId) {
   data.projects = data.projects.filter(p => p.id !== projectId);
-  const removed = new Set(data.tasks.filter(t => t.projectId === projectId).map(t => t.id));
-  data.tasks = data.tasks.filter(t => t.projectId !== projectId);
-  data.flows = data.flows.filter(f => !removed.has(f.from) && !removed.has(f.to));
+  const removedTasks = new Set(data.tasks.filter(t => t.projectId === projectId).map(t => t.id));
+  const removedGroups = new Set((data.groups || []).filter(g => g.projectId === projectId).map(g => g.id));
+  data.tasks  = data.tasks.filter(t => t.projectId !== projectId);
+  data.groups = (data.groups || []).filter(g => g.projectId !== projectId);
+  data.flows  = (data.flows || []).filter(f =>
+    !removedTasks.has(f.from) && !removedTasks.has(f.to) &&
+    !removedGroups.has(f.from) && !removedGroups.has(f.to)
+  );
   // 뷰의 projectIds에서도 제거
   for (const view of (data.views || [])) {
     view.projectIds = (view.projectIds || []).filter(id => id !== projectId);
@@ -226,10 +244,11 @@ export function deleteProject(data, projectId) {
 }
 
 // ── 업무 ─────────────────────────────────────────────────
-export function addTask(data, { name, projectId, assignee = '', x = 100, y = 100 }) {
+export function addTask(data, { name, projectId, groupId = null, assignee = '', x = 100, y = 100 }) {
   const task = {
     id: generateId('t'),
     projectId: projectId || data.projects[0]?.id || '',
+    groupId,
     name: name || '새 업무',
     assignee,
     status: 'pre',
@@ -252,11 +271,16 @@ export function deleteTask(data, taskId) {
   data.flows = data.flows.filter(f => f.from !== taskId && f.to !== taskId);
 }
 
-// ── 그룹 ─────────────────────────────────────────────────
+// ── 그룹/묶음 ────────────────────────────────────────────
 export const GROUP_COLORS = ['#6366F1','#0EA5E9','#10B981','#F59E0B','#EF4444','#EC4899','#8B5CF6','#14B8A6'];
 
-export function addGroup(data, name, color) {
-  const g = { id: generateId('g'), name, color };
+// projectId: 소속 프로젝트 (null = 레거시 태그 전용)
+// x, y: 캔버스 절대 좌표 (빈 묶음 앵커 / 드래그 후 업데이트)
+// sortOrder: 정렬 순서
+export function addGroup(data, name, color, projectId = null, x = 200, y = 200) {
+  const maxOrder = (data.groups || []).filter(g => g.projectId === projectId)
+    .reduce((m, g) => Math.max(m, g.sortOrder || 0), 0);
+  const g = { id: generateId('g'), name, color, projectId, x, y, sortOrder: maxOrder + 1 };
   if (!data.groups) data.groups = [];
   data.groups.push(g);
   return g;
@@ -265,6 +289,8 @@ export function addGroup(data, name, color) {
 export function deleteGroup(data, groupId) {
   data.groups = (data.groups || []).filter(g => g.id !== groupId);
   data.tasks.forEach(t => { if (t.groupId === groupId) t.groupId = null; });
+  // 묶음과 연결된 flow도 제거
+  data.flows = (data.flows || []).filter(f => f.from !== groupId && f.to !== groupId);
 }
 
 // ── 연결 ─────────────────────────────────────────────────

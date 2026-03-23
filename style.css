@@ -404,6 +404,71 @@ body {
   top: 0; left: 0;
 }
 
+/* ── 프로젝트 박스 ────────────────────────────────────── */
+.project-box {
+  position: absolute;
+  border: 2px solid #E5E7EB;
+  border-radius: 16px;
+  background: transparent;
+  pointer-events: none; /* 배경 클릭은 통과, 헤더만 포인터 이벤트 */
+}
+.project-box-header {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  pointer-events: auto;
+  cursor: grab;
+  user-select: none;
+  border-radius: 14px 14px 0 0;
+  border-bottom: 1px solid #F3F4F6;
+  background: rgba(255,255,255,0.8);
+}
+.project-box-header:active { cursor: grabbing; }
+
+/* ── 묶음(카테고리) 박스 ──────────────────────────────── */
+.group-box {
+  position: absolute;
+  border: 1px dashed #D1D5DB;
+  border-radius: 12px;
+  background: transparent;
+  pointer-events: none; /* 배경 통과 */
+}
+.group-box-header {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  pointer-events: auto;
+  cursor: grab;
+  user-select: none;
+  border-radius: 11px 11px 0 0;
+}
+.group-box-header:active { cursor: grabbing; }
+.group-color-bar {
+  width: 3px;
+  height: 16px;
+  border-radius: 2px;
+  flex-shrink: 0;
+  margin-right: 8px;
+}
+/* 묶음 박스 호버 시 연결 핸들 표시 */
+.group-box .group-nh {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 0;
+  pointer-events: auto;
+  transition: opacity 0.15s;
+}
+.group-box:hover .group-nh { opacity: 1; }
+.group-box .nh-l { left:  -7px; }
+.group-box .nh-r { right: -7px; }
+
 /* ── 태스크 노드 ──────────────────────────────────────── */
 .task-node {
   position: absolute;
