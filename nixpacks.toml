@@ -1,0 +1,5 @@
+[phases.install]
+cmds = ["npm ci --production"]
+
+[start]
+cmd = "node server/index.js"
