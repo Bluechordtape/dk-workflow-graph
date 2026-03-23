@@ -1,7 +1,7 @@
 // graph.js
 
 export const NODE_W = 190;
-export const NODE_H = 88;
+export const NODE_H = 110;
 
 const STATUS = {
   // 구버전 호환
@@ -181,7 +181,8 @@ export class Graph {
       `background: #FFFFFF`,
       `box-shadow: 0 1px 4px rgba(0,0,0,0.07)`,
       `padding: 10px 12px`,
-      `min-height: 88px`,
+      `height: ${NODE_H}px`,
+      `overflow: hidden`,
       `display: flex`,
       `flex-direction: column`,
       `gap: 5px`,

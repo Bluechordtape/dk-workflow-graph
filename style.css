@@ -446,7 +446,8 @@ body {
   padding: 10px 12px;
   cursor: pointer;
   user-select: none;
-  min-height: 88px;
+  height: 110px;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   gap: 5px;
