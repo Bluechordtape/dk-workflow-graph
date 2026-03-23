@@ -14,7 +14,7 @@ import {
 } from './data.js';
 import { Graph } from './graph.js';
 
-const VERSION = 'v2.11';
+const VERSION = 'v2.12';
 
 let data = null;
 let graph = null;
@@ -1032,69 +1032,71 @@ function deleteTaskBtn() {
 }
 
 // ── 세부업무 ─────────────────────────────────────────────
-function makeSubtaskRow(task, s) {
-  const row = document.createElement('div');
-  row.className = 'subtask-row';
-
-  const cb = document.createElement('input');
-  cb.type = 'checkbox';
-  cb.checked = s.status === 'done';
-  cb.addEventListener('change', (e) => {
-    s.status = e.target.checked ? 'done' : 'pending';
-    saveData(data);
-  });
-
-  const nameInput = document.createElement('input');
-  nameInput.type = 'text';
-  nameInput.className = 'sub-name';
-  nameInput.value = s.name;
-  nameInput.placeholder = '세부업무 이름';
-  nameInput.addEventListener('input', (e) => { s.name = e.target.value; });
-  nameInput.addEventListener('change', (e) => { s.name = e.target.value; saveData(data); });
-
-  const delBtn = document.createElement('button');
-  delBtn.className = 'sub-del';
-  delBtn.textContent = '×';
-  delBtn.style.display = canWrite() ? '' : 'none';
-  delBtn.addEventListener('click', () => {
-    const idx = task.subtasks.indexOf(s);
-    if (idx !== -1) task.subtasks.splice(idx, 1);
-    saveData(data);
-    row.remove();
-  });
-
-  row.appendChild(cb);
-  row.appendChild(nameInput);
-  row.appendChild(delBtn);
-  return row;
-}
-
-function renderSubtasks(task) {
+function renderSubtasks(task, focusLast = false) {
   const list = document.getElementById('subtask-list');
+  if (!list) return;
   list.innerHTML = '';
-  (task.subtasks || []).forEach(s => list.appendChild(makeSubtaskRow(task, s)));
+
+  (task.subtasks || []).forEach((s, i) => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:6px;margin-bottom:4px';
+
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = s.status === 'done';
+    cb.style.flexShrink = '0';
+    cb.style.accentColor = '#212121';
+    cb.addEventListener('change', () => {
+      s.status = cb.checked ? 'done' : 'pending';
+      saveData(data);
+      graph.setData(filteredData());
+    });
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = s.name || '';
+    input.placeholder = '세부업무 입력';
+    input.style.cssText = 'flex:1;height:28px;border:1px solid #E5E7EB;border-radius:5px;padding:0 8px;font-size:12px;font-family:inherit;outline:none';
+    input.addEventListener('focus', () => input.style.borderColor = '#212121');
+    input.addEventListener('blur', () => {
+      input.style.borderColor = '#E5E7EB';
+      s.name = input.value;
+      saveData(data);
+    });
+    input.addEventListener('input', () => { s.name = input.value; });
+
+    const del = document.createElement('button');
+    del.textContent = '×';
+    del.style.cssText = 'width:24px;height:24px;border:none;background:none;color:#D1D5DB;font-size:18px;cursor:pointer;flex-shrink:0;line-height:1;padding:0';
+    del.addEventListener('mouseenter', () => del.style.color = '#EF4444');
+    del.addEventListener('mouseleave', () => del.style.color = '#D1D5DB');
+    del.addEventListener('click', () => {
+      task.subtasks.splice(i, 1);
+      saveData(data);
+      graph.setData(filteredData());
+      renderSubtasks(task);
+    });
+
+    row.appendChild(cb);
+    row.appendChild(input);
+    row.appendChild(del);
+    list.appendChild(row);
+  });
+
+  if (focusLast && list.lastChild) {
+    const inp = list.lastChild.querySelector('input[type=text]');
+    if (inp) { inp.focus(); inp.select(); }
+  }
 }
 
 function addSubtask() {
-  if (!activeTaskId || !canWrite()) return;
   const task = data.tasks.find(t => t.id === activeTaskId);
   if (!task) return;
   if (!task.subtasks) task.subtasks = [];
-
-  const s = { id: `s_${Date.now()}`, name: '', status: 'pending' };
-  task.subtasks.push(s);
-  // saveData는 사용자가 내용 입력 후 blur 시점에 makeSubtaskRow 내부에서 호출됨
-  // 여기서 즉시 저장하면 소켓 브로드캐스트로 data 객체가 교체되어 s 참조가 끊어질 수 있음
-
-  const list = document.getElementById('subtask-list');
-  const row = makeSubtaskRow(task, s);
-  list.appendChild(row);
-  const input = row.querySelector('.sub-name');
-  requestAnimationFrame(() => {
-    input.focus();
-    // 패널이 스크롤 가능하면 새 입력창이 보이도록 스크롤
-    input.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-  });
+  task.subtasks.push({ id: 's_' + Date.now(), name: '', status: 'pending' });
+  renderSubtasks(task, true);
+  saveData(data);
+  graph.setData(filteredData());
 }
 
 // ── 그룹 관리 ────────────────────────────────────────────
