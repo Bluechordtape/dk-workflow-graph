@@ -5,18 +5,18 @@ export const NODE_H = 88;
 
 const STATUS = {
   // 구버전 호환
-  todo:     { label: '착수전',   bar: '#9E9E9E', bg: '#F5F5F5', text: '#757575' },
-  pending:  { label: '착수전',   bar: '#9E9E9E', bg: '#F5F5F5', text: '#757575' },
-  wip:      { label: '진행 중',  bar: '#212121', bg: '#F5F5F5', text: '#424242' },
+  todo:     { label: '착수전',   bar: '#9E9E9E', bg: '#F3F4F6', text: '#4B5563', bdg: '#D1D5DB' },
+  pending:  { label: '착수전',   bar: '#9E9E9E', bg: '#F3F4F6', text: '#4B5563', bdg: '#D1D5DB' },
+  wip:      { label: '진행 중',  bar: '#212121', bg: '#EDE9FE', text: '#5B21B6', bdg: '#C4B5FD' },
   // 새 상태
-  pre:      { label: '착수전',   bar: '#9E9E9E', bg: '#F5F5F5', text: '#757575' },
-  doing:    { label: '진행 중',  bar: '#212121', bg: '#F5F5F5', text: '#424242' },
-  waiting:  { label: '대기',     bar: '#D97706', bg: '#FFFBEB', text: '#92400E' },
-  delayed:  { label: '지연',     bar: '#DC2626', bg: '#FEF2F2', text: '#991B1B' },
-  review:   { label: '완료요청', bar: '#7C3AED', bg: '#F5F3FF', text: '#5B21B6' },
-  inactive: { label: '미진행',   bar: '#616161', bg: '#F5F5F5', text: '#424242' },
-  done:     { label: '완료',     bar: '#059669', bg: '#ECFDF5', text: '#065F46' },
-  closed:   { label: '종결',     bar: '#212121', bg: '#212121', text: '#FFFFFF' },
+  pre:      { label: '착수전',   bar: '#9E9E9E', bg: '#F3F4F6', text: '#4B5563', bdg: '#D1D5DB' },
+  doing:    { label: '진행 중',  bar: '#212121', bg: '#EDE9FE', text: '#5B21B6', bdg: '#C4B5FD' },
+  waiting:  { label: '대기',     bar: '#D97706', bg: '#FEF9C3', text: '#854D0E', bdg: '#FCD34D' },
+  delayed:  { label: '지연',     bar: '#DC2626', bg: '#FEF2F2', text: '#991B1B', bdg: '#FECACA' },
+  review:   { label: '완료요청', bar: '#7C3AED', bg: '#FEF9C3', text: '#854D0E', bdg: '#FCD34D' },
+  inactive: { label: '미진행',   bar: '#616161', bg: '#F3F4F6', text: '#6B7280', bdg: '#D1D5DB' },
+  done:     { label: '완료',     bar: '#059669', bg: '#DCFCE7', text: '#15803D', bdg: '#86EFAC' },
+  closed:   { label: '종결',     bar: '#212121', bg: '#212121', text: '#FFFFFF', bdg: '#424242' },
 };
 
 export class Graph {
@@ -198,7 +198,7 @@ export class Graph {
         </div>
         <div class="node-mid" style="display:flex;align-items:center;justify-content:space-between;gap:6px">
           <span class="node-assignee" style="font-size:11px;color:#9E9E9E">${task.assignee || '미배정'}</span>
-          <span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;white-space:nowrap;background:${st.bg};color:${st.text}">${st.label}</span>
+          <span style="font-size:12px;font-weight:700;padding:4px 12px;border-radius:4px;white-space:nowrap;background:${st.bg};color:${st.text};border:1px solid ${st.bdg}">${st.label}</span>
         </div>
         ${subLine}
         ${ddayLine}
