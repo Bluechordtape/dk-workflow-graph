@@ -1360,3 +1360,53 @@ body {
 }
 .perm-ok { color: #16A34A; font-weight: 700; font-size: 14px; }
 .perm-no { color: #D1D5DB; font-size: 13px; }
+
+/* ── 온라인 사용자 아바타 ── */
+.online-users {
+  display: flex;
+  align-items: center;
+  flex-direction: row-reverse; /* 오른쪽부터 쌓임 */
+}
+.online-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  cursor: default;
+  position: relative;
+  margin-left: -6px;
+  flex-shrink: 0;
+  transition: transform 0.1s;
+}
+.online-avatar:last-child { margin-left: 0; }
+.online-avatar:hover { transform: scale(1.15); z-index: 10; }
+.online-avatar.is-self { box-shadow: 0 0 0 2px #212121; }
+.online-avatar-overflow {
+  background: #E5E7EB;
+  color: #6B7280;
+}
+/* 툴팁 */
+.online-avatar-tip {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  background: #212121;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 8px;
+  border-radius: 4px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 100;
+}
+.online-avatar:hover .online-avatar-tip { opacity: 1; }

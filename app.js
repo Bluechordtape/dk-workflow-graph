@@ -15,7 +15,7 @@ import {
 } from './data.js';
 import { Graph } from './graph.js';
 
-const VERSION = 'v2.21';
+const VERSION = 'v2.22';
 
 let data = null;
 let graph = null;
@@ -255,7 +255,11 @@ function showLoginError(msg) {
 function initSocket() {
   if (typeof io === 'undefined') return;
   const socket = io();
-  socket.on('connect', () => setSocketId(socket.id));
+  socket.on('connect', () => {
+    setSocketId(socket.id);
+    // 접속 시 유저 정보 서버에 알림
+    if (currentUser) socket.emit('user:join', currentUser);
+  });
   socket.on('data:updated', (newData) => {
     data = normalize(newData);
     graph.setData(filteredData());
@@ -263,6 +267,52 @@ function initSocket() {
     renderSidebar();
     if (viewMode === 'calendar') renderCalendar();
   });
+  socket.on('users:online', (users) => {
+    renderOnlineUsers(users);
+  });
+}
+
+// ── 접속자 아바타 렌더링 ─────────────────────────────────
+const ROLE_AVATAR = {
+  admin:   { bg: '#212121', text: '#FFFFFF' },
+  leader:  { bg: '#C8102E', text: '#FFFFFF' },
+  manager: { bg: '#EDE9FE', text: '#5B21B6' },
+  member:  { bg: '#F3F4F6', text: '#6B7280' },
+};
+const ROLE_LABEL = { admin: '관리자', leader: '팀장', manager: '과장', member: '팀원' };
+
+function renderOnlineUsers(users) {
+  const wrap = document.getElementById('online-users');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+
+  const MAX = 5;
+  const visible = users.slice(0, MAX);
+  const extra   = users.length - MAX;
+
+  visible.forEach(u => {
+    const isSelf = u.id === currentUser?.id;
+    const colors = ROLE_AVATAR[u.role] || ROLE_AVATAR.member;
+    const initial = (u.name || '?')[0];
+    const label = `${u.name} (${ROLE_LABEL[u.role] || u.role})`;
+
+    const av = document.createElement('div');
+    av.className = 'online-avatar';
+    av.style.background = colors.bg;
+    av.style.color = colors.text;
+    if (isSelf) av.style.outline = '2px solid #212121';
+    av.innerHTML = `${initial}<span class="online-avatar-tip">${label}</span>`;
+    wrap.appendChild(av);
+  });
+
+  if (extra > 0) {
+    const more = document.createElement('div');
+    more.className = 'online-avatar';
+    more.style.background = '#E5E7EB';
+    more.style.color = '#6B7280';
+    more.innerHTML = `+${extra}<span class="online-avatar-tip">${extra}명 더</span>`;
+    wrap.appendChild(more);
+  }
 }
 
 // ── 앱 시작 (로그인 후) ───────────────────────────────────

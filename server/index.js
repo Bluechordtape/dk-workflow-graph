@@ -46,10 +46,28 @@ app.get('*', (req, res) => {
 });
 
 // ── Socket.io ─────────────────────────────────────────────
+const onlineUsers = new Map(); // socketId → { id, name, role }
+
+function getUniqueUsers() {
+  const seen = new Set();
+  return [...onlineUsers.values()].filter(u => {
+    if (seen.has(u.id)) return false;
+    seen.add(u.id); return true;
+  });
+}
+
 io.on('connection', (socket) => {
   console.log(`[Socket] 연결: ${socket.id}`);
+
+  socket.on('user:join', (user) => {
+    onlineUsers.set(socket.id, { id: user.id, name: user.name, role: user.role });
+    io.emit('users:online', getUniqueUsers());
+  });
+
   socket.on('disconnect', () => {
     console.log(`[Socket] 해제: ${socket.id}`);
+    onlineUsers.delete(socket.id);
+    io.emit('users:online', getUniqueUsers());
   });
 });
 
