@@ -197,13 +197,13 @@ export class Graph {
           <span class="node-name" style="font-size:13px;font-weight:600;color:#212121;line-height:1.35;letter-spacing:-0.2px;flex:1">${task.name}</span>
           ${groupBadge}
         </div>
-        <div class="node-mid" style="display:flex;align-items:center;justify-content:space-between;gap:6px">
-          <span class="node-assignee" style="font-size:11px;color:#9E9E9E">${task.assignee || '미배정'}</span>
-          <span style="font-size:12px;font-weight:700;padding:4px 12px;border-radius:4px;white-space:nowrap;background:${st.bg};color:${st.text};border:1px solid ${st.bdg}">${st.label}</span>
+        <div class="node-mid" style="display:flex;align-items:center;gap:5px">
+          <span class="node-assignee" style="font-size:11px;color:#9E9E9E;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${task.assignee || '미배정'}</span>
+          <span style="font-size:12px;font-weight:700;padding:4px 12px;border-radius:4px;white-space:nowrap;flex-shrink:0;background:${st.bg};color:${st.text};border:1px solid ${st.bdg}">${st.label}</span>
+          ${actionBtn}
         </div>
         ${subLine}
         ${ddayLine}
-        ${actionBtn}
       </div>
       <div class="nh nh-r" data-id="${task.id}" data-side="right"></div>`;
 

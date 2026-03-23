@@ -512,15 +512,16 @@ body {
 }
 
 .node-action {
-  margin-top: 4px;
-  width: 100%;
+  flex-shrink: 0;
   height: 22px;
+  padding: 0 10px;
   border-radius: 4px;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 500;
   font-family: inherit;
   cursor: pointer;
   letter-spacing: -0.1px;
+  white-space: nowrap;
   transition: background 0.12s, border-color 0.12s;
 }
 .btn-start {
