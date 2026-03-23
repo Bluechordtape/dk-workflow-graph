@@ -951,16 +951,25 @@ body {
 .view-check-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 8px;
-  border-radius: 6px;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 7px;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 14px;
+  font-weight: 500;
   color: #212121;
   transition: background 0.1s;
+  width: 100%;
+  box-sizing: border-box;
 }
 .view-check-item:hover { background: #F3F4F6; }
-.view-check-item input[type=checkbox] { accent-color: #C8102E; flex-shrink: 0; }
+.view-check-item input[type=checkbox] {
+  width: 16px; height: 16px;
+  accent-color: #C8102E;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.view-check-item span:last-child { flex: 1; }
 
 /* ── 캘린더 뷰 ───────────────────────────────────────────── */
 #calendar-view {

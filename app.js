@@ -14,7 +14,7 @@ import {
 } from './data.js';
 import { Graph } from './graph.js';
 
-const VERSION = 'v2.14';
+const VERSION = 'v2.15';
 
 let data = null;
 let graph = null;
@@ -736,9 +736,10 @@ function openViewModal(view = null) {
     cb.checked = currentIds.includes(p.id);
 
     const dot = document.createElement('span');
-    dot.style.cssText = `width:10px;height:10px;border-radius:2px;background:${p.color};flex-shrink:0`;
+    dot.style.cssText = `width:12px;height:12px;border-radius:3px;background:${p.color};flex-shrink:0`;
 
     const nameSpan = document.createElement('span');
+    nameSpan.style.cssText = 'flex:1;font-size:14px;font-weight:500;color:#212121';
     nameSpan.textContent = p.name;
 
     label.appendChild(cb);
