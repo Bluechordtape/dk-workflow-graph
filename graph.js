@@ -96,7 +96,44 @@ export class Graph {
   setData(data) { this.data = data; this.render(); }
   setFilter(f)  { this.filter = { ...this.filter, ...f }; this.render(); }
   setUserContext(user) { this.userCtx = user; if (this.data) this.render(); }
-  resetView() { this.scale = 1; this.offsetX = 0; this.offsetY = 0; this._transform(); }
+  resetView() {
+    if (!this.data) { this.scale = 1; this.offsetX = 0; this.offsetY = 0; this._transform(); return; }
+
+    // 모든 컨텐츠의 전체 bbox 계산
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    let hasContent = false;
+    for (const t of (this.data.tasks || [])) {
+      minX = Math.min(minX, t.x);           minY = Math.min(minY, t.y);
+      maxX = Math.max(maxX, t.x + NODE_W);  maxY = Math.max(maxY, t.y + NODE_H);
+      hasContent = true;
+    }
+    for (const g of (this.data.groups || [])) {
+      const b = this._groupBBox(g);
+      minX = Math.min(minX, b.x); minY = Math.min(minY, b.y);
+      maxX = Math.max(maxX, b.x + b.w); maxY = Math.max(maxY, b.y + b.h);
+      hasContent = true;
+    }
+    for (const p of (this.data.projects || [])) {
+      const b = this._projectBBox(p);
+      minX = Math.min(minX, b.x); minY = Math.min(minY, b.y);
+      maxX = Math.max(maxX, b.x + b.w); maxY = Math.max(maxY, b.y + b.h);
+      hasContent = true;
+    }
+
+    if (!hasContent) { this.scale = 1; this.offsetX = 0; this.offsetY = 0; this._transform(); return; }
+
+    const PAD    = 40;
+    const cw     = this.container.clientWidth;
+    const ch     = this.container.clientHeight;
+    const contentW = maxX - minX + PAD * 2;
+    const contentH = maxY - minY + PAD * 2;
+    const scale  = Math.min(1, Math.min(cw / contentW, ch / contentH));
+
+    this.scale   = scale;
+    this.offsetX = (cw - contentW * scale) / 2 - (minX - PAD) * scale;
+    this.offsetY = (ch - contentH * scale) / 2 - (minY - PAD) * scale;
+    this._transform();
+  }
   getTransform() { return { x: this.offsetX, y: this.offsetY, k: this.scale }; }
 
   render() {
