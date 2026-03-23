@@ -10,11 +10,12 @@ import {
   fetchTemplates, saveTemplate, deleteTemplate,
   fetchBackups, createBackup, restoreBackup, deleteBackup,
   addView, updateView, deleteView, normalize,
-  fetchUserNames, fetchUsers, updateUserRole, resetUserPassword, createUser
+  fetchUserNames, fetchUsers, updateUserRole, resetUserPassword, createUser,
+  fetchLayout, saveLayout
 } from './data.js';
 import { Graph } from './graph.js';
 
-const VERSION = 'v2.18';
+const VERSION = 'v2.19';
 
 let data = null;
 let graph = null;
@@ -23,6 +24,35 @@ let currentUser = null; // { id, email, name, role }
 let userNames = [];     // 전체 팀원 이름 목록
 let calendarDate = new Date();
 let viewMode = 'graph'; // 'graph' | 'calendar'
+
+// ── 사용자별 레이아웃 (서버 저장, 개인 위치 오버레이) ─────
+let userLayout = { tasks: {}, groups: {}, projects: {} };
+let _layoutSaveTimer = null;
+
+function scheduleSaveLayout() {
+  clearTimeout(_layoutSaveTimer);
+  _layoutSaveTimer = setTimeout(() => saveLayout(userLayout), 1000);
+}
+
+// 사용자 위치 오버레이 적용 (원본 data 객체를 변경하지 않는 shallow clone)
+function applyUserLayout({ projects, tasks, flows, groups }) {
+  const ul = userLayout;
+  return {
+    projects: (projects || []).map(p => {
+      const ov = ul.projects[p.id];
+      return ov ? { ...p, x: ov.x, y: ov.y } : { ...p };
+    }),
+    tasks: (tasks || []).map(t => {
+      const ov = ul.tasks[t.id];
+      return ov ? { ...t, x: ov.x, y: ov.y } : { ...t };
+    }),
+    groups: (groups || []).map(g => {
+      const ov = ul.groups[g.id];
+      return ov ? { ...g, x: ov.x, y: ov.y } : { ...g };
+    }),
+    flows: flows || [],
+  };
+}
 
 const TOKEN_KEY = 'dk_jwt';
 
@@ -35,21 +65,23 @@ function activeView() {
 
 function filteredData() {
   const view = activeView();
+  let slice;
   if (!view || !view.projectIds?.length) {
-    return { projects: data.projects, tasks: data.tasks, flows: data.flows, groups: data.groups };
+    slice = { projects: data.projects, tasks: data.tasks, flows: data.flows, groups: data.groups };
+  } else {
+    const projects = data.projects.filter(p => view.projectIds.includes(p.id));
+    const pSet = new Set(projects.map(p => p.id));
+    const tasks = data.tasks.filter(t => pSet.has(t.projectId));
+    const tSet = new Set(tasks.map(t => t.id));
+    const groups = (data.groups || []).filter(g => !g.projectId || pSet.has(g.projectId));
+    const gSet = new Set(groups.map(g => g.id));
+    const flows = (data.flows || []).filter(f =>
+      (tSet.has(f.from) || gSet.has(f.from)) && (tSet.has(f.to) || gSet.has(f.to))
+    );
+    slice = { projects, tasks, flows, groups };
   }
-  const projects = data.projects.filter(p => view.projectIds.includes(p.id));
-  const pSet = new Set(projects.map(p => p.id));
-  const tasks = data.tasks.filter(t => pSet.has(t.projectId));
-  const tSet = new Set(tasks.map(t => t.id));
-  // 뷰에 포함된 프로젝트의 묶음만 표시 (projectId 없는 레거시 태그는 항상 포함)
-  const groups = (data.groups || []).filter(g => !g.projectId || pSet.has(g.projectId));
-  const gSet = new Set(groups.map(g => g.id));
-  // flow: task-task, task-group, group-group 모두 허용
-  const flows = (data.flows || []).filter(f =>
-    (tSet.has(f.from) || gSet.has(f.from)) && (tSet.has(f.to) || gSet.has(f.to))
-  );
-  return { projects, tasks, flows, groups };
+  // 사용자 개인 위치 오버레이 적용 (data 객체는 변경 안 함)
+  return applyUserLayout(slice);
 }
 
 // ── 언도/리두 ─────────────────────────────────────────────
@@ -296,7 +328,13 @@ async function startApp() {
           if (activeTaskId === taskId) document.getElementById('task-status').value = st;
         }
       },
-      onNodeMoved: () => { if (canWrite()) saveData(data); }
+      onNodeMoved: (moved) => {
+        if (!moved) return;
+        moved.tasks.forEach(({ id, x, y })    => { userLayout.tasks[id]    = { x, y }; });
+        moved.groups.forEach(({ id, x, y })   => { userLayout.groups[id]   = { x, y }; });
+        moved.projects.forEach(({ id, x, y }) => { userLayout.projects[id] = { x, y }; });
+        scheduleSaveLayout();
+      }
     });
 
     // 키보드 단축키
@@ -314,8 +352,14 @@ async function startApp() {
 
   try { userNames = await fetchUserNames(); } catch { userNames = []; }
 
-  data = await loadData();
+  // 글로벌 데이터 + 사용자 개인 레이아웃 병렬 로드
+  const [loadedData, loadedLayout] = await Promise.all([
+    loadData(),
+    fetchLayout().catch(() => ({ tasks: {}, groups: {}, projects: {} }))
+  ]);
+  data = loadedData;
   if (!data) { logout(); return; }
+  userLayout = loadedLayout;
 
   graph.setData(filteredData());
   graph.setUserContext(currentUser);

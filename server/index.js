@@ -10,6 +10,7 @@ const dataRouter      = require('./routes/data');
 const authRouter      = require('./routes/auth');
 const templatesRouter = require('./routes/templates');
 const backupsRouter   = require('./routes/backups');
+const layoutRouter    = require('./routes/layout');
 const cron            = require('node-cron');
 const pool            = require('./db');
 
@@ -35,6 +36,7 @@ app.use(express.static(path.join(__dirname, '..')));
 app.use('/api/auth',      authRouter());
 app.use('/api/templates', templatesRouter());
 app.use('/api/backups',   backupsRouter());
+app.use('/api',           layoutRouter());
 app.use('/api',           dataRouter(io));
 
 // SPA 폴백

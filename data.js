@@ -365,3 +365,18 @@ export async function resetUserPassword(userId, password) {
   if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || '변경 실패'); }
   return res.json();
 }
+
+// ── 사용자별 레이아웃 ─────────────────────────────────────
+export async function fetchLayout() {
+  const res = await fetch('/api/layout', { headers: authHeaders() });
+  if (!res.ok) return { tasks: {}, groups: {}, projects: {} };
+  return res.json();
+}
+
+export function saveLayout(layout) {
+  fetch('/api/layout', {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify(layout)
+  }).catch(err => console.warn('[레이아웃 저장 실패]', err.message));
+}

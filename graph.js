@@ -627,6 +627,25 @@ export class Graph {
   }
 
   // ── 인터랙션 바인딩 ───────────────────────────────────
+  _getMovedPositions() {
+    const { type, id, taskOffsets, groupOffsets } = this._drag;
+    const moved = { tasks: [], groups: [], projects: [] };
+    if (type === 'task') {
+      const t = (this.data.tasks || []).find(t => t.id === id);
+      if (t) moved.tasks.push({ id: t.id, x: t.x, y: t.y });
+    } else if (type === 'group') {
+      for (const { t } of (taskOffsets || [])) moved.tasks.push({ id: t.id, x: t.x, y: t.y });
+      const g = (this.data.groups || []).find(g => g.id === id);
+      if (g) moved.groups.push({ id: g.id, x: g.x, y: g.y });
+    } else if (type === 'project') {
+      for (const { t } of (taskOffsets  || [])) moved.tasks.push({ id: t.id, x: t.x, y: t.y });
+      for (const { g } of (groupOffsets || [])) moved.groups.push({ id: g.id, x: g.x, y: g.y });
+      const p = (this.data.projects || []).find(p => p.id === id);
+      if (p) moved.projects.push({ id: p.id, x: p.x, y: p.y });
+    }
+    return moved;
+  }
+
   _bind() {
     window.addEventListener('mousemove', (e) => {
       // 드래그 처리
@@ -694,7 +713,8 @@ export class Graph {
 
     window.addEventListener('mouseup', (e) => {
       if (this._drag) {
-        this.cb.onNodeMoved?.();
+        const moved = this._getMovedPositions();
+        this.cb.onNodeMoved?.(moved);
         this._drag = null;
       }
       if (this._conn) {

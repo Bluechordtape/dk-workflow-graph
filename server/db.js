@@ -144,6 +144,15 @@ async function initDB() {
     )
   `);
 
+  // 사용자별 레이아웃 테이블 (노드/프로젝트 위치 개인 저장)
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS user_layouts (
+      user_id    INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+      layout     JSONB NOT NULL DEFAULT '{}',
+      updated_at TIMESTAMP DEFAULT NOW()
+    )
+  `);
+
   console.log('[DB] 테이블 준비 완료');
 }
 
