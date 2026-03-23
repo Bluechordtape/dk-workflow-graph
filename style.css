@@ -1306,6 +1306,27 @@ body {
 .flow-delete-confirm:hover { background: #DC2626; }
 
 /* ── 권한 안내 테이블 ── */
+/* ── 묶음 관리 프로젝트 선택바 ── */
+.grp-project-bar {
+  margin-bottom: 12px;
+}
+.grp-project-bar select {
+  width: 100%;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid #E0E0E0;
+  border-radius: 7px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  color: #212121;
+  background: #F8F8F8;
+  cursor: pointer;
+  outline: none;
+}
+.grp-project-bar select:focus { border-color: #C8102E; }
+
+/* ── 권한 안내 테이블 ── */
 .perm-table {
   width: 100%;
   border-collapse: collapse;

@@ -14,7 +14,7 @@ import {
 } from './data.js';
 import { Graph } from './graph.js';
 
-const VERSION = 'v2.17';
+const VERSION = 'v2.18';
 
 let data = null;
 let graph = null;
@@ -1190,17 +1190,40 @@ function buildGroupColorPalette() {
   });
 }
 
+function openGroupsModal(defaultProjectId = null) {
+  // 프로젝트 선택기 채우기
+  const sel = document.getElementById('grp-manage-project');
+  sel.innerHTML = '';
+  data.projects.filter(p => !p.archived).forEach(p => {
+    const o = document.createElement('option');
+    o.value = p.id; o.textContent = p.name;
+    sel.appendChild(o);
+  });
+  // 기본 선택: 인자 → 현재 패널 업무 프로젝트 → 필터 프로젝트 → 첫 번째
+  const preselect = defaultProjectId
+    || (activeTaskId ? data.tasks.find(t => t.id === activeTaskId)?.projectId : null)
+    || document.getElementById('filter-project').value
+    || data.projects.find(p => !p.archived)?.id
+    || '';
+  sel.value = preselect;
+
+  renderGroupList();
+  openModal('modal-groups');
+}
+
 function renderGroupList() {
+  const projectId = document.getElementById('grp-manage-project').value;
   const list = document.getElementById('group-list');
   list.innerHTML = '';
-  if (!(data.groups || []).length) {
-    list.innerHTML = '<div style="color:#9E9E9E;font-size:13px;padding:8px 0">생성된 묶음이 없습니다.</div>';
+
+  const groups = (data.groups || []).filter(g => g.projectId === projectId);
+
+  if (!groups.length) {
+    list.innerHTML = '<div style="color:#9E9E9E;font-size:13px;padding:8px 0">이 프로젝트에 묶음이 없습니다.</div>';
     return;
   }
-  (data.groups || []).forEach(g => {
-    const projectName = g.projectId
-      ? (data.projects.find(p => p.id === g.projectId)?.name || '')
-      : '태그 전용';
+
+  groups.forEach(g => {
     const item = document.createElement('div');
     item.className = 'tmpl-item';
     item.style.cursor = 'default';
@@ -1208,7 +1231,6 @@ function renderGroupList() {
       <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">
         <span style="width:12px;height:12px;border-radius:3px;background:${g.color};flex-shrink:0"></span>
         <span class="tmpl-item-name">${g.name}</span>
-        ${projectName ? `<span style="font-size:10px;color:#9E9E9E;white-space:nowrap">${projectName}</span>` : ''}
       </div>
       <div style="display:flex;gap:6px;flex-shrink:0">
         <button class="btn-grp-edit" style="height:26px;padding:0 10px;border-radius:5px;border:1px solid #E0E0E0;background:#FAFAFA;font-size:11px;font-weight:600;font-family:inherit;cursor:pointer">편집</button>
@@ -1229,12 +1251,11 @@ function renderGroupList() {
   });
 }
 
-document.getElementById('btn-manage-groups').addEventListener('click', () => {
-  renderGroupList();
-  openModal('modal-groups');
-});
+document.getElementById('grp-manage-project').addEventListener('change', renderGroupList);
 
-function openGroupModal(group = null) {
+document.getElementById('btn-manage-groups').addEventListener('click', () => openGroupsModal());
+
+function openGroupModal(group = null, defaultProjectId = null) {
   _editingGroupId = group?.id || null;
   document.getElementById('grp-modal-title').textContent = group ? '묶음 수정' : '묶음 추가';
   document.getElementById('grp-name').value = group?.name || '';
@@ -1250,7 +1271,7 @@ function openGroupModal(group = null) {
   if (group) {
     sel.value = group.projectId || '';
   } else {
-    const fp = document.getElementById('filter-project').value;
+    const fp = defaultProjectId || document.getElementById('filter-project').value;
     if (fp) sel.value = fp;
   }
 
@@ -1259,7 +1280,10 @@ function openGroupModal(group = null) {
   setTimeout(() => document.getElementById('grp-name').focus(), 50);
 }
 
-document.getElementById('btn-open-group-create').addEventListener('click', () => openGroupModal(null));
+document.getElementById('btn-open-group-create').addEventListener('click', () => {
+  const projectId = document.getElementById('grp-manage-project').value || null;
+  openGroupModal(null, projectId);
+});
 
 document.getElementById('btn-grp-save').addEventListener('click', () => {
   const name = document.getElementById('grp-name').value.trim();
