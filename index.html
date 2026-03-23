@@ -88,77 +88,89 @@
 
 <!-- ── 툴바 ── -->
 <div id="toolbar">
-  <div class="brand">
-    <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0">
-      <rect x="2"  y="2"  width="5" height="5" rx="1.2" fill="#EBEBEB"/>
-      <rect x="9"  y="2"  width="5" height="5" rx="1.2" fill="#212121"/>
-      <rect x="16" y="2"  width="5" height="5" rx="1.2" fill="#212121"/>
-      <rect x="23" y="2"  width="5" height="5" rx="1.2" fill="#EBEBEB"/>
-      <rect x="2"  y="9"  width="5" height="5" rx="1.2" fill="#212121"/>
-      <rect x="9"  y="9"  width="5" height="5" rx="1.2" fill="#C8102E"/>
-      <rect x="16" y="9"  width="5" height="5" rx="1.2" fill="#212121"/>
-      <rect x="23" y="9"  width="5" height="5" rx="1.2" fill="#EBEBEB"/>
-      <rect x="2"  y="16" width="5" height="5" rx="1.2" fill="#212121"/>
-      <rect x="9"  y="16" width="5" height="5" rx="1.2" fill="#212121"/>
-      <rect x="16" y="16" width="5" height="5" rx="1.2" fill="#C8102E"/>
-      <rect x="23" y="16" width="5" height="5" rx="1.2" fill="#212121"/>
-      <rect x="2"  y="23" width="5" height="5" rx="1.2" fill="#EBEBEB"/>
-      <rect x="9"  y="23" width="5" height="5" rx="1.2" fill="#212121"/>
-      <rect x="16" y="23" width="5" height="5" rx="1.2" fill="#EBEBEB"/>
-      <rect x="23" y="23" width="5" height="5" rx="1.2" fill="#EBEBEB"/>
-    </svg>
-    Loom
-    <span id="toolbar-version" style="font-size:10px;font-weight:500;color:#BDBDBD;margin-left:2px;letter-spacing:0"></span>
+
+  <!-- 왼쪽: 로고 + 필터 + 뷰 컨트롤 (flex-shrink 허용) -->
+  <div class="toolbar-left">
+    <div class="brand">
+      <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0">
+        <rect x="2"  y="2"  width="5" height="5" rx="1.2" fill="#EBEBEB"/>
+        <rect x="9"  y="2"  width="5" height="5" rx="1.2" fill="#212121"/>
+        <rect x="16" y="2"  width="5" height="5" rx="1.2" fill="#212121"/>
+        <rect x="23" y="2"  width="5" height="5" rx="1.2" fill="#EBEBEB"/>
+        <rect x="2"  y="9"  width="5" height="5" rx="1.2" fill="#212121"/>
+        <rect x="9"  y="9"  width="5" height="5" rx="1.2" fill="#C8102E"/>
+        <rect x="16" y="9"  width="5" height="5" rx="1.2" fill="#212121"/>
+        <rect x="23" y="9"  width="5" height="5" rx="1.2" fill="#EBEBEB"/>
+        <rect x="2"  y="16" width="5" height="5" rx="1.2" fill="#212121"/>
+        <rect x="9"  y="16" width="5" height="5" rx="1.2" fill="#212121"/>
+        <rect x="16" y="16" width="5" height="5" rx="1.2" fill="#C8102E"/>
+        <rect x="23" y="16" width="5" height="5" rx="1.2" fill="#212121"/>
+        <rect x="2"  y="23" width="5" height="5" rx="1.2" fill="#EBEBEB"/>
+        <rect x="9"  y="23" width="5" height="5" rx="1.2" fill="#212121"/>
+        <rect x="16" y="23" width="5" height="5" rx="1.2" fill="#EBEBEB"/>
+        <rect x="23" y="23" width="5" height="5" rx="1.2" fill="#EBEBEB"/>
+      </svg>
+      Loom
+      <span id="toolbar-version" style="font-size:10px;font-weight:500;color:#BDBDBD;margin-left:2px;letter-spacing:0"></span>
+    </div>
+    <div class="sep"></div>
+    <select id="filter-project"></select>
+    <select id="filter-assignee"></select>
+    <select id="filter-status">
+      <option value="">상태 전체</option>
+      <option value="pre">착수전</option>
+      <option value="doing">진행 중</option>
+      <option value="waiting">대기</option>
+      <option value="delayed">지연</option>
+      <option value="review">완료요청</option>
+      <option value="inactive">미진행</option>
+      <option value="done">완료</option>
+      <option value="closed">종결</option>
+    </select>
+    <div class="sep"></div>
+    <button id="btn-undo" class="icon-btn" title="실행 취소 (Ctrl+Z)" disabled>↩</button>
+    <button id="btn-redo" class="icon-btn" title="다시 실행 (Ctrl+Y)" disabled>↪</button>
+    <div class="sep"></div>
+    <button id="btn-reset-view">뷰 초기화</button>
   </div>
-  <div class="sep"></div>
 
-  <select id="filter-project"></select>
-  <select id="filter-assignee"></select>
-  <select id="filter-status">
-    <option value="">상태 전체</option>
-    <option value="pre">착수전</option>
-    <option value="doing">진행 중</option>
-    <option value="waiting">대기</option>
-    <option value="delayed">지연</option>
-    <option value="review">완료요청</option>
-    <option value="inactive">미진행</option>
-    <option value="done">완료</option>
-    <option value="closed">종결</option>
-  </select>
+  <!-- 오른쪽: 액션 버튼 (절대 줄어들지 않음) -->
+  <div class="toolbar-right">
+    <!-- 항상 표시 -->
+    <button id="btn-add-group">+ 묶음 추가</button>
+    <button id="btn-add-task">+ 업무 추가</button>
+    <button id="btn-add-project" class="primary">
+      + 프로젝트
+      <span id="pending-badge" class="pending-badge" style="display:none"></span>
+    </button>
+    <div class="sep"></div>
 
-  <div class="sep"></div>
-  <button id="btn-undo" class="icon-btn" title="실행 취소 (Ctrl+Z)" disabled>↩</button>
-  <button id="btn-redo" class="icon-btn" title="다시 실행 (Ctrl+Y)" disabled>↪</button>
-  <div class="sep"></div>
-  <button id="btn-reset-view">뷰 초기화</button>
+    <!-- 2차: 화면이 좁으면 ⋯ 드롭다운으로 이동 -->
+    <button id="btn-template-load" class="tb-sec">템플릿</button>
+    <button id="btn-template-save" class="tb-sec">템플릿 저장</button>
+    <button id="btn-manage-projects" class="tb-sec">프로젝트 관리</button>
+    <button id="btn-manage-users" class="tb-sec">사용자 관리</button>
+    <div class="sep tb-sec"></div>
+    <button id="btn-view-graph" class="view-btn active tb-sec">그래프</button>
+    <button id="btn-view-calendar" class="view-btn tb-sec">캘린더</button>
+    <div class="sep tb-sec"></div>
+    <button id="btn-backup" class="tb-sec">백업</button>
+    <button id="btn-import" class="tb-sec">가져오기</button>
+    <button id="btn-export" class="tb-sec">내보내기</button>
+    <div class="sep tb-sec"></div>
+    <button id="btn-perm" class="tb-sec" title="역할별 권한 안내">권한 안내</button>
 
-  <div class="spacer"></div>
+    <div class="sep"></div>
+    <button id="btn-switch-user" class="user-btn"></button>
+    <button id="btn-logout" class="logout-btn">로그아웃</button>
 
-  <span class="hint">빈 곳 더블클릭 → 업무 추가 &nbsp;|&nbsp; 노드 끝 드래그 → 연결</span>
+    <!-- ⋯ 더보기 (좁을 때만 표시) -->
+    <div class="toolbar-more-wrap">
+      <button id="btn-more" class="icon-btn" title="더 보기">⋯</button>
+      <div id="toolbar-more-dropdown" class="hidden"></div>
+    </div>
+  </div>
 
-  <div class="spacer"></div>
-
-  <button id="btn-perm" title="역할별 권한 안내">권한 안내</button>
-  <button id="btn-switch-user" class="user-btn"></button>
-  <button id="btn-logout" class="logout-btn">로그아웃</button>
-  <div class="sep"></div>
-  <button id="btn-add-group">+ 묶음 추가</button>
-  <button id="btn-add-task">+ 업무 추가</button>
-  <button id="btn-add-project" class="primary">
-    + 프로젝트
-    <span id="pending-badge" class="pending-badge" style="display:none"></span>
-  </button>
-  <button id="btn-template-load">템플릿</button>
-  <button id="btn-template-save">템플릿 저장</button>
-  <button id="btn-manage-projects">프로젝트 관리</button>
-  <button id="btn-manage-users">사용자 관리</button>
-  <div class="sep"></div>
-  <button id="btn-view-graph" class="view-btn active">그래프</button>
-  <button id="btn-view-calendar" class="view-btn">캘린더</button>
-  <div class="sep"></div>
-  <button id="btn-backup">백업</button>
-  <button id="btn-import">가져오기</button>
-  <button id="btn-export">내보내기</button>
 </div>
 
 <!-- ── 오버뷰 바 ── -->

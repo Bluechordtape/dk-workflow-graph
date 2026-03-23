@@ -208,13 +208,33 @@ body {
 #toolbar {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0;
   padding: 0 16px;
   height: 52px;
   background: #FFFFFF;
   border-bottom: 1px solid #E0E0E0;
   flex-shrink: 0;
   z-index: 100;
+  overflow: hidden;
+}
+
+/* 왼쪽: 줄어들 수 있음 */
+.toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  padding-right: 8px;
+}
+
+/* 오른쪽: 절대 줄어들지 않음 */
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
 .brand {
@@ -236,14 +256,6 @@ body {
   flex-shrink: 0;
 }
 
-.spacer { flex: 1; }
-
-.hint {
-  font-size: 11px;
-  color: #9E9E9E;
-  white-space: nowrap;
-}
-
 #toolbar select {
   height: 32px;
   padding: 0 8px;
@@ -254,9 +266,11 @@ body {
   color: #212121;
   background: #FAFAFA;
   cursor: pointer;
-  max-width: 140px;
+  min-width: 70px;
+  max-width: 130px;
+  width: 110px;
   outline: none;
-  flex-shrink: 0;
+  flex-shrink: 1;
 }
 #toolbar select:focus { border-color: #C8102E; }
 
@@ -274,6 +288,7 @@ body {
   white-space: nowrap;
   transition: background 0.12s, border-color 0.12s;
   position: relative;
+  flex-shrink: 0;
 }
 #toolbar button:hover { background: #F5F5F5; border-color: #BDBDBD; }
 #toolbar button.primary {
@@ -288,6 +303,59 @@ body {
   color: #FFFFFF !important;
   border-color: #212121 !important;
   font-weight: 600;
+}
+
+/* ── ⋯ 더보기 드롭다운 ────────────────────────────────── */
+.toolbar-more-wrap {
+  position: relative;
+  display: none; /* 기본 숨김, 미디어쿼리에서 표시 */
+  align-items: center;
+}
+#btn-more {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  padding: 0 10px;
+  font-size: 16px;
+  letter-spacing: 2px;
+}
+#toolbar-more-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  background: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+  padding: 4px;
+  min-width: 168px;
+  z-index: 300;
+}
+#toolbar-more-dropdown.hidden { display: none; }
+.toolbar-dd-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+  border-radius: 5px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.1s;
+}
+.toolbar-dd-item:hover { background: #F3F4F6; }
+.toolbar-dd-item.active-item { font-weight: 700; color: #212121; }
+.toolbar-dd-sep {
+  height: 1px;
+  background: #F0F0F0;
+  margin: 3px 6px;
+}
+
+/* 2차 버튼: 기본은 표시, 좁을 때 숨김 */
+@media (max-width: 1299px) {
+  .tb-sec { display: none !important; }
+  .toolbar-more-wrap { display: flex; }
 }
 
 .pending-badge {

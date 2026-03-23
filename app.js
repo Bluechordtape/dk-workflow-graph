@@ -14,7 +14,7 @@ import {
 } from './data.js';
 import { Graph } from './graph.js';
 
-const VERSION = 'v2.16';
+const VERSION = 'v2.17';
 
 let data = null;
 let graph = null;
@@ -468,6 +468,7 @@ function setViewMode(mode) {
   document.getElementById('calendar-view').style.display = isGraph ? 'none' : '';
   document.getElementById('btn-view-graph').classList.toggle('active', isGraph);
   document.getElementById('btn-view-calendar').classList.toggle('active', !isGraph);
+  closeMoreDropdown();
   if (!isGraph) renderCalendar();
 }
 
@@ -843,6 +844,83 @@ function setupViewSidebar() {
   });
 }
 
+// ── ⋯ 더보기 드롭다운 ────────────────────────────────────
+const MORE_ITEMS = [
+  { label: '템플릿 불러오기', id: 'btn-template-load' },
+  { label: '템플릿 저장',     id: 'btn-template-save' },
+  { label: '프로젝트 관리',   id: 'btn-manage-projects' },
+  { label: '사용자 관리',     id: 'btn-manage-users' },
+  null,
+  { label: '그래프 보기',     id: 'btn-view-graph', activeClass: true },
+  { label: '캘린더 보기',     id: 'btn-view-calendar', activeClass: true },
+  null,
+  { label: '백업/복구',       id: 'btn-backup' },
+  { label: '가져오기',        id: 'btn-import' },
+  { label: '내보내기',        id: 'btn-export' },
+  null,
+  { label: '권한 안내',       id: 'btn-perm' },
+];
+
+let _moreOpen = false;
+
+function openMoreDropdown() {
+  const dd = document.getElementById('toolbar-more-dropdown');
+  dd.innerHTML = '';
+  let prevWasSep = true;
+
+  MORE_ITEMS.forEach(item => {
+    if (!item) {
+      if (!prevWasSep) {
+        const sep = document.createElement('div');
+        sep.className = 'toolbar-dd-sep';
+        dd.appendChild(sep);
+        prevWasSep = true;
+      }
+      return;
+    }
+    const btn = document.getElementById(item.id);
+    // 역할에 의해 숨겨진 버튼은 드롭다운에도 표시 안 함
+    if (!btn || btn.style.display === 'none') return;
+
+    const el = document.createElement('div');
+    el.className = 'toolbar-dd-item';
+    if (item.activeClass && btn.classList.contains('active')) {
+      el.classList.add('active-item');
+    }
+    el.textContent = item.label;
+    el.addEventListener('click', () => {
+      closeMoreDropdown();
+      btn.click();
+    });
+    dd.appendChild(el);
+    prevWasSep = false;
+  });
+
+  // 마지막 sep 제거
+  if (dd.lastChild?.classList?.contains('toolbar-dd-sep')) dd.lastChild.remove();
+
+  dd.classList.remove('hidden');
+  _moreOpen = true;
+}
+
+function closeMoreDropdown() {
+  document.getElementById('toolbar-more-dropdown')?.classList.add('hidden');
+  _moreOpen = false;
+}
+
+function setupMoreBtn() {
+  document.getElementById('btn-more').addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (_moreOpen) closeMoreDropdown();
+    else openMoreDropdown();
+  });
+  document.addEventListener('click', (e) => {
+    if (_moreOpen && !document.getElementById('toolbar-more-dropdown')?.contains(e.target)) {
+      closeMoreDropdown();
+    }
+  });
+}
+
 // ── 툴바 ─────────────────────────────────────────────────
 let toolbarSetup = false;
 function setupToolbar() {
@@ -911,6 +989,7 @@ function setupToolbar() {
     calendarDate = new Date(calendarDate.getFullYear(), calendarDate.getMonth() + 1, 1);
     renderCalendar();
   });
+  setupMoreBtn();
 }
 
 // ── 프로젝트 관리 모달 ────────────────────────────────────
