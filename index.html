@@ -138,6 +138,7 @@
 
   <div class="spacer"></div>
 
+  <button id="btn-perm" title="역할별 권한 안내">권한 안내</button>
   <button id="btn-switch-user" class="user-btn"></button>
   <button id="btn-logout" class="logout-btn">로그아웃</button>
   <div class="sep"></div>
@@ -506,6 +507,22 @@
     console.error('[Promise 오류]', e.reason);
   });
 </script>
+<!-- ── 권한 안내 모달 ── -->
+<div id="modal-perm" class="modal-overlay hidden">
+  <div class="modal-card modal-card-wide">
+    <div class="modal-header">
+      <h3>역할별 권한 안내</h3>
+      <button class="modal-close" data-modal="modal-perm">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="perm-table-wrap"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" data-modal="modal-perm">닫기</button>
+    </div>
+  </div>
+</div>
+
 <script type="module" src="app.js?v=2.2"></script>
 </body>
 </html>

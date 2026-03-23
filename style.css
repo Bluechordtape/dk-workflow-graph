@@ -1236,3 +1236,36 @@ body {
   cursor: pointer;
 }
 .flow-delete-confirm:hover { background: #DC2626; }
+
+/* ── 권한 안내 테이블 ── */
+.perm-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.perm-table th, .perm-table td {
+  padding: 7px 12px;
+  text-align: center;
+  border-bottom: 1px solid #F0F0F0;
+}
+.perm-table th:first-child, .perm-table td:first-child {
+  text-align: left;
+  font-weight: 500;
+  color: #374151;
+  width: 160px;
+}
+.perm-table thead th {
+  font-size: 12px;
+  font-weight: 700;
+  color: #9CA3AF;
+  letter-spacing: 0.3px;
+  background: #FAFAFA;
+  border-bottom: 2px solid #E5E7EB;
+}
+.perm-table th.perm-me, .perm-table td.perm-me {
+  background: #FFF5F5;
+  color: #C8102E;
+  font-weight: 700;
+}
+.perm-ok { color: #16A34A; font-weight: 700; font-size: 14px; }
+.perm-no { color: #D1D5DB; font-size: 13px; }

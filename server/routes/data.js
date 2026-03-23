@@ -56,7 +56,7 @@ module.exports = function (io) {
     const { taskId, updates } = req.body;
     if (!taskId || !updates) return res.status(400).json({ error: 'taskId, updates 필요' });
 
-    const canComplete = ['admin', 'leader', 'manager'].includes(req.user.role);
+    const canComplete = ['admin', 'leader'].includes(req.user.role);
     if ((updates.status === 'done' || updates.status === 'closed') && !canComplete)
       return res.status(403).json({ error: '완료/종결 처리 권한이 없습니다' });
 
@@ -115,7 +115,7 @@ module.exports = function (io) {
     if (!taskId || !status)
       return res.status(400).json({ error: 'taskId, status 필요' });
 
-    const canComplete = ['admin', 'leader', 'manager'].includes(req.user.role);
+    const canComplete = ['admin', 'leader'].includes(req.user.role);
     if (!canComplete && mgmtStatuses.includes(status))
       return res.status(403).json({ error: '이 상태는 관리자급만 설정할 수 있습니다' });
 

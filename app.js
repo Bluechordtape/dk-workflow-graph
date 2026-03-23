@@ -14,7 +14,7 @@ import {
 } from './data.js';
 import { Graph } from './graph.js';
 
-const VERSION = 'v2.15';
+const VERSION = 'v2.16';
 
 let data = null;
 let graph = null;
@@ -329,50 +329,112 @@ async function startApp() {
   populateAssigneeSelect();
 }
 
-// ── 역할 권한 헬퍼 ────────────────────────────────────────
+// ── 권한 매트릭스 ─────────────────────────────────────────
+const PERMISSIONS = {
+  createTask:    ['admin', 'leader', 'manager'],
+  deleteTask:    ['admin'],
+  editTask:      ['admin', 'leader', 'manager'],
+  confirmDone:   ['admin', 'leader'],
+  createProject: ['admin', 'leader', 'manager'],
+  deleteProject: ['admin'],
+  createGroup:   ['admin', 'leader', 'manager'],
+  deleteGroup:   ['admin', 'leader'],
+  createView:    ['admin', 'leader'],
+  editView:      ['admin', 'leader'],
+  importExport:  ['admin'],
+  backup:        ['admin'],
+  saveTemplate:  ['admin'],
+  manageUsers:   ['admin'],
+};
+
+function can(action) {
+  return (PERMISSIONS[action] || []).includes(currentUser?.role);
+}
+
+// ── 역할 권한 헬퍼 (하위 호환) ────────────────────────────
 function canWrite() {
-  return ['admin', 'leader', 'manager'].includes(currentUser?.role);
+  return can('createTask');
 }
 function isAdmin() { return currentUser?.role === 'admin'; }
-function isPrivileged() { return ['admin', 'leader'].includes(currentUser?.role); }
+function isPrivileged() { return can('createView'); }
 
 // ── 역할별 UI 제어 ────────────────────────────────────────
 function applyRoleUI() {
-  const isMember = currentUser?.role === 'member';
+  const canEdit  = can('editTask');
+  const canDone  = can('confirmDone');
 
-  document.getElementById('btn-add-group').style.display       = canWrite() ? '' : 'none';
-  document.getElementById('btn-add-task').style.display        = canWrite() ? '' : 'none';
-  document.getElementById('btn-add-project').style.display     = canWrite() ? '' : 'none';
-  document.getElementById('btn-manage-projects').style.display = canWrite() ? '' : 'none';
-  document.getElementById('btn-manage-users').style.display    = isAdmin()  ? '' : 'none';
-  document.getElementById('btn-import').style.display          = isAdmin()  ? '' : 'none';
-  document.getElementById('btn-export').style.display          = isAdmin()  ? '' : 'none';
-  document.getElementById('btn-backup').style.display          = isAdmin()  ? '' : 'none';
-  document.getElementById('btn-template-save').style.display   = isAdmin()  ? '' : 'none';
+  document.getElementById('btn-add-group').style.display       = can('createGroup')   ? '' : 'none';
+  document.getElementById('btn-add-task').style.display        = can('createTask')    ? '' : 'none';
+  document.getElementById('btn-add-project').style.display     = can('createProject') ? '' : 'none';
+  document.getElementById('btn-manage-projects').style.display = can('createProject') ? '' : 'none';
+  document.getElementById('btn-manage-users').style.display    = can('manageUsers')   ? '' : 'none';
+  document.getElementById('btn-import').style.display          = can('importExport')  ? '' : 'none';
+  document.getElementById('btn-export').style.display          = can('importExport')  ? '' : 'none';
+  document.getElementById('btn-backup').style.display          = can('backup')        ? '' : 'none';
+  document.getElementById('btn-template-save').style.display   = can('saveTemplate')  ? '' : 'none';
   document.getElementById('btn-template-load').style.display   = '';
 
   document.getElementById('btn-save-task').style.display   = '';
-  document.getElementById('btn-delete-task').style.display = isAdmin() ? '' : 'none';
+  document.getElementById('btn-delete-task').style.display = can('deleteTask') ? '' : 'none';
 
-  document.getElementById('task-name').readOnly = isMember;
-  document.getElementById('task-name').style.background = isMember ? '#F5F5F5' : '';
-  document.getElementById('task-assignee').disabled  = isMember;
-  document.getElementById('task-assignee').style.background = isMember ? '#F5F5F5' : '';
-  document.getElementById('task-project').disabled  = isMember;
-  document.getElementById('task-due-date').readOnly = isMember;
-  document.getElementById('task-group').disabled    = isMember;
-  document.getElementById('task-status').disabled = false;
+  document.getElementById('task-name').readOnly = !canEdit;
+  document.getElementById('task-name').style.background = !canEdit ? '#F5F5F5' : '';
+  document.getElementById('task-assignee').disabled = !canEdit;
+  document.getElementById('task-assignee').style.background = !canEdit ? '#F5F5F5' : '';
+  document.getElementById('task-project').disabled  = !canEdit;
+  document.getElementById('task-due-date').readOnly = !canEdit;
+  document.getElementById('task-group').disabled    = !canEdit;
+  document.getElementById('task-status').disabled   = false;
   const statusSel = document.getElementById('task-status');
   statusSel.querySelectorAll('option').forEach(opt => {
     if (opt.value === 'done' || opt.value === 'closed') {
-      opt.style.display = canWrite() ? '' : 'none';
+      opt.style.display = canDone ? '' : 'none';
     }
   });
-  document.getElementById('btn-manage-groups').style.display = canWrite() ? '' : 'none';
+  document.getElementById('btn-manage-groups').style.display = can('createGroup') ? '' : 'none';
 
   // 사이드바 + 새 시트 버튼
   const addViewBtn = document.getElementById('btn-add-view');
-  if (addViewBtn) addViewBtn.style.display = isPrivileged() ? '' : 'none';
+  if (addViewBtn) addViewBtn.style.display = can('createView') ? '' : 'none';
+}
+
+// ── 권한 안내 모달 ────────────────────────────────────────
+function openPermModal() {
+  const roleOrder = ['admin', 'leader', 'manager', 'member'];
+  const roleLabel = { admin: '관리자', leader: '팀장', manager: '과장', member: '팀원' };
+  const rows = [
+    { label: '업무 생성',        action: 'createTask'    },
+    { label: '업무 수정',        action: 'editTask'      },
+    { label: '업무 삭제',        action: 'deleteTask'    },
+    { label: '완료 승인',        action: 'confirmDone'   },
+    { label: '상태 변경 (메모)', action: null, all: true  },
+    { label: '프로젝트 생성',    action: 'createProject' },
+    { label: '프로젝트 삭제',    action: 'deleteProject' },
+    { label: '묶음 생성',        action: 'createGroup'   },
+    { label: '묶음 삭제',        action: 'deleteGroup'   },
+    { label: '시트 관리',        action: 'createView'    },
+    { label: '템플릿 저장',      action: 'saveTemplate'  },
+    { label: '백업/복구',        action: 'backup'        },
+    { label: '가져오기/내보내기',action: 'importExport'  },
+    { label: '사용자 관리',      action: 'manageUsers'   },
+  ];
+
+  const myRole = currentUser?.role;
+  let html = `<table class="perm-table">
+    <thead><tr><th>기능</th>${roleOrder.map(r =>
+      `<th class="${r === myRole ? 'perm-me' : ''}">${roleLabel[r]}</th>`
+    ).join('')}</tr></thead><tbody>`;
+
+  rows.forEach(row => {
+    html += `<tr><td>${row.label}</td>${roleOrder.map(r => {
+      const ok = row.all ? true : (PERMISSIONS[row.action] || []).includes(r);
+      return `<td class="${r === myRole ? 'perm-me' : ''}">${ok ? '<span class="perm-ok">✓</span>' : '<span class="perm-no">—</span>'}</td>`;
+    }).join('')}</tr>`;
+  });
+
+  html += '</tbody></table>';
+  document.getElementById('perm-table-wrap').innerHTML = html;
+  openModal('modal-perm');
 }
 
 // ── 툴바 유저 버튼 ────────────────────────────────────────
@@ -834,6 +896,7 @@ function setupToolbar() {
     graph.setData(filteredData());
     openPanel(task);
   });
+  document.getElementById('btn-perm').addEventListener('click', openPermModal);
   document.getElementById('btn-logout').addEventListener('click', () => {
     if (confirm(`${currentUser?.name}님, 로그아웃 하시겠습니까?`)) logout();
   });
@@ -960,7 +1023,7 @@ function openPanel(task) {
 
   const statusEl = document.getElementById('task-status');
   statusEl.querySelectorAll('option').forEach(opt => {
-    if (opt.value === 'done' || opt.value === 'closed') opt.style.display = canWrite() ? '' : 'none';
+    if (opt.value === 'done' || opt.value === 'closed') opt.style.display = can('confirmDone') ? '' : 'none';
   });
   statusEl.value = task.status || 'pre';
 
