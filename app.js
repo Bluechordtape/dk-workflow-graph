@@ -14,7 +14,7 @@ import {
 } from './data.js';
 import { Graph } from './graph.js';
 
-const VERSION = 'v2.12';
+const VERSION = 'v2.13';
 
 let data = null;
 let graph = null;
@@ -368,7 +368,6 @@ function applyRoleUI() {
       opt.style.display = canWrite() ? '' : 'none';
     }
   });
-  document.getElementById('btn-add-subtask').style.display   = canWrite() ? '' : 'none';
   document.getElementById('btn-manage-groups').style.display = canWrite() ? '' : 'none';
 
   // 사이드바 + 새 시트 버튼
@@ -934,7 +933,6 @@ function setupPanel() {
   document.getElementById('panel-close').addEventListener('click', closePanel);
   document.getElementById('btn-save-task').addEventListener('click', saveTask);
   document.getElementById('btn-delete-task').addEventListener('click', deleteTaskBtn);
-  document.getElementById('btn-add-subtask').addEventListener('click', addSubtask);
 }
 
 function openPanel(task) {
@@ -968,7 +966,6 @@ function openPanel(task) {
   // 다른 시트로 복제 버튼 — 시트 개념이 없어졌으므로 숨김
   document.getElementById('btn-copy-task').style.display = 'none';
 
-  renderSubtasks(task);
 }
 
 function updateGroupSwatch(groupId) {
@@ -1009,7 +1006,6 @@ async function saveTask() {
       const result = await updateTaskMember(activeTaskId, {
         note:     document.getElementById('task-note').value,
         status:   document.getElementById('task-status').value,
-        subtasks: task?.subtasks
       });
       data = normalize(result.data);
       graph.setData(filteredData());
@@ -1029,74 +1025,6 @@ function deleteTaskBtn() {
   graph.setData(filteredData());
   buildFilters();
   closePanel();
-}
-
-// ── 세부업무 ─────────────────────────────────────────────
-function renderSubtasks(task, focusLast = false) {
-  const list = document.getElementById('subtask-list');
-  if (!list) return;
-  list.innerHTML = '';
-
-  (task.subtasks || []).forEach((s, i) => {
-    const row = document.createElement('div');
-    row.style.cssText = 'display:flex;align-items:center;gap:6px;margin-bottom:4px';
-
-    const cb = document.createElement('input');
-    cb.type = 'checkbox';
-    cb.checked = s.status === 'done';
-    cb.style.flexShrink = '0';
-    cb.style.accentColor = '#212121';
-    cb.addEventListener('change', () => {
-      s.status = cb.checked ? 'done' : 'pending';
-      saveData(data);
-      graph.setData(filteredData());
-    });
-
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.value = s.name || '';
-    input.placeholder = '세부업무 입력';
-    input.style.cssText = 'flex:1;height:28px;border:1px solid #E5E7EB;border-radius:5px;padding:0 8px;font-size:12px;font-family:inherit;outline:none';
-    input.addEventListener('focus', () => input.style.borderColor = '#212121');
-    input.addEventListener('blur', () => {
-      input.style.borderColor = '#E5E7EB';
-      s.name = input.value;
-      saveData(data);
-    });
-    input.addEventListener('input', () => { s.name = input.value; });
-
-    const del = document.createElement('button');
-    del.textContent = '×';
-    del.style.cssText = 'width:24px;height:24px;border:none;background:none;color:#D1D5DB;font-size:18px;cursor:pointer;flex-shrink:0;line-height:1;padding:0';
-    del.addEventListener('mouseenter', () => del.style.color = '#EF4444');
-    del.addEventListener('mouseleave', () => del.style.color = '#D1D5DB');
-    del.addEventListener('click', () => {
-      task.subtasks.splice(i, 1);
-      saveData(data);
-      graph.setData(filteredData());
-      renderSubtasks(task);
-    });
-
-    row.appendChild(cb);
-    row.appendChild(input);
-    row.appendChild(del);
-    list.appendChild(row);
-  });
-
-  if (focusLast && list.lastChild) {
-    const inp = list.lastChild.querySelector('input[type=text]');
-    if (inp) { inp.focus(); inp.select(); }
-  }
-}
-
-function addSubtask() {
-  const task = data.tasks.find(t => t.id === activeTaskId);
-  if (!task) return;
-  if (!task.subtasks) task.subtasks = [];
-  task.subtasks.push({ id: 's_' + Date.now(), name: '', status: 'pending' });
-  renderSubtasks(task, true);
-  saveData(data);
-  graph.setData(filteredData());
 }
 
 // ── 그룹 관리 ────────────────────────────────────────────
@@ -1366,7 +1294,7 @@ document.getElementById('btn-tmpl-save-confirm').addEventListener('click', async
   const templateData = {
     tasks: fd.tasks.map(t => ({
       id: t.id, name: t.name, x: t.x, y: t.y,
-      status: 'pending', assignee: '', note: '', subtasks: [], dueDate: null
+      status: 'pending', assignee: '', note: '', dueDate: null
     })),
     flows: fd.flows.map(f => ({ id: f.id, from: f.from, to: f.to }))
   };

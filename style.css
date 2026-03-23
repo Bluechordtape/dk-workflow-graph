@@ -583,12 +583,6 @@ body {
   flex-shrink: 0;
 }
 
-/* 3행: 세부업무 */
-.node-sub {
-  font-size: 11px;
-  color: #9E9E9E;
-  font-weight: 400;
-}
 
 /* 5행: 액션 버튼 행 (구분선 포함) */
 .node-action-row {
@@ -686,30 +680,6 @@ body {
 .form-group textarea:focus { border-color: #C8102E; box-shadow: 0 0 0 3px rgba(200,16,46,0.08); }
 .form-group textarea { resize: vertical; min-height: 70px; }
 
-/* 세부업무 */
-#subtask-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 6px; }
-.subtask-row { display: flex; align-items: center; gap: 6px; }
-.subtask-row input[type=checkbox] { flex-shrink: 0; cursor: pointer; accent-color: #C8102E; }
-.subtask-row .sub-name {
-  flex: 1;
-  padding: 5px 8px;
-  border: 1px solid #E0E0E0;
-  border-radius: 5px;
-  font-size: 12px;
-  font-family: inherit;
-  color: #212121;
-  outline: none;
-}
-.subtask-row .sub-name:focus { border-color: #C8102E; }
-.subtask-row .sub-del {
-  width: 22px; height: 22px;
-  border: none; background: none;
-  color: #BDBDBD; font-size: 16px;
-  cursor: pointer; border-radius: 4px;
-  display: flex; align-items: center; justify-content: center;
-  line-height: 1;
-}
-.subtask-row .sub-del:hover { background: #F5F5F5; color: #424242; }
 
 .btn-small {
   padding: 5px 10px;

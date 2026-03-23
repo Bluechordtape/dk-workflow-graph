@@ -389,8 +389,6 @@ export class Graph {
     el.style.top  = `${task.y}px`;
     el.style.setProperty('--sc', st.bar);
 
-    const sub = task.subtasks || [];
-    const subDone = sub.filter(s => s.status === 'done').length;
 
     const role   = this.userCtx?.role;
     const myName = this.userCtx?.name;
@@ -423,7 +421,6 @@ export class Graph {
           <span class="node-assignee">${task.assignee || '미배정'}</span>
           ${dday ? `<span class="node-dday" style="color:${dday.color}">${dday.label}</span>` : ''}
         </div>
-        ${sub.length ? `<div class="node-sub">${subDone}/${sub.length} 세부업무</div>` : ''}
         ${actionBtn ? `<div class="node-action-row">${actionBtn}</div>` : ''}
       </div>
       <div class="nh nh-r" data-id="${task.id}" data-side="right"></div>`;
