@@ -95,6 +95,7 @@ export class Graph {
   setFilter(f)  { this.filter = { ...this.filter, ...f }; this.render(); }
   setUserContext(user) { this.userCtx = user; if (this.data) this.render(); }
   resetView() { this.scale = 1; this.offsetX = 0; this.offsetY = 0; this._transform(); }
+  getTransform() { return { x: this.offsetX, y: this.offsetY, k: this.scale }; }
 
   render() {
     if (!this.data) return;
@@ -476,16 +477,8 @@ export class Graph {
       const cx = (x1 + x2) / 2;
 
       const normalStroke = isGroup ? '#BDBDBD' : '#D1D5DB';
-      const hoverStroke  = isGroup ? '#9CA3AF' : '#6B7280';
-
-      // 히트 영역 (넓은 투명 선)
-      const hitPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      hitPath.setAttribute('d', `M${x1},${y1} C${cx},${y1} ${cx},${y2} ${x2},${y2}`);
-      hitPath.setAttribute('fill', 'none');
-      hitPath.setAttribute('stroke', 'transparent');
-      hitPath.setAttribute('stroke-width', '12');
-      hitPath.style.pointerEvents = 'stroke';
-      hitPath.style.cursor = 'pointer';
+      const midX = cx;
+      const midY = (y1 + y2) / 2;
 
       // 표시선
       const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
@@ -497,58 +490,44 @@ export class Graph {
       path.setAttribute('marker-end', isGroup ? 'url(#arr-group)' : 'url(#arr)');
       path.style.pointerEvents = 'none';
 
-      // 삭제 버튼 (중앙에 × 원형)
-      const midX = cx;
-      const midY = (y1 + y2) / 2;
-      const delG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-      delG.style.opacity = '0';
-      delG.style.pointerEvents = 'auto';
-      delG.style.cursor = 'pointer';
-      delG.style.transition = 'opacity 0.15s';
+      // 히트 영역 (넓은 투명 선, 길게 누르기용)
+      const hitPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      hitPath.setAttribute('d', `M${x1},${y1} C${cx},${y1} ${cx},${y2} ${x2},${y2}`);
+      hitPath.setAttribute('fill', 'none');
+      hitPath.setAttribute('stroke', 'transparent');
+      hitPath.setAttribute('stroke-width', '14');
+      hitPath.style.pointerEvents = 'stroke';
+      hitPath.style.cursor = 'pointer';
 
-      const delCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-      delCircle.setAttribute('cx', midX);
-      delCircle.setAttribute('cy', midY);
-      delCircle.setAttribute('r', '10');
-      delCircle.setAttribute('fill', 'white');
-      delCircle.setAttribute('stroke', '#EF4444');
-      delCircle.setAttribute('stroke-width', '1.5');
-
-      const delText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      delText.setAttribute('x', midX);
-      delText.setAttribute('y', midY);
-      delText.setAttribute('text-anchor', 'middle');
-      delText.setAttribute('dominant-baseline', 'central');
-      delText.setAttribute('fill', '#EF4444');
-      delText.setAttribute('font-size', '14');
-      delText.setAttribute('font-weight', '700');
-      delText.setAttribute('font-family', 'sans-serif');
-      delText.textContent = '×';
-      delG.appendChild(delCircle);
-      delG.appendChild(delText);
-
-      const showDel = () => {
-        delG.style.opacity = '1';
-        path.setAttribute('stroke', hoverStroke);
-        path.setAttribute('stroke-width', '2');
+      // 길게 누르기 → 선 빛남 → 확인 팝업
+      let holdTimer = null;
+      const startGlow = () => {
+        path.setAttribute('stroke', '#F97316');
+        path.setAttribute('stroke-width', '3');
+        path.classList.add('flow-glowing');
       };
-      const hideDel = () => {
-        delG.style.opacity = '0';
+      const stopGlow = () => {
         path.setAttribute('stroke', normalStroke);
         path.setAttribute('stroke-width', '1.5');
+        path.classList.remove('flow-glowing');
       };
-      hitPath.addEventListener('mouseenter', showDel);
-      hitPath.addEventListener('mouseleave', e => { if (!delG.contains(e.relatedTarget)) hideDel(); });
-      delG.addEventListener('mouseenter', showDel);
-      delG.addEventListener('mouseleave', e => { if (!hitPath.contains(e.relatedTarget)) hideDel(); });
-      delG.addEventListener('click', e => {
-        e.stopPropagation();
-        this.cb.onFlowDelete?.(flow.id);
+      hitPath.addEventListener('pointerdown', e => {
+        e.preventDefault();
+        holdTimer = setTimeout(() => {
+          holdTimer = null;
+          startGlow();
+          this.cb.onFlowHold?.(flow.id, midX, midY, stopGlow);
+        }, 600);
       });
+      const cancelHold = () => {
+        if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; }
+      };
+      hitPath.addEventListener('pointerup',    cancelHold);
+      hitPath.addEventListener('pointerleave', cancelHold);
+      hitPath.addEventListener('pointermove',  cancelHold);
 
       this.svg.insertBefore(path,    this.tempPath);
       this.svg.insertBefore(hitPath, this.tempPath);
-      this.svg.insertBefore(delG,    this.tempPath);
     }
   }
 

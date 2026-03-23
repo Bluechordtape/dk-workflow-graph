@@ -60,6 +60,14 @@ function pushUndo() {
   undoStack.push(JSON.parse(JSON.stringify(data)));
   if (undoStack.length > 30) undoStack.shift();
   redoStack = [];
+  updateUndoRedoButtons();
+}
+
+function updateUndoRedoButtons() {
+  const u = document.getElementById('btn-undo');
+  const r = document.getElementById('btn-redo');
+  if (u) u.disabled = !undoStack.length;
+  if (r) r.disabled = !redoStack.length;
 }
 
 function undo() {
@@ -71,6 +79,7 @@ function undo() {
   graph.setData(filteredData());
   buildFilters();
   renderSidebar();
+  updateUndoRedoButtons();
   if (activeTaskId) {
     const t = data.tasks.find(t => t.id === activeTaskId);
     if (t) openPanel(t); else closePanel();
@@ -85,10 +94,50 @@ function redo() {
   graph.setData(filteredData());
   buildFilters();
   renderSidebar();
+  updateUndoRedoButtons();
   if (activeTaskId) {
     const t = data.tasks.find(t => t.id === activeTaskId);
     if (t) openPanel(t); else closePanel();
   }
+}
+
+// ── 연결선 삭제 확인 팝업 ─────────────────────────────────
+function showFlowDeletePopup(flowId, svgMidX, svgMidY, stopGlow) {
+  // 기존 팝업 제거
+  document.getElementById('flow-delete-popup')?.remove();
+
+  const canvas = document.getElementById('graph-container');
+  const rect = canvas.getBoundingClientRect();
+  const transform = graph.getTransform?.() || { x: 0, y: 0, k: 1 };
+  const screenX = rect.left + transform.x + svgMidX * transform.k;
+  const screenY = rect.top  + transform.y + svgMidY * transform.k;
+
+  const popup = document.createElement('div');
+  popup.id = 'flow-delete-popup';
+  popup.className = 'flow-delete-popup';
+  popup.innerHTML = `
+    <div class="flow-delete-msg">연결을 삭제할까요?</div>
+    <div class="flow-delete-btns">
+      <button class="flow-delete-cancel">취소</button>
+      <button class="flow-delete-confirm">삭제</button>
+    </div>`;
+  popup.style.left = `${screenX}px`;
+  popup.style.top  = `${screenY}px`;
+  document.body.appendChild(popup);
+
+  const dismiss = () => { popup.remove(); stopGlow(); };
+  popup.querySelector('.flow-delete-cancel').addEventListener('click', dismiss);
+  popup.querySelector('.flow-delete-confirm').addEventListener('click', () => {
+    dismiss();
+    pushUndo();
+    deleteFlow(data, flowId);
+    saveData(data);
+    graph.setData(filteredData());
+  });
+  // 팝업 바깥 클릭 시 닫기
+  setTimeout(() => document.addEventListener('pointerdown', function h(e) {
+    if (!popup.contains(e.target)) { dismiss(); document.removeEventListener('pointerdown', h); }
+  }), 0);
 }
 
 // ── 인증 ─────────────────────────────────────────────────
@@ -224,6 +273,10 @@ async function startApp() {
         if (!canWrite()) return;
         pushUndo();
         deleteFlow(data, flowId); saveData(data); graph.setData(filteredData());
+      },
+      onFlowHold: (flowId, midX, midY, stopGlow) => {
+        if (!canWrite()) { stopGlow(); return; }
+        showFlowDeletePopup(flowId, midX, midY, stopGlow);
       },
       onStatusChange: async (taskId, st) => {
         if (!canWrite()) {
@@ -737,6 +790,8 @@ function setupToolbar() {
   ['filter-assignee','filter-project','filter-status'].forEach(id =>
     document.getElementById(id).addEventListener('change', applyFilter)
   );
+  document.getElementById('btn-undo').addEventListener('click', undo);
+  document.getElementById('btn-redo').addEventListener('click', redo);
   document.getElementById('btn-reset-view').addEventListener('click', () => graph.resetView());
   document.getElementById('btn-export').addEventListener('click', () => exportJSON(data));
   document.getElementById('btn-import').addEventListener('click', () =>
