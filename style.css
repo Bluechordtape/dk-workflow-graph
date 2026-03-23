@@ -171,7 +171,7 @@ body {
   letter-spacing: 0;
 }
 .role-badge.admin   { background: #212121; color: #FFFFFF; }
-.role-badge.leader  { background: #6366F1; color: #FFFFFF; }
+.role-badge.leader  { background: #C8102E; color: #FFFFFF; }
 .role-badge.manager { background: #EEEEEE; color: #424242; }
 .role-badge.member  { background: #F5F5F5; color: #757575; }
 
@@ -419,14 +419,18 @@ body {
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  background: #616161;
+  background: #212121;
   border: 2px solid #FFFFFF;
-  box-shadow: 0 0 0 1px #616161;
+  box-shadow: 0 0 0 1px #212121;
   flex-shrink: 0;
   cursor: crosshair;
   opacity: 0;
-  transition: opacity 0.15s;
+  transition: opacity 0.15s, background 0.12s, box-shadow 0.12s;
   z-index: 10;
+}
+.nh:hover {
+  background: #C8102E;
+  box-shadow: 0 0 0 1px #C8102E;
 }
 .task-node:hover .nh { opacity: 1; }
 .nh-l { margin-right: -6px; }
@@ -519,7 +523,7 @@ body {
   letter-spacing: -0.1px;
 }
 .node-action:hover { opacity: 0.8; }
-.btn-start { background: #EFF6FF; color: #1D4ED8; }
+.btn-start { background: #F5F5F5; color: #424242; }
 .btn-req   { background: #F5F3FF; color: #5B21B6; }
 .btn-cfm   { background: #ECFDF5; color: #065F46; }
 .btn-close { background: #212121; color: #FFFFFF; }
@@ -947,7 +951,7 @@ body {
 }
 
 .cal-sunday .cal-day-num { color: #EF4444; }
-.cal-saturday .cal-day-num { color: #3B82F6; }
+.cal-saturday .cal-day-num { color: #424242; }
 .cal-other-month { background: #FAFAFA; border-color: #F5F5F5; }
 .cal-other-month .cal-day-num { color: #D1D5DB; }
 
@@ -986,9 +990,17 @@ body {
 /* ── 호버 하이라이트 ─────────────────────────────────────── */
 /* dim-hover는 사용 안 함 — 연결 안 된 노드도 항상 잘 보임 */
 .task-node.dim-hover { /* 흐려지지 않음 */ }
+/* 호버된 노드 자신 */
+.task-node.highlight-self .node-inner {
+  box-shadow: 0 0 0 3px rgba(33,33,33,0.12), 0 3px 12px rgba(0,0,0,0.12) !important;
+  border-color: #212121 !important;
+  border-width: 2px !important;
+}
+/* 연결된 노드 */
 .task-node.highlight-hover .node-inner {
-  box-shadow: 0 0 0 2.5px #2563EB, 0 0 16px rgba(37,99,235,0.25) !important;
-  border-color: #2563EB !important;
+  box-shadow: 0 0 0 2px rgba(200,16,46,0.10) !important;
+  border-color: #C8102E !important;
+  border-width: 1px !important;
 }
 
 /* ── 사용자 관리 아이템 ──────────────────────────────────── */

@@ -7,10 +7,10 @@ const STATUS = {
   // 구버전 호환
   todo:     { label: '착수전',   bar: '#9E9E9E', bg: '#F5F5F5', text: '#757575' },
   pending:  { label: '착수전',   bar: '#9E9E9E', bg: '#F5F5F5', text: '#757575' },
-  wip:      { label: '진행 중',  bar: '#2563EB', bg: '#EFF6FF', text: '#1D4ED8' },
+  wip:      { label: '진행 중',  bar: '#212121', bg: '#F5F5F5', text: '#424242' },
   // 새 상태
   pre:      { label: '착수전',   bar: '#9E9E9E', bg: '#F5F5F5', text: '#757575' },
-  doing:    { label: '진행 중',  bar: '#2563EB', bg: '#EFF6FF', text: '#1D4ED8' },
+  doing:    { label: '진행 중',  bar: '#212121', bg: '#F5F5F5', text: '#424242' },
   waiting:  { label: '대기',     bar: '#D97706', bg: '#FFFBEB', text: '#92400E' },
   delayed:  { label: '지연',     bar: '#DC2626', bg: '#FEF2F2', text: '#991B1B' },
   review:   { label: '완료요청', bar: '#7C3AED', bg: '#F5F3FF', text: '#5B21B6' },
@@ -53,14 +53,14 @@ export class Graph {
     const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
     defs.innerHTML = `
       <marker id="arr" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto" markerUnits="strokeWidth">
-        <path d="M0,0 L7,2.5 L0,5 Z" fill="#BDBDBD"/>
+        <path d="M0,0 L7,2.5 L0,5 Z" fill="#D1D5DB"/>
       </marker>`;
     this.svg.appendChild(defs);
 
     // 임시 연결선
     this.tempPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     this.tempPath.setAttribute('fill', 'none');
-    this.tempPath.setAttribute('stroke', '#BDBDBD');
+    this.tempPath.setAttribute('stroke', '#D1D5DB');
     this.tempPath.setAttribute('stroke-width', '1.5');
     this.tempPath.setAttribute('stroke-dasharray', '6,3');
     this.tempPath.style.display = 'none';
@@ -277,7 +277,7 @@ export class Graph {
       const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
       path.setAttribute('d', `M${x1},${y1} C${cx},${y1} ${cx},${y2} ${x2},${y2}`);
       path.setAttribute('fill', 'none');
-      path.setAttribute('stroke', '#BDBDBD');
+      path.setAttribute('stroke', '#D1D5DB');
       path.setAttribute('stroke-width', '1.5');
       path.setAttribute('marker-end', 'url(#arr)');
       path.dataset.flowId = flow.id;
@@ -314,15 +314,19 @@ export class Graph {
     );
     this.nodesEl.querySelectorAll('.task-node').forEach(n => {
       const isConn = connected.has(n.dataset.id);
-      // 연결된 노드는 테두리 빛남, 연결 안 된 노드는 흐려지지 않음 (그대로 유지)
-      n.classList.toggle('highlight-hover', isConn && n.dataset.id !== taskId);
-      n.classList.remove('dim-hover'); // 절대 흐려지지 않음
+      const isSelf = n.dataset.id === taskId;
+      n.classList.toggle('highlight-self', isSelf);
+      n.classList.toggle('highlight-hover', isConn && !isSelf);
+      n.classList.remove('dim-hover');
     });
     Array.from(this.svg.children).forEach(c => {
       if (c.tagName !== 'defs' && c !== this.tempPath) {
         const isConn = connectedFlows.has(c.dataset?.flowId);
-        c.style.opacity = isConn ? '1' : '0.25'; // 약간만 흐리게 (완전히 숨기지 않음)
-        if (isConn) c.setAttribute('stroke', '#424242');
+        c.style.opacity = isConn ? '1' : '0.25';
+        if (isConn) {
+          c.setAttribute('stroke', '#212121');
+          c.setAttribute('stroke-width', '2');
+        }
       }
     });
   }
@@ -403,12 +407,13 @@ export class Graph {
 
   _clearHover() {
     this.nodesEl.querySelectorAll('.task-node').forEach(n => {
-      n.classList.remove('dim-hover', 'highlight-hover');
+      n.classList.remove('dim-hover', 'highlight-hover', 'highlight-self');
     });
     Array.from(this.svg.children).forEach(c => {
       if (c.tagName !== 'defs' && c !== this.tempPath) {
         c.style.opacity = '';
-        c.setAttribute('stroke', '#BDBDBD');
+        c.setAttribute('stroke', '#D1D5DB');
+        c.setAttribute('stroke-width', '1.5');
       }
     });
   }
