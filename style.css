@@ -407,7 +407,7 @@ body {
 /* ── 프로젝트 박스 ────────────────────────────────────── */
 .project-box {
   position: absolute;
-  border: 2px solid #E5E7EB;
+  border: 2px solid #D1D5DB;
   border-radius: 16px;
   background: transparent;
   pointer-events: none; /* 배경 클릭은 통과, 헤더만 포인터 이벤트 */
@@ -415,23 +415,23 @@ body {
 .project-box-header {
   position: absolute;
   top: 0; left: 0; right: 0;
-  height: 48px;
+  height: 52px;
   display: flex;
   align-items: center;
-  padding: 0 18px;
+  padding: 0 16px;
   pointer-events: auto;
   cursor: grab;
   user-select: none;
   border-radius: 14px 14px 0 0;
-  border-bottom: 1px solid #F3F4F6;
-  background: rgba(255,255,255,0.8);
+  border-bottom: 1px solid #E5E7EB;
+  background: #F0F0F0;
 }
 .project-box-header:active { cursor: grabbing; }
 
 /* ── 묶음(카테고리) 박스 ──────────────────────────────── */
 .group-box {
   position: absolute;
-  border: 1px dashed #D1D5DB;
+  border: 1.5px dashed #BDBDBD;
   border-radius: 12px;
   background: transparent;
   pointer-events: none; /* 배경 통과 */
@@ -439,10 +439,10 @@ body {
 .group-box-header {
   position: absolute;
   top: 0; left: 0; right: 0;
-  height: 36px;
+  height: 40px;
   display: flex;
   align-items: center;
-  padding: 0 12px;
+  padding: 0 14px;
   pointer-events: auto;
   cursor: grab;
   user-select: none;
@@ -450,11 +450,11 @@ body {
 }
 .group-box-header:active { cursor: grabbing; }
 .group-color-bar {
-  width: 3px;
-  height: 16px;
-  border-radius: 2px;
+  width: 5px;
+  height: 20px;
+  border-radius: 3px;
   flex-shrink: 0;
-  margin-right: 8px;
+  margin-right: 9px;
 }
 /* 묶음 박스 호버 시 연결 핸들 표시 */
 .group-box .group-nh {
@@ -472,7 +472,7 @@ body {
 /* ── 태스크 노드 ──────────────────────────────────────── */
 .task-node {
   position: absolute;
-  width: 220px;
+  width: 200px;
   display: flex;
   align-items: center;
   transition: opacity 0.15s;
@@ -507,7 +507,7 @@ body {
   background: #FFFFFF;
   border-radius: 8px;
   border: 1px solid #E0E0E0;
-  border-left: 3px solid var(--sc, #BDBDBD);
+  border-left: 4px solid var(--sc, #BDBDBD);
   padding: 12px 14px;
   cursor: pointer;
   user-select: none;
@@ -530,17 +530,17 @@ body {
   gap: 6px;
 }
 .node-dot {
-  width: 7px; height: 7px;
+  width: 9px; height: 9px;
   border-radius: 50%;
   flex-shrink: 0;
   margin-top: 3px;
 }
 .node-name {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 15px;
+  font-weight: 700;
   color: #212121;
-  line-height: 1.35;
-  letter-spacing: -0.2px;
+  line-height: 1.3;
+  letter-spacing: -0.3px;
 }
 
 .node-mid {

@@ -1,12 +1,12 @@
 // graph.js — 3-tier hierarchy: Project > Group(Category) > Task
 
-export const NODE_W = 220;
+export const NODE_W = 200;
 export const NODE_H = 110;
 
 // Layout constants
-const PROJECT_HEADER_H = 48;
+const PROJECT_HEADER_H = 52;
 const PROJECT_PAD      = 22;
-const GROUP_HEADER_H   = 36;
+const GROUP_HEADER_H   = 40;
 const GROUP_PAD        = 14;
 const MIN_PROJECT_W    = 300;
 const MIN_PROJECT_H    = 160;
@@ -221,16 +221,16 @@ export class Graph {
     header.className = 'project-box-header';
 
     const colorDot = document.createElement('span');
-    colorDot.style.cssText = `width:8px;height:8px;border-radius:50%;background:${project.color};flex-shrink:0`;
+    colorDot.style.cssText = `width:10px;height:10px;border-radius:50%;background:${project.color};flex-shrink:0`;
 
     const pill = document.createElement('span');
     pill.className = 'project-label-pill';
     pill.style.cssText = `
-      display:inline-flex;align-items:center;gap:6px;
-      padding:3px 10px;border-radius:100px;
+      display:inline-flex;align-items:center;gap:7px;
+      padding:5px 14px;border-radius:100px;
       background:${project.color}1A;color:${project.color};
-      border:1px solid ${project.color}44;
-      font-size:12px;font-weight:700;letter-spacing:0.3px;
+      border:1.5px solid ${project.color}55;
+      font-size:15px;font-weight:800;letter-spacing:-0.2px;
     `;
     pill.appendChild(colorDot);
     pill.appendChild(document.createTextNode(project.name));
@@ -278,7 +278,7 @@ export class Graph {
     colorBar.style.background = group.color;
 
     const nameSpan = document.createElement('span');
-    nameSpan.style.cssText = 'font-size:13px;font-weight:600;color:#374151;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
+    nameSpan.style.cssText = 'font-size:14px;font-weight:700;color:#374151;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
     nameSpan.textContent = group.name;
 
     header.appendChild(colorBar);
@@ -376,7 +376,7 @@ export class Graph {
 
     const innerStyle = [
       'border: 1px solid #E0E0E0',
-      `border-left: 3px solid ${st.bar}`,
+      `border-left: 4px solid ${st.bar}`,
       'border-radius: 8px',
       'background: #FFFFFF',
       'box-shadow: 0 1px 4px rgba(0,0,0,0.07)',
@@ -394,8 +394,8 @@ export class Graph {
       <div class="nh nh-l" data-id="${task.id}" data-side="left"></div>
       <div class="node-inner" style="${innerStyle}">
         <div class="node-top">
-          <span class="node-dot" style="width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:3px;background:${st.bar}"></span>
-          <span class="node-name" style="font-size:14px;font-weight:600;color:#212121;line-height:1.35;letter-spacing:-0.2px;flex:1">${task.name}</span>
+          <span class="node-dot" style="width:9px;height:9px;border-radius:50%;flex-shrink:0;margin-top:3px;background:${st.bar}"></span>
+          <span class="node-name" style="font-size:15px;font-weight:700;color:#212121;line-height:1.3;letter-spacing:-0.3px;flex:1">${task.name}</span>
         </div>
         <div class="node-mid" style="display:flex;align-items:center;gap:5px">
           <span class="node-assignee" style="font-size:12px;color:#9E9E9E;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${task.assignee || '미배정'}</span>
