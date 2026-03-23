@@ -1363,52 +1363,123 @@ body {
 .perm-ok { color: #16A34A; font-weight: 700; font-size: 14px; }
 .perm-no { color: #D1D5DB; font-size: 13px; }
 
-/* ── 온라인 사용자 아바타 ── */
-.online-users {
+/* ── 접속자 플로팅 패널 ── */
+#online-panel {
+  position: fixed;
+  right: 16px;
+  top: 56px;
+  width: 172px;
+  background: #fff;
+  border: 1px solid #EFEFEF;
+  border-radius: 18px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.09), 0 2px 8px rgba(0,0,0,0.05);
+  padding: 11px 0 8px;
+  z-index: 50;
+  animation: op-fadein 0.22s ease;
+}
+#online-panel.hidden { display: none; }
+@keyframes op-fadein {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.op-header {
   display: flex;
   align-items: center;
-  flex-direction: row-reverse; /* 오른쪽부터 쌓임 */
+  justify-content: space-between;
+  padding: 0 12px 8px;
+  border-bottom: 1px solid #F5F5F5;
 }
-.online-avatar {
-  width: 28px;
-  height: 28px;
+.op-header-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.op-live-dot {
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
-  border: 2px solid #fff;
+  background: #22C55E;
+  flex-shrink: 0;
+  animation: op-pulse 2.2s ease-in-out infinite;
+}
+@keyframes op-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.55; transform: scale(0.8); }
+}
+.op-title {
+  font-size: 10px;
+  font-weight: 700;
+  color: #BDBDBD;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+.op-badge {
+  font-size: 10px;
+  font-weight: 700;
+  background: #F3F4F6;
+  color: #9CA3AF;
+  border-radius: 99px;
+  padding: 1px 7px;
+  min-width: 18px;
+  text-align: center;
+}
+.op-list {
+  padding: 6px 8px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+.op-list::-webkit-scrollbar { width: 3px; }
+.op-list::-webkit-scrollbar-thumb { background: #E5E7EB; border-radius: 99px; }
+.op-user {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 5px;
+  border-radius: 10px;
+  transition: background 0.12s;
+}
+.op-user:hover { background: #F9FAFB; }
+.op-user.is-me { background: #FFF5F5; }
+.op-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
-  font-weight: 700;
-  color: #fff;
-  cursor: default;
-  position: relative;
-  margin-left: -6px;
+  font-size: 12px;
+  font-weight: 800;
   flex-shrink: 0;
-  transition: transform 0.1s;
+  letter-spacing: -0.5px;
 }
-.online-avatar:last-child { margin-left: 0; }
-.online-avatar:hover { transform: scale(1.15); z-index: 10; }
-.online-avatar.is-self { box-shadow: 0 0 0 2px #212121; }
-.online-avatar-overflow {
-  background: #E5E7EB;
-  color: #6B7280;
+.op-avatar.is-me {
+  box-shadow: 0 0 0 2.5px #C8102E;
 }
-/* 툴팁 */
-.online-avatar-tip {
-  position: absolute;
-  bottom: calc(100% + 6px);
-  left: 50%;
-  transform: translateX(-50%);
+.op-info { flex: 1; min-width: 0; }
+.op-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: #212121;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
-  background: #212121;
-  color: #fff;
-  font-size: 11px;
-  font-weight: 500;
-  padding: 3px 8px;
-  border-radius: 4px;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.15s;
-  z-index: 100;
+  line-height: 1.3;
 }
-.online-avatar:hover .online-avatar-tip { opacity: 1; }
+.op-role {
+  font-size: 10px;
+  color: #BDBDBD;
+  font-weight: 500;
+  line-height: 1.3;
+}
+.op-me-tag {
+  font-size: 9px;
+  font-weight: 700;
+  color: #C8102E;
+  background: #FFF0F2;
+  border-radius: 5px;
+  padding: 1px 5px;
+  flex-shrink: 0;
+}

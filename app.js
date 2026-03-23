@@ -15,7 +15,7 @@ import {
 } from './data.js';
 import { Graph } from './graph.js';
 
-const VERSION = 'v2.22';
+const VERSION = 'v2.23';
 
 let data = null;
 let graph = null;
@@ -282,37 +282,47 @@ const ROLE_AVATAR = {
 const ROLE_LABEL = { admin: '관리자', leader: '팀장', manager: '과장', member: '팀원' };
 
 function renderOnlineUsers(users) {
-  const wrap = document.getElementById('online-users');
-  if (!wrap) return;
-  wrap.innerHTML = '';
+  const panel = document.getElementById('online-panel');
+  const list  = document.getElementById('op-list');
+  const badge = document.getElementById('op-count');
+  if (!panel || !list) return;
 
-  const MAX = 5;
-  const visible = users.slice(0, MAX);
-  const extra   = users.length - MAX;
+  if (!users.length) { panel.classList.add('hidden'); return; }
+  panel.classList.remove('hidden');
+  badge.textContent = users.length;
+  list.innerHTML = '';
 
-  visible.forEach(u => {
+  // 본인 먼저, 나머지 이름순 정렬
+  const sorted = [...users].sort((a, b) => {
+    if (a.id === currentUser?.id) return -1;
+    if (b.id === currentUser?.id) return 1;
+    return (a.name || '').localeCompare(b.name || '', 'ko');
+  });
+
+  sorted.forEach(u => {
     const isSelf = u.id === currentUser?.id;
     const colors = ROLE_AVATAR[u.role] || ROLE_AVATAR.member;
     const initial = (u.name || '?')[0];
-    const label = `${u.name} (${ROLE_LABEL[u.role] || u.role})`;
+
+    const row = document.createElement('div');
+    row.className = 'op-user' + (isSelf ? ' is-me' : '');
 
     const av = document.createElement('div');
-    av.className = 'online-avatar';
+    av.className = 'op-avatar' + (isSelf ? ' is-me' : '');
     av.style.background = colors.bg;
     av.style.color = colors.text;
-    if (isSelf) av.style.outline = '2px solid #212121';
-    av.innerHTML = `${initial}<span class="online-avatar-tip">${label}</span>`;
-    wrap.appendChild(av);
-  });
+    av.textContent = initial;
 
-  if (extra > 0) {
-    const more = document.createElement('div');
-    more.className = 'online-avatar';
-    more.style.background = '#E5E7EB';
-    more.style.color = '#6B7280';
-    more.innerHTML = `+${extra}<span class="online-avatar-tip">${extra}명 더</span>`;
-    wrap.appendChild(more);
-  }
+    row.innerHTML = `
+      <div class="op-info">
+        <div class="op-name">${u.name || '?'}</div>
+        <div class="op-role">${ROLE_LABEL[u.role] || u.role}</div>
+      </div>
+      ${isSelf ? '<span class="op-me-tag">나</span>' : ''}
+    `;
+    row.insertBefore(av, row.firstChild);
+    list.appendChild(row);
+  });
 }
 
 // ── 앱 시작 (로그인 후) ───────────────────────────────────

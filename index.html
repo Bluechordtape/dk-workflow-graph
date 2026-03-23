@@ -158,8 +158,6 @@
     <button id="btn-perm" class="tb-sec" title="역할별 권한 안내">권한 안내</button>
 
     <div class="sep"></div>
-    <div id="online-users" class="online-users"></div>
-    <div class="sep"></div>
     <button id="btn-switch-user" class="user-btn"></button>
     <button id="btn-logout" class="logout-btn">로그아웃</button>
 
@@ -183,6 +181,18 @@
     <button id="cal-next">›</button>
   </div>
   <div id="calendar-grid"></div>
+</div>
+
+<!-- ── 접속자 플로팅 패널 ── -->
+<div id="online-panel" class="hidden">
+  <div class="op-header">
+    <div class="op-header-left">
+      <span class="op-live-dot"></span>
+      <span class="op-title">지금 접속 중</span>
+    </div>
+    <span id="op-count" class="op-badge">0</span>
+  </div>
+  <div id="op-list"></div>
 </div>
 
 <!-- ── 메인 ── -->
