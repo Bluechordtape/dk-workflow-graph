@@ -742,19 +742,7 @@ function setupToolbar() {
   document.getElementById('btn-import').addEventListener('click', () =>
     importJSON(d => { data = d; graph.setData(filteredData()); buildFilters(); closePanel(); renderSidebar(); })
   );
-  document.getElementById('btn-add-project').addEventListener('click', () => {
-    if (!canWrite()) return;
-    const name = prompt('새 프로젝트 이름:');
-    if (!name?.trim()) return;
-    pushUndo();
-    const p = addProject(data, name.trim());
-    // 현재 필터 뷰에 있으면 신규 프로젝트를 해당 뷰에 추가
-    const view = activeView();
-    if (view && view.projectIds.length > 0) view.projectIds.push(p.id);
-    saveData(data);
-    buildFilters();
-    renderSidebar();
-  });
+  document.getElementById('btn-add-project').addEventListener('click', openProjectsModal);
   document.getElementById('btn-manage-projects').addEventListener('click', openProjectsModal);
   document.getElementById('btn-backup').addEventListener('click', openBackupModal);
   document.getElementById('btn-template-save').addEventListener('click', () => openModal('modal-save-template'));
@@ -809,9 +797,33 @@ function setupToolbar() {
 
 // ── 프로젝트 관리 모달 ────────────────────────────────────
 function openProjectsModal() {
+  if (!canWrite()) return;
   renderProjectList();
+  document.getElementById('new-project-name').value = '';
   openModal('modal-projects');
+  setTimeout(() => document.getElementById('new-project-name').focus(), 50);
 }
+
+function doAddProject() {
+  const input = document.getElementById('new-project-name');
+  const name = input.value.trim();
+  if (!name) { input.focus(); return; }
+  pushUndo();
+  const p = addProject(data, name);
+  const view = activeView();
+  if (view && view.projectIds.length > 0) view.projectIds.push(p.id);
+  saveData(data);
+  buildFilters();
+  renderSidebar();
+  renderProjectList();
+  input.value = '';
+  input.focus();
+}
+
+document.getElementById('btn-add-project-confirm').addEventListener('click', doAddProject);
+document.getElementById('new-project-name').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doAddProject();
+});
 
 function renderProjectList() {
   const list = document.getElementById('project-list');
