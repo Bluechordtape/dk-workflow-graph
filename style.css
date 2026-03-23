@@ -1089,8 +1089,8 @@ body {
 .cal-task-chip:hover { opacity: 0.82; transform: translateX(1px); }
 
 /* ── 호버 하이라이트 ─────────────────────────────────────── */
-/* dim-hover는 사용 안 함 — 연결 안 된 노드도 항상 잘 보임 */
-.task-node.dim-hover { /* 흐려지지 않음 */ }
+/* 연결되지 않은 노드 흐림 */
+.task-node.dim-hover { opacity: 0.25; transition: opacity 0.15s; }
 /* 호버된 노드 자신 */
 .task-node.highlight-self .node-inner {
   box-shadow: 0 0 0 3px rgba(33,33,33,0.12), 0 3px 12px rgba(0,0,0,0.12) !important;

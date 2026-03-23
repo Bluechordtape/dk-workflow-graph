@@ -590,20 +590,24 @@ export class Graph {
   }
 
   _applyHover(taskId) {
-    const connected = this._getConnected(taskId);
+    const connected = this._getConnected(taskId, 1); // 1단계 직접 연결만
     const connectedFlows = new Set(
-      (this.data.flows || []).filter(f => connected.has(f.from) && connected.has(f.to)).map(f => f.id)
+      (this.data.flows || []).filter(f =>
+        (f.from === taskId || f.to === taskId) &&
+        (connected.has(f.from) && connected.has(f.to))
+      ).map(f => f.id)
     );
     this.nodesEl.querySelectorAll('.task-node').forEach(n => {
-      const isConn = connected.has(n.dataset.id);
       const isSelf = n.dataset.id === taskId;
+      const isConn = connected.has(n.dataset.id) && !isSelf;
       n.classList.toggle('highlight-self',  isSelf);
-      n.classList.toggle('highlight-hover', isConn && !isSelf);
+      n.classList.toggle('highlight-hover', isConn);
+      n.classList.toggle('dim-hover',       !isSelf && !isConn);
     });
     Array.from(this.svg.children).forEach(c => {
       if (c.tagName !== 'defs' && c !== this.tempPath) {
         const isConn = connectedFlows.has(c.dataset?.flowId);
-        c.style.opacity = isConn ? '1' : '0.25';
+        c.style.opacity = isConn ? '1' : '0.15';
         if (isConn) { c.setAttribute('stroke', '#212121'); c.setAttribute('stroke-width', '2'); }
       }
     });
