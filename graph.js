@@ -1,17 +1,19 @@
 // graph.js — 3-tier hierarchy: Project > Group(Category) > Task
 
-export const NODE_W = 200;
-export const NODE_H = 110;
+export const NODE_W = 230;
+export const NODE_H = 118;
 
 // Layout constants
 const PROJECT_HEADER_H = 52;
-const PROJECT_PAD      = 22;
+const PROJECT_PAD_X    = 20;
+const PROJECT_PAD_Y    = 16;
 const GROUP_HEADER_H   = 40;
-const GROUP_PAD        = 14;
-const MIN_PROJECT_W    = 300;
+const GROUP_PAD_X      = 16;
+const GROUP_PAD_Y      = 14;
+const MIN_PROJECT_W    = 320;
 const MIN_PROJECT_H    = 160;
-const MIN_GROUP_W      = 240;
-const MIN_GROUP_H      = 90;
+const MIN_GROUP_W      = 270;
+const MIN_GROUP_H      = 100;
 
 const STATUS = {
   // 구버전 호환
@@ -118,10 +120,10 @@ export class Graph {
       maxX = Math.max(maxX, t.x + NODE_W); maxY = Math.max(maxY, t.y + NODE_H);
     }
     return {
-      x: minX - GROUP_PAD,
-      y: minY - GROUP_PAD - GROUP_HEADER_H,
-      w: Math.max(MIN_GROUP_W, (maxX - minX) + GROUP_PAD * 2),
-      h: (maxY - minY) + GROUP_PAD * 2 + GROUP_HEADER_H,
+      x: minX - GROUP_PAD_X,
+      y: minY - GROUP_PAD_Y - GROUP_HEADER_H,
+      w: Math.max(MIN_GROUP_W, (maxX - minX) + GROUP_PAD_X * 2),
+      h: (maxY - minY) + GROUP_PAD_Y * 2 + GROUP_HEADER_H,
     };
   }
 
@@ -150,10 +152,10 @@ export class Graph {
       return { x, y, w: MIN_PROJECT_W, h: MIN_PROJECT_H };
     }
     return {
-      x: minX - PROJECT_PAD,
-      y: minY - PROJECT_PAD - PROJECT_HEADER_H,
-      w: Math.max(MIN_PROJECT_W, (maxX - minX) + PROJECT_PAD * 2),
-      h: (maxY - minY) + PROJECT_PAD * 2 + PROJECT_HEADER_H,
+      x: minX - PROJECT_PAD_X,
+      y: minY - PROJECT_PAD_Y - PROJECT_HEADER_H,
+      w: Math.max(MIN_PROJECT_W, (maxX - minX) + PROJECT_PAD_X * 2),
+      h: (maxY - minY) + PROJECT_PAD_Y * 2 + PROJECT_HEADER_H,
     };
   }
 
@@ -226,11 +228,11 @@ export class Graph {
     const pill = document.createElement('span');
     pill.className = 'project-label-pill';
     pill.style.cssText = `
-      display:inline-flex;align-items:center;gap:7px;
-      padding:5px 14px;border-radius:100px;
-      background:${project.color}1A;color:${project.color};
-      border:1.5px solid ${project.color}55;
-      font-size:15px;font-weight:800;letter-spacing:-0.2px;
+      display:inline-flex;align-items:center;gap:8px;
+      padding:6px 16px;border-radius:100px;
+      background:#F3F4F6;color:#212121;
+      border:1.5px solid #E5E7EB;
+      font-size:16px;font-weight:800;letter-spacing:-0.5px;
     `;
     pill.appendChild(colorDot);
     pill.appendChild(document.createTextNode(project.name));
@@ -278,7 +280,7 @@ export class Graph {
     colorBar.style.background = group.color;
 
     const nameSpan = document.createElement('span');
-    nameSpan.style.cssText = 'font-size:14px;font-weight:700;color:#374151;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
+    nameSpan.style.cssText = 'font-size:15px;font-weight:700;color:#374151;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
     nameSpan.textContent = group.name;
 
     header.appendChild(colorBar);
@@ -381,7 +383,7 @@ export class Graph {
       'background: #FFFFFF',
       'box-shadow: 0 1px 4px rgba(0,0,0,0.07)',
       'padding: 12px 14px',
-      `height: ${NODE_H}px`,
+      `min-height: ${NODE_H}px`,
       'overflow: hidden',
       'display: flex',
       'flex-direction: column',
@@ -395,7 +397,7 @@ export class Graph {
       <div class="node-inner" style="${innerStyle}">
         <div class="node-top">
           <span class="node-dot" style="width:9px;height:9px;border-radius:50%;flex-shrink:0;margin-top:3px;background:${st.bar}"></span>
-          <span class="node-name" style="font-size:15px;font-weight:700;color:#212121;line-height:1.3;letter-spacing:-0.3px;flex:1">${task.name}</span>
+          <span class="node-name" style="font-size:16px;font-weight:800;color:#212121;line-height:1.3;letter-spacing:-0.5px;flex:1;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:keep-all">${task.name}</span>
         </div>
         <div class="node-mid" style="display:flex;align-items:center;gap:5px">
           <span class="node-assignee" style="font-size:12px;color:#9E9E9E;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${task.assignee || '미배정'}</span>

@@ -407,7 +407,7 @@ body {
 /* ── 프로젝트 박스 ────────────────────────────────────── */
 .project-box {
   position: absolute;
-  border: 2px solid #D1D5DB;
+  border: 2px solid #E5E7EB;
   border-radius: 16px;
   background: transparent;
   pointer-events: none; /* 배경 클릭은 통과, 헤더만 포인터 이벤트 */
@@ -451,7 +451,7 @@ body {
 .group-box-header:active { cursor: grabbing; }
 .group-color-bar {
   width: 5px;
-  height: 20px;
+  height: 18px;
   border-radius: 3px;
   flex-shrink: 0;
   margin-right: 9px;
@@ -472,7 +472,7 @@ body {
 /* ── 태스크 노드 ──────────────────────────────────────── */
 .task-node {
   position: absolute;
-  width: 200px;
+  width: 230px;
   display: flex;
   align-items: center;
   transition: opacity 0.15s;
@@ -511,7 +511,7 @@ body {
   padding: 12px 14px;
   cursor: pointer;
   user-select: none;
-  height: 110px;
+  min-height: 118px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -536,11 +536,16 @@ body {
   margin-top: 3px;
 }
 .node-name {
-  font-size: 15px;
-  font-weight: 700;
+  font-size: 16px;
+  font-weight: 800;
   color: #212121;
   line-height: 1.3;
-  letter-spacing: -0.3px;
+  letter-spacing: -0.5px;
+  word-break: keep-all;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .node-mid {
