@@ -475,20 +475,80 @@ export class Graph {
       const isGroup = !fromTask || !toTask;
       const cx = (x1 + x2) / 2;
 
+      const normalStroke = isGroup ? '#BDBDBD' : '#D1D5DB';
+      const hoverStroke  = isGroup ? '#9CA3AF' : '#6B7280';
+
+      // 히트 영역 (넓은 투명 선)
+      const hitPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      hitPath.setAttribute('d', `M${x1},${y1} C${cx},${y1} ${cx},${y2} ${x2},${y2}`);
+      hitPath.setAttribute('fill', 'none');
+      hitPath.setAttribute('stroke', 'transparent');
+      hitPath.setAttribute('stroke-width', '12');
+      hitPath.style.pointerEvents = 'stroke';
+      hitPath.style.cursor = 'pointer';
+
+      // 표시선
       const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
       path.setAttribute('d', `M${x1},${y1} C${cx},${y1} ${cx},${y2} ${x2},${y2}`);
       path.setAttribute('fill', 'none');
-      path.setAttribute('stroke', isGroup ? '#BDBDBD' : '#D1D5DB');
+      path.setAttribute('stroke', normalStroke);
       path.setAttribute('stroke-width', '1.5');
       if (isGroup) path.setAttribute('stroke-dasharray', '4 4');
       path.setAttribute('marker-end', isGroup ? 'url(#arr-group)' : 'url(#arr)');
-      path.dataset.flowId = flow.id;
-      path.style.pointerEvents = 'stroke';
-      path.style.cursor = 'pointer';
-      path.addEventListener('click', () => {
-        if (confirm('이 연결을 삭제하시겠습니까?')) this.cb.onFlowDelete?.(flow.id);
+      path.style.pointerEvents = 'none';
+
+      // 삭제 버튼 (중앙에 × 원형)
+      const midX = cx;
+      const midY = (y1 + y2) / 2;
+      const delG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      delG.style.opacity = '0';
+      delG.style.pointerEvents = 'auto';
+      delG.style.cursor = 'pointer';
+      delG.style.transition = 'opacity 0.15s';
+
+      const delCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      delCircle.setAttribute('cx', midX);
+      delCircle.setAttribute('cy', midY);
+      delCircle.setAttribute('r', '10');
+      delCircle.setAttribute('fill', 'white');
+      delCircle.setAttribute('stroke', '#EF4444');
+      delCircle.setAttribute('stroke-width', '1.5');
+
+      const delText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      delText.setAttribute('x', midX);
+      delText.setAttribute('y', midY);
+      delText.setAttribute('text-anchor', 'middle');
+      delText.setAttribute('dominant-baseline', 'central');
+      delText.setAttribute('fill', '#EF4444');
+      delText.setAttribute('font-size', '14');
+      delText.setAttribute('font-weight', '700');
+      delText.setAttribute('font-family', 'sans-serif');
+      delText.textContent = '×';
+      delG.appendChild(delCircle);
+      delG.appendChild(delText);
+
+      const showDel = () => {
+        delG.style.opacity = '1';
+        path.setAttribute('stroke', hoverStroke);
+        path.setAttribute('stroke-width', '2');
+      };
+      const hideDel = () => {
+        delG.style.opacity = '0';
+        path.setAttribute('stroke', normalStroke);
+        path.setAttribute('stroke-width', '1.5');
+      };
+      hitPath.addEventListener('mouseenter', showDel);
+      hitPath.addEventListener('mouseleave', e => { if (!delG.contains(e.relatedTarget)) hideDel(); });
+      delG.addEventListener('mouseenter', showDel);
+      delG.addEventListener('mouseleave', e => { if (!hitPath.contains(e.relatedTarget)) hideDel(); });
+      delG.addEventListener('click', e => {
+        e.stopPropagation();
+        this.cb.onFlowDelete?.(flow.id);
       });
-      this.svg.insertBefore(path, this.tempPath);
+
+      this.svg.insertBefore(path,    this.tempPath);
+      this.svg.insertBefore(hitPath, this.tempPath);
+      this.svg.insertBefore(delG,    this.tempPath);
     }
   }
 
