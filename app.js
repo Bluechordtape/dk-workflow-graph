@@ -16,7 +16,7 @@ import {
 } from './data.js';
 import { Graph } from './graph.js';
 
-const VERSION = 'v2.30';
+const VERSION = 'v2.31';
 
 let data = null;
 let graph = null;

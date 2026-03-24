@@ -692,7 +692,7 @@ body {
   transition: width 0.2s ease;
   flex-shrink: 0;
 }
-#side-panel.open { width: 300px; }
+#side-panel.open { width: 340px; }
 
 .panel-header {
   display: flex;
@@ -750,7 +750,7 @@ body {
 .form-group input:focus,
 .form-group select:focus,
 .form-group textarea:focus { border-color: #C8102E; box-shadow: 0 0 0 3px rgba(200,16,46,0.08); }
-.form-group textarea { resize: vertical; min-height: 70px; }
+.form-group textarea { resize: vertical; min-height: 160px; font-size: 13px; line-height: 1.6; padding: 10px 12px; }
 
 
 .btn-small {
