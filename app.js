@@ -16,7 +16,7 @@ import {
 } from './data.js';
 import { Graph } from './graph.js';
 
-const VERSION = 'v2.46';
+const VERSION = 'v2.47';
 
 let data = null;
 let graph = null;
@@ -322,6 +322,24 @@ function initSocket() {
     setSocketId(socket.id);
     if (currentUser) socket.emit('user:join', currentUser);
     socket.emit('data:sync', { timestamp: Date.now() });
+  });
+}
+
+function initCollapsible() {
+  document.querySelectorAll('.sidebar-section-title.collapsible').forEach(title => {
+    const section = title.dataset.section;
+    const body = title.nextElementSibling;
+    const arrow = title.querySelector('.collapse-arrow');
+    const isCollapsed = localStorage.getItem(`sidebar-${section}`) === 'collapsed';
+    if (isCollapsed) {
+      body.classList.add('collapsed');
+      arrow.classList.add('collapsed');
+    }
+    title.addEventListener('click', () => {
+      const collapsed = body.classList.toggle('collapsed');
+      arrow.classList.toggle('collapsed', collapsed);
+      localStorage.setItem(`sidebar-${section}`, collapsed ? 'collapsed' : 'open');
+    });
   });
 }
 
@@ -647,6 +665,7 @@ async function startApp() {
   loadViewport();
   const onlinePanel = document.getElementById('online-panel');
   if (onlinePanel) makeDraggable(onlinePanel);
+  initCollapsible();
 }
 
 // ── 권한 매트릭스 ─────────────────────────────────────────
