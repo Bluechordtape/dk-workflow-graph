@@ -1578,7 +1578,7 @@ async function saveTask() {
 }
 
 function deleteTaskBtn() {
-  if (!activeTaskId || !isAdmin()) return;
+  if (!activeTaskId || !can('deleteTask')) return;
   const task = data.tasks.find(t => t.id === activeTaskId);
   if (!confirm(`"${task?.name}" 업무를 삭제할까요?`)) return;
   pushUndo();
