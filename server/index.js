@@ -95,10 +95,10 @@ io.on('connection', (socket) => {
   socket.on('data:sync', async () => {
     console.log(`[Sync] data:sync 수신 from ${socket.id}`);
     try {
-      const result = await pool.query('SELECT data FROM workflow_data WHERE id = 1');
+      const result = await pool.query('SELECT data FROM workflow_data LIMIT 1');
       if (result.rows.length > 0) {
-        console.log(`[Sync] data:sync → data:updated except ${socket.id}`);
-        io.except(socket.id).emit('data:updated', result.rows[0].data);
+        console.log(`[Sync] data:sync → data:updated broadcast (except sender)`);
+        socket.broadcast.emit('data:updated', result.rows[0].data);
       } else {
         console.warn('[Sync] data:sync — workflow_data 테이블에 데이터 없음');
       }

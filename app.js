@@ -16,7 +16,7 @@ import {
 } from './data.js';
 import { Graph } from './graph.js';
 
-const VERSION = 'v2.38';
+const VERSION = 'v2.39';
 
 let data = null;
 let graph = null;
@@ -33,7 +33,22 @@ let _layoutSaveTimer = null;
 
 function scheduleSaveLayout() {
   clearTimeout(_layoutSaveTimer);
-  _layoutSaveTimer = setTimeout(() => saveLayout(userLayout), 1000);
+  _layoutSaveTimer = setTimeout(() => {
+    // userLayout을 공유 data에 반영 후 saveData()로 브로드캐스트
+    for (const [id, pos] of Object.entries(userLayout.tasks || {})) {
+      const t = data.tasks.find(t => t.id === id);
+      if (t) { t.x = pos.x; t.y = pos.y; }
+    }
+    for (const [id, pos] of Object.entries(userLayout.groups || {})) {
+      const g = (data.groups || []).find(g => g.id === id);
+      if (g) { g.x = pos.x; g.y = pos.y; }
+    }
+    for (const [id, pos] of Object.entries(userLayout.projects || {})) {
+      const p = (data.projects || []).find(p => p.id === id);
+      if (p) { p.x = pos.x; p.y = pos.y; }
+    }
+    saveData(data);
+  }, 800);
 }
 
 // 사용자 위치 오버레이 적용 (원본 data 객체를 변경하지 않는 shallow clone)
@@ -283,6 +298,7 @@ function initSocket() {
     buildFilters();
     renderSidebar();
     updateOverview();
+    renderActivityFeed();
     if (viewMode === 'calendar') renderCalendar();
   });
   socket.on('users:online', (users) => {
