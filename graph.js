@@ -261,7 +261,7 @@ export class Graph {
       padding:6px 16px;border-radius:100px;
       background:#F3F4F6;color:#212121;
       border:1.5px solid #E5E7EB;
-      font-size:16px;font-weight:800;letter-spacing:-0.5px;
+      font-size:21px;font-weight:800;letter-spacing:-0.5px;
     `;
     pill.appendChild(colorDot);
     pill.appendChild(document.createTextNode(project.name));
