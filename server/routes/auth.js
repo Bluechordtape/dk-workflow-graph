@@ -140,5 +140,39 @@ module.exports = function () {
     }
   });
 
+  // DELETE /api/auth/users/:id — 사용자 삭제 (admin만, admin 계정 삭제 불가)
+  router.delete('/users/:id', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'admin')
+      return res.status(403).json({ error: '관리자만 삭제할 수 있습니다' });
+
+    const targetId = parseInt(req.params.id);
+    try {
+      const target = await pool.query('SELECT name, role FROM users WHERE id=$1', [targetId]);
+      if (target.rows.length === 0) return res.status(404).json({ error: '사용자 없음' });
+      if (target.rows[0].role === 'admin') return res.status(403).json({ error: 'admin 계정은 삭제할 수 없습니다' });
+
+      const userName = target.rows[0].name;
+
+      // 해당 유저가 담당자인 태스크 assignee 초기화
+      const wd = await pool.query('SELECT data FROM workflow_data WHERE id=1');
+      if (wd.rows[0]) {
+        const d = wd.rows[0].data;
+        let changed = false;
+        if (d.tasks) {
+          d.tasks.forEach(t => { if (t.assignee === userName) { t.assignee = ''; changed = true; } });
+        }
+        if (changed) {
+          await pool.query('UPDATE workflow_data SET data=$1, updated_at=NOW() WHERE id=1', [JSON.stringify(d)]);
+        }
+      }
+
+      await pool.query('DELETE FROM users WHERE id=$1', [targetId]);
+      res.json({ ok: true });
+    } catch (err) {
+      console.error('[Auth] 사용자 삭제 오류:', err.message);
+      res.status(500).json({ error: '서버 오류' });
+    }
+  });
+
   return router;
 };

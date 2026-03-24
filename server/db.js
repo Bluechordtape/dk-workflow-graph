@@ -144,6 +144,14 @@ async function initDB() {
     console.log('[DB] 기본 템플릿 2개 생성 완료');
   }
 
+  // 앱 설정 테이블 (권한 등 key-value JSON store)
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS app_settings (
+      key   TEXT PRIMARY KEY,
+      value JSONB NOT NULL
+    )
+  `);
+
   // 백업 테이블
   await pool.query(`
     CREATE TABLE IF NOT EXISTS backups (

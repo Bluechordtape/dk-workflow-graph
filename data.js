@@ -364,6 +364,28 @@ export async function createUser(name, email, password, role) {
   return res.json();
 }
 
+export async function deleteUser(userId) {
+  const res = await fetch(`/api/auth/users/${userId}`, {
+    method: 'DELETE', headers: authHeaders()
+  });
+  if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || '삭제 실패'); }
+  return res.json();
+}
+
+export async function fetchPermissions() {
+  const res = await fetch('/api/permissions', { headers: authHeaders() });
+  if (!res.ok) throw new Error('권한 조회 실패');
+  return res.json();
+}
+
+export async function savePermissions(perms) {
+  const res = await fetch('/api/permissions', {
+    method: 'PUT', headers: authHeaders(), body: JSON.stringify(perms)
+  });
+  if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || '저장 실패'); }
+  return res.json();
+}
+
 export async function resetUserPassword(userId, password) {
   const res = await fetch(`/api/auth/users/${userId}/password`, {
     method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ password })

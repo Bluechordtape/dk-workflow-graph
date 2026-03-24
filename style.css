@@ -1362,6 +1362,10 @@ body {
 }
 .perm-ok { color: #16A34A; font-weight: 700; font-size: 14px; }
 .perm-no { color: #D1D5DB; font-size: 13px; }
+.perm-table td.perm-editable { cursor: pointer; transition: background 0.1s; }
+.perm-table td.perm-editable:hover { background: #F5F5F5; }
+.perm-table th.perm-locked { opacity: 0.45; }
+.perm-table td.perm-locked { opacity: 0.45; cursor: default; }
 
 /* ── 접속자 플로팅 패널 ── */
 #online-panel {

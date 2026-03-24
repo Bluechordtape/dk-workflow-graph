@@ -773,15 +773,21 @@ export class Graph {
       this.cb.onNodeCreate?.(x, y, context);
     });
 
-    // 줌
+    // 휠: Ctrl+휠=줌, Shift+휠=좌우패닝, 기본=위아래패닝
     this.container.addEventListener('wheel', (e) => {
       e.preventDefault();
-      const d = e.deltaY > 0 ? 0.9 : 1.1;
-      const rect = this.container.getBoundingClientRect();
-      const mx = e.clientX - rect.left, my = e.clientY - rect.top;
-      this.offsetX = mx - (mx - this.offsetX) * d;
-      this.offsetY = my - (my - this.offsetY) * d;
-      this.scale = Math.min(3, Math.max(0.2, this.scale * d));
+      if (e.ctrlKey) {
+        const d = e.deltaY > 0 ? 0.9 : 1.1;
+        const rect = this.container.getBoundingClientRect();
+        const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+        this.offsetX = mx - (mx - this.offsetX) * d;
+        this.offsetY = my - (my - this.offsetY) * d;
+        this.scale = Math.min(3, Math.max(0.2, this.scale * d));
+      } else if (e.shiftKey) {
+        this.offsetX -= e.deltaY;
+      } else {
+        this.offsetY -= e.deltaY;
+      }
       this._transform();
     }, { passive: false });
   }

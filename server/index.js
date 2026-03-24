@@ -6,11 +6,12 @@ const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
 
-const dataRouter      = require('./routes/data');
-const authRouter      = require('./routes/auth');
-const templatesRouter = require('./routes/templates');
-const backupsRouter   = require('./routes/backups');
-const layoutRouter    = require('./routes/layout');
+const dataRouter        = require('./routes/data');
+const authRouter        = require('./routes/auth');
+const templatesRouter   = require('./routes/templates');
+const backupsRouter     = require('./routes/backups');
+const layoutRouter      = require('./routes/layout');
+const permissionsRouter = require('./routes/permissions');
 const cron            = require('node-cron');
 const pool            = require('./db');
 
@@ -37,6 +38,7 @@ app.use('/api/auth',      authRouter());
 app.use('/api/templates', templatesRouter());
 app.use('/api/backups',   backupsRouter());
 app.use('/api',           layoutRouter());
+app.use('/api',           permissionsRouter());
 app.use('/api',           dataRouter(io));
 
 // SPA 폴백

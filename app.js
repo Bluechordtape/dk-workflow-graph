@@ -11,11 +11,12 @@ import {
   fetchBackups, createBackup, restoreBackup, deleteBackup,
   addView, updateView, deleteView, normalize,
   fetchUserNames, fetchUsers, updateUserRole, resetUserPassword, createUser,
+  deleteUser, fetchPermissions, savePermissions,
   fetchLayout, saveLayout
 } from './data.js';
 import { Graph } from './graph.js';
 
-const VERSION = 'v2.23';
+const VERSION = 'v2.25';
 
 let data = null;
 let graph = null;
@@ -412,6 +413,7 @@ async function startApp() {
   }
 
   try { userNames = await fetchUserNames(); } catch { userNames = []; }
+  await loadPermissions();
 
   // 글로벌 데이터 + 사용자 개인 레이아웃 병렬 로드
   const [loadedData, loadedLayout] = await Promise.all([
@@ -438,7 +440,7 @@ async function startApp() {
 }
 
 // ── 권한 매트릭스 ─────────────────────────────────────────
-const PERMISSIONS = {
+let PERMISSIONS = {
   createTask:    ['admin', 'leader', 'manager'],
   deleteTask:    ['admin'],
   editTask:      ['admin', 'leader', 'manager'],
@@ -454,6 +456,13 @@ const PERMISSIONS = {
   saveTemplate:  ['admin'],
   manageUsers:   ['admin'],
 };
+
+async function loadPermissions() {
+  try {
+    const remote = await fetchPermissions();
+    if (remote) PERMISSIONS = remote;
+  } catch { /* 기본값 유지 */ }
+}
 
 function can(action) {
   return (PERMISSIONS[action] || []).includes(currentUser?.role);
@@ -529,20 +538,44 @@ function openPermModal() {
   ];
 
   const myRole = currentUser?.role;
+  const isAdminUser = isAdmin();
+
   let html = `<table class="perm-table">
-    <thead><tr><th>기능</th>${roleOrder.map(r =>
-      `<th class="${r === myRole ? 'perm-me' : ''}">${roleLabel[r]}</th>`
-    ).join('')}</tr></thead><tbody>`;
+    <thead><tr><th>기능</th>${roleOrder.map(r => {
+      const locked = r === 'admin';
+      return `<th class="${r === myRole ? 'perm-me' : ''}${locked ? ' perm-locked' : ''}">${roleLabel[r]}${locked ? ' 🔒' : ''}</th>`;
+    }).join('')}</tr></thead><tbody>`;
 
   rows.forEach(row => {
-    html += `<tr><td>${row.label}</td>${roleOrder.map(r => {
-      const ok = row.all ? true : (PERMISSIONS[row.action] || []).includes(r);
-      return `<td class="${r === myRole ? 'perm-me' : ''}">${ok ? '<span class="perm-ok">✓</span>' : '<span class="perm-no">—</span>'}</td>`;
+    html += `<tr data-action="${row.action || ''}">${
+      `<td>${row.label}</td>`
+    }${roleOrder.map(r => {
+      const locked = r === 'admin' || !row.action; // admin 컬럼 or 편집 불가 행
+      const ok = r === 'admin' ? true : (row.all ? true : (PERMISSIONS[row.action] || []).includes(r));
+      const editable = isAdminUser && !locked;
+      return `<td class="${r === myRole ? 'perm-me' : ''}${editable ? ' perm-editable' : ''}${locked ? ' perm-locked' : ''}" data-role="${r}" data-ok="${ok}">${ok ? '<span class="perm-ok">✓</span>' : '<span class="perm-no">—</span>'}</td>`;
     }).join('')}</tr>`;
   });
 
   html += '</tbody></table>';
-  document.getElementById('perm-table-wrap').innerHTML = html;
+  const wrap = document.getElementById('perm-table-wrap');
+  wrap.innerHTML = html;
+
+  // 편집 가능 셀 클릭 이벤트
+  if (isAdminUser) {
+    wrap.querySelectorAll('td.perm-editable').forEach(td => {
+      td.addEventListener('click', () => {
+        const ok = td.dataset.ok === 'true';
+        td.dataset.ok = ok ? 'false' : 'true';
+        td.innerHTML = !ok ? '<span class="perm-ok">✓</span>' : '<span class="perm-no">—</span>';
+      });
+    });
+  }
+
+  // 저장 버튼 표시/숨김
+  const saveBtn = document.getElementById('btn-perm-save');
+  if (saveBtn) saveBtn.style.display = isAdminUser ? '' : 'none';
+
   openModal('modal-perm');
 }
 
@@ -1082,6 +1115,32 @@ function setupToolbar() {
     openPanel(task);
   });
   document.getElementById('btn-perm').addEventListener('click', openPermModal);
+  document.getElementById('btn-perm-save').addEventListener('click', async () => {
+    const wrap = document.getElementById('perm-table-wrap');
+    const newPerms = { ...PERMISSIONS };
+    wrap.querySelectorAll('tbody tr[data-action]').forEach(tr => {
+      const action = tr.dataset.action;
+      if (!action) return;
+      const roles = [];
+      tr.querySelectorAll('td[data-role]').forEach(td => {
+        if (td.dataset.role === 'admin') { roles.push('admin'); return; }
+        if (td.dataset.ok === 'true') roles.push(td.dataset.role);
+      });
+      newPerms[action] = roles;
+    });
+    const btn = document.getElementById('btn-perm-save');
+    btn.disabled = true; btn.textContent = '저장 중...';
+    try {
+      await savePermissions(newPerms);
+      PERMISSIONS = newPerms;
+      applyRoleUI();
+      btn.textContent = '✓ 저장됨';
+      setTimeout(() => { btn.textContent = '저장'; btn.disabled = false; }, 1500);
+    } catch (err) {
+      alert(err.message);
+      btn.textContent = '저장'; btn.disabled = false;
+    }
+  });
   document.getElementById('btn-logout').addEventListener('click', () => {
     if (confirm(`${currentUser?.name}님, 로그아웃 하시겠습니까?`)) logout();
   });
@@ -1475,6 +1534,9 @@ async function renderUserList() {
           </select>
           <button class="btn-role-save btn-small-action">권한 저장</button>
           <button class="btn-pw-reset btn-small-action">비밀번호 변경</button>
+          ${(isAdmin() && u.role !== 'admin' && u.id !== currentUser?.id)
+            ? '<button class="btn-user-delete btn-small-action" style="color:#C8102E;border-color:#C8102E22">🗑 삭제</button>'
+            : ''}
         </div>
       `;
 
@@ -1512,6 +1574,20 @@ async function renderUserList() {
       };
       item.querySelector('.btn-pw-reset').addEventListener('click', pwChange);
       item.querySelector('.pw-display').addEventListener('click', pwChange);
+
+      const delBtn = item.querySelector('.btn-user-delete');
+      if (delBtn) {
+        delBtn.addEventListener('click', async () => {
+          if (!confirm(`"${u.name}" 계정을 삭제할까요?\n해당 유저가 담당자인 업무의 담당자가 초기화됩니다.`)) return;
+          try {
+            await deleteUser(u.id);
+            item.remove();
+            // 로그인 드롭다운에서도 제거
+            const opt = document.querySelector(`#login-name-select option[value="${u.name}"]`);
+            if (opt) opt.remove();
+          } catch (err) { alert(err.message); }
+        });
+      }
 
       list.appendChild(item);
     });
