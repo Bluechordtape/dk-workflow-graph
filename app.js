@@ -16,7 +16,7 @@ import {
 } from './data.js';
 import { Graph } from './graph.js';
 
-const VERSION = 'v2.40';
+const VERSION = 'v2.41';
 
 let data = null;
 let graph = null;
@@ -541,6 +541,8 @@ async function startApp() {
           try {
             const result = await saveTaskStatus(taskId, st);
             data = normalize(result.data);
+            console.log('[STATUS] socket emit data:sync (member)');
+            socket?.emit('data:sync', { timestamp: Date.now() });
             graph.setData(filteredData());
             buildFilters();
             if (activeTaskId === taskId) document.getElementById('task-status').value = st;
