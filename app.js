@@ -16,7 +16,7 @@ import {
 } from './data.js';
 import { Graph } from './graph.js';
 
-const VERSION = 'v2.25';
+const VERSION = 'v2.26';
 
 let data = null;
 let graph = null;
@@ -445,6 +445,8 @@ let PERMISSIONS = {
   deleteTask:    ['admin'],
   editTask:      ['admin', 'leader', 'manager'],
   confirmDone:   ['admin', 'leader'],
+  changeStatus:  ['admin', 'leader', 'manager', 'member'],
+  editMemo:      ['admin', 'leader', 'manager', 'member'],
   createProject: ['admin', 'leader', 'manager'],
   deleteProject: ['admin'],
   createGroup:   ['admin', 'leader', 'manager'],
@@ -524,9 +526,10 @@ function openPermModal() {
     { label: '업무 생성',        action: 'createTask'    },
     { label: '업무 수정',        action: 'editTask'      },
     { label: '업무 삭제',        action: 'deleteTask'    },
-    { label: '완료 승인',        action: 'confirmDone'   },
-    { label: '상태 변경 (메모)', action: null, all: false },
-    { label: '프로젝트 생성',    action: 'createProject' },
+    { label: '완료 승인',              action: 'confirmDone'   },
+    { label: '상태 변경 (착수/진행중)', action: 'changeStatus'  },
+    { label: '메모 수정',              action: 'editMemo'      },
+    { label: '프로젝트 생성',          action: 'createProject' },
     { label: '프로젝트 삭제',    action: 'deleteProject' },
     { label: '묶음 생성',        action: 'createGroup'   },
     { label: '묶음 삭제',        action: 'deleteGroup'   },
