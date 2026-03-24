@@ -128,6 +128,13 @@ export class Graph {
   }
   getTransform() { return { x: this.offsetX, y: this.offsetY, k: this.scale }; }
 
+  setViewport(x, y, scale) {
+    this.offsetX = x;
+    this.offsetY = y;
+    this.scale   = scale;
+    this._transform();
+  }
+
   render() {
     if (!this.data) return;
     this._renderNodes();
@@ -692,6 +699,7 @@ export class Graph {
         this.offsetX = this._pan.ox + (e.clientX - this._pan.sx);
         this.offsetY = this._pan.oy + (e.clientY - this._pan.sy);
         this._transform();
+        this.cb.onViewportChange?.(this.offsetX, this.offsetY, this.scale);
         return;
       }
 
@@ -789,6 +797,7 @@ export class Graph {
         this.offsetY -= e.deltaY;
       }
       this._transform();
+      this.cb.onViewportChange?.(this.offsetX, this.offsetY, this.scale);
     }, { passive: false });
   }
 

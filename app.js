@@ -16,7 +16,7 @@ import {
 } from './data.js';
 import { Graph } from './graph.js';
 
-const VERSION = 'v2.35';
+const VERSION = 'v2.36';
 
 let data = null;
 let graph = null;
@@ -386,6 +386,35 @@ function _emitStatusActivity(oldStatus, newStatus, taskName, projectName) {
   else if (oldStatus === 'review' && newStatus === 'doing') pushActivity('reject', taskName, projectName);
 }
 
+// ── 뷰포트 저장/로드 ──────────────────────────────────────
+let _vpTimer = null;
+function saveViewport(offsetX, offsetY, scale) {
+  clearTimeout(_vpTimer);
+  _vpTimer = setTimeout(() => {
+    const token = localStorage.getItem(TOKEN_KEY);
+    fetch('/api/viewport', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ offsetX, offsetY, scale })
+    }).catch(() => {});
+  }, 1500);
+}
+
+async function loadViewport() {
+  try {
+    const token = localStorage.getItem(TOKEN_KEY);
+    const res = await fetch('/api/viewport', {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) { requestAnimationFrame(() => graph.resetView()); return; }
+    const vp = await res.json();
+    if (vp.isDefault) { requestAnimationFrame(() => graph.resetView()); return; }
+    requestAnimationFrame(() => graph.setViewport(vp.offsetX, vp.offsetY, vp.scale));
+  } catch {
+    requestAnimationFrame(() => graph.resetView());
+  }
+}
+
 // ── 접속자 아바타 렌더링 ─────────────────────────────────
 const ROLE_AVATAR = {
   admin:   { bg: '#212121', text: '#FFFFFF' },
@@ -512,7 +541,8 @@ async function startApp() {
         moved.groups.forEach(({ id, x, y })   => { userLayout.groups[id]   = { x, y }; });
         moved.projects.forEach(({ id, x, y }) => { userLayout.projects[id] = { x, y }; });
         scheduleSaveLayout();
-      }
+      },
+      onViewportChange: (x, y, s) => saveViewport(x, y, s),
     });
 
     // 키보드 단축키
@@ -551,9 +581,7 @@ async function startApp() {
   renderSidebar();
   populateAssigneeSelect();
   loadActivityLog();
-
-  // DOM 레이아웃 완료 후 전체 노드가 보이도록 fitView
-  requestAnimationFrame(() => graph.resetView());
+  loadViewport();
 }
 
 // ── 권한 매트릭스 ─────────────────────────────────────────

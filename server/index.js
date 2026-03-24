@@ -13,6 +13,7 @@ const backupsRouter     = require('./routes/backups');
 const layoutRouter      = require('./routes/layout');
 const permissionsRouter = require('./routes/permissions');
 const activityRouter    = require('./routes/activity');
+const viewportRouter    = require('./routes/viewport');
 const cron            = require('node-cron');
 const pool            = require('./db');
 
@@ -21,6 +22,17 @@ const server = http.createServer(app);
 const io = new Server(server, {
   cors: { origin: '*' }
 });
+
+// ── user_viewports 테이블 자동 생성 ──────────────────────
+pool.query(`
+  CREATE TABLE IF NOT EXISTS user_viewports (
+    user_id TEXT PRIMARY KEY,
+    offset_x FLOAT DEFAULT 0,
+    offset_y FLOAT DEFAULT 0,
+    scale FLOAT DEFAULT 1,
+    updated_at TIMESTAMP DEFAULT NOW()
+  )
+`).catch(err => console.error('[DB] user_viewports 테이블 생성 실패:', err.message));
 
 // ── activity_log 테이블 자동 생성 ─────────────────────────
 pool.query(`
@@ -52,6 +64,7 @@ app.use('/api/backups',   backupsRouter());
 app.use('/api',           layoutRouter());
 app.use('/api',           permissionsRouter());
 app.use('/api',           activityRouter());
+app.use('/api',           viewportRouter());
 app.use('/api',           dataRouter(io));
 
 // SPA 폴백
