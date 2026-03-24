@@ -515,14 +515,14 @@ export class Graph {
       // 길게 누르기 → 선 빛남 → 확인 팝업
       let holdTimer = null;
       const startGlow = () => {
-        path.setAttribute('stroke', '#F97316');
-        path.setAttribute('stroke-width', '3');
-        path.classList.add('flow-glowing');
+        path.setAttribute('stroke', '#C8102E');
+        path.setAttribute('stroke-width', '2');
+        path.style.filter = 'none';
       };
       const stopGlow = () => {
         path.setAttribute('stroke', normalStroke);
         path.setAttribute('stroke-width', '1.5');
-        path.classList.remove('flow-glowing');
+        path.style.filter = '';
       };
       hitPath.addEventListener('pointerdown', e => {
         e.preventDefault();

@@ -1296,12 +1296,6 @@ body {
 }
 #btn-undo:disabled, #btn-redo:disabled { opacity: 0.3; cursor: not-allowed; }
 
-/* ── 연결선 glow 애니메이션 ── */
-@keyframes flowGlow {
-  0%,100% { filter: drop-shadow(0 0 3px #F97316) drop-shadow(0 0 6px #F9731680); }
-  50%      { filter: drop-shadow(0 0 8px #F97316) drop-shadow(0 0 16px #F97316); }
-}
-.flow-glowing { animation: flowGlow 0.5s ease-in-out infinite; }
 
 /* ── 연결선 삭제 확인 팝업 ── */
 .flow-delete-popup {
