@@ -16,7 +16,7 @@ import {
 } from './data.js';
 import { Graph } from './graph.js';
 
-const VERSION = 'v2.45';
+const VERSION = 'v2.46';
 
 let data = null;
 let graph = null;
@@ -325,6 +325,25 @@ function initSocket() {
   });
 }
 
+function makeDraggable(el) {
+  let isDragging = false, startX, startY, startLeft, startTop;
+  el.addEventListener('mousedown', (e) => {
+    if (e.target.closest('button')) return;
+    isDragging = true;
+    startX = e.clientX; startY = e.clientY;
+    startLeft = el.offsetLeft; startTop = el.offsetTop;
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+    el.style.left   = (startLeft + e.clientX - startX) + 'px';
+    el.style.top    = (startTop  + e.clientY - startY) + 'px';
+    el.style.right  = 'auto';
+    el.style.bottom = 'auto';
+  });
+  document.addEventListener('mouseup', () => { isDragging = false; });
+}
+
 function reconnectSocket() {
   if (!socket) { console.warn('[SOCKET] socket 없음'); return; }
   console.log('[SOCKET] 강제 재연결 시작 | 유저:', currentUser?.name);
@@ -626,6 +645,8 @@ async function startApp() {
   populateAssigneeSelect();
   loadActivityLog();
   loadViewport();
+  const onlinePanel = document.getElementById('online-panel');
+  if (onlinePanel) makeDraggable(onlinePanel);
 }
 
 // ── 권한 매트릭스 ─────────────────────────────────────────
