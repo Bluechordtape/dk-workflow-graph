@@ -16,7 +16,7 @@ import {
 } from './data.js';
 import { Graph } from './graph.js';
 
-const VERSION = 'v2.44';
+const VERSION = 'v2.45';
 
 let data = null;
 let graph = null;
@@ -288,11 +288,15 @@ function initSocket() {
   socket = io();
   setSocket(socket);
   socket.on('connect', () => {
+    console.log('[SOCKET] 연결됨:', socket.id, '| 유저:', currentUser?.name);
     setSocketId(socket.id);
     if (currentUser) socket.emit('user:join', currentUser);
   });
+  socket.on('connect_error', (err) => {
+    console.error('[SOCKET] 연결 오류:', err.message);
+  });
   socket.on('data:updated', (newData) => {
-    console.log('[RECEIVE] data:updated 수신', newData ? 'ok' : 'empty');
+    console.log('[RECEIVE] data:updated 수신 | 유저:', currentUser?.name, '| 데이터:', newData ? 'ok' : 'empty');
     if (!newData) return;
     data = normalize(newData);
     graph.setData(filteredData());
@@ -310,15 +314,22 @@ function initSocket() {
     if (activityLog.length > 30) activityLog.pop();
     renderActivityFeed();
   });
-  socket.on('disconnect', () => {
-    console.log('[Socket] 연결 끊김, 재연결 시도...');
+  socket.on('disconnect', (reason) => {
+    console.warn('[SOCKET] 연결 끊김:', reason, '| 유저:', currentUser?.name);
   });
   socket.on('reconnect', () => {
-    console.log('[Socket] 재연결됨');
+    console.log('[SOCKET] 재연결됨 | 유저:', currentUser?.name);
     setSocketId(socket.id);
     if (currentUser) socket.emit('user:join', currentUser);
     socket.emit('data:sync', { timestamp: Date.now() });
   });
+}
+
+function reconnectSocket() {
+  if (!socket) { console.warn('[SOCKET] socket 없음'); return; }
+  console.log('[SOCKET] 강제 재연결 시작 | 유저:', currentUser?.name);
+  socket.disconnect();
+  socket.connect();
 }
 
 // ── Activity Feed ─────────────────────────────────────────
@@ -1315,6 +1326,9 @@ function setupToolbar() {
   });
   document.getElementById('btn-logout').addEventListener('click', () => {
     if (confirm(`${currentUser?.name}님, 로그아웃 하시겠습니까?`)) logout();
+  });
+  document.getElementById('btn-reconnect-socket').addEventListener('click', () => {
+    reconnectSocket();
   });
   document.getElementById('btn-view-graph').addEventListener('click', () => setViewMode('graph'));
   document.getElementById('btn-view-calendar').addEventListener('click', () => setViewMode('calendar'));
