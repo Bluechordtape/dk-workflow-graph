@@ -150,7 +150,10 @@ export async function saveTaskStatus(taskId, status, socketId) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.error || '상태 변경 실패');
   }
-  return res.json();
+  const result = await res.json();
+  // saveData()와 동일하게: 성공 시 data:sync로 fallback 브로드캐스트
+  _socket?.emit('data:sync', { timestamp: Date.now() });
+  return result;
 }
 
 // ── 백업 API ─────────────────────────────────────────────

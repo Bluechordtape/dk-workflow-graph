@@ -40,8 +40,10 @@ module.exports = function (io) {
 
       const socketId = req.headers['x-socket-id'];
       if (socketId) {
+        console.log(`[Sync] PUT data:updated → except ${socketId}`);
         io.except(socketId).emit('data:updated', data);
       } else {
+        console.log('[Sync] PUT data:updated → all');
         io.emit('data:updated', data);
       }
       res.json({ ok: true });
@@ -153,8 +155,10 @@ module.exports = function (io) {
 
       const socketId = req.headers['x-socket-id'];
       if (socketId) {
+        console.log(`[Sync] PATCH task-status data:updated → except ${socketId}`);
         io.except(socketId).emit('data:updated', data);
       } else {
+        console.log('[Sync] PATCH task-status data:updated → all');
         io.emit('data:updated', data);
       }
       res.json({ ok: true, data });
