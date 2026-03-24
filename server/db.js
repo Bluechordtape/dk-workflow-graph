@@ -34,7 +34,7 @@ async function initDB() {
   await pool.query(`
     ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
     ALTER TABLE users ADD CONSTRAINT users_role_check
-      CHECK (role IN ('admin','leader','manager','member'));
+      CHECK (role IN ('admin','leader','manager','member','viewer'));
   `).catch(() => {});
 
   // password_plain 컬럼 추가 (없을 때만)
@@ -54,6 +54,18 @@ async function initDB() {
       ['admin@dk.com', hash, 'dk2024!', '관리자']
     );
     console.log('[DB] admin 계정 생성: 관리자 / dk2024!');
+  }
+
+  // 손님(viewer) 계정이 없으면 자동 생성
+  const guest = await pool.query("SELECT id FROM users WHERE name = '손님' LIMIT 1");
+  if (guest.rows.length === 0) {
+    const guestHash = await bcrypt.hash('0000', 10);
+    await pool.query(
+      `INSERT INTO users (email, password_hash, password_plain, name, role)
+       VALUES ($1, $2, $3, $4, 'viewer')`,
+      ['guest@loom.internal', guestHash, '0000', '손님']
+    );
+    console.log('[DB] 손님 계정 생성: 손님 / 0000');
   }
 
   // 팀원 계정 시딩 (없을 때만)
