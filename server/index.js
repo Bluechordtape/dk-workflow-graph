@@ -12,6 +12,7 @@ const templatesRouter   = require('./routes/templates');
 const backupsRouter     = require('./routes/backups');
 const layoutRouter      = require('./routes/layout');
 const permissionsRouter = require('./routes/permissions');
+const activityRouter    = require('./routes/activity');
 const cron            = require('node-cron');
 const pool            = require('./db');
 
@@ -20,6 +21,17 @@ const server = http.createServer(app);
 const io = new Server(server, {
   cors: { origin: '*' }
 });
+
+// ── activity_log 테이블 자동 생성 ─────────────────────────
+pool.query(`
+  CREATE TABLE IF NOT EXISTS activity_log (
+    id SERIAL PRIMARY KEY,
+    msg TEXT NOT NULL,
+    project_name TEXT,
+    user_name TEXT,
+    created_at TIMESTAMP DEFAULT NOW()
+  )
+`).catch(err => console.error('[DB] activity_log 테이블 생성 실패:', err.message));
 
 // ── 미들웨어 ──────────────────────────────────────────────
 app.use(express.json({ limit: '10mb' }));
@@ -39,6 +51,7 @@ app.use('/api/templates', templatesRouter());
 app.use('/api/backups',   backupsRouter());
 app.use('/api',           layoutRouter());
 app.use('/api',           permissionsRouter());
+app.use('/api',           activityRouter());
 app.use('/api',           dataRouter(io));
 
 // SPA 폴백
@@ -66,8 +79,19 @@ io.on('connection', (socket) => {
     io.emit('users:online', getUniqueUsers());
   });
 
-  socket.on('activity:push', (activity) => {
-    io.emit('activity:new', activity);
+  socket.on('activity:push', async (activity) => {
+    try {
+      await pool.query(
+        'INSERT INTO activity_log (msg, project_name, user_name) VALUES ($1, $2, $3)',
+        [activity.msg, activity.project || '', activity.userName || '']
+      );
+      await pool.query(
+        'DELETE FROM activity_log WHERE id NOT IN (SELECT id FROM activity_log ORDER BY created_at DESC LIMIT 100)'
+      );
+    } catch (err) {
+      console.error('[Activity] DB 저장 실패:', err.message);
+    }
+    io.emit('activity:new', { ...activity, time: new Date().toISOString() });
   });
 
   socket.on('disconnect', () => {

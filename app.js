@@ -16,7 +16,7 @@ import {
 } from './data.js';
 import { Graph } from './graph.js';
 
-const VERSION = 'v2.33';
+const VERSION = 'v2.34';
 
 let data = null;
 let graph = null;
@@ -297,13 +297,20 @@ function initSocket() {
 const activityLog = [];
 
 function getElapsed(iso) {
-  const diff = Date.now() - new Date(iso).getTime();
+  const now = new Date();
+  const d = new Date(iso);
+  const diff = now - d;
   const min = Math.floor(diff / 60000);
   if (min < 1) return '방금';
   if (min < 60) return `${min}분 전`;
   const hr = Math.floor(min / 60);
   if (hr < 24) return `${hr}시간 전`;
-  return `${Math.floor(hr / 24)}일 전`;
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterdayStart = new Date(todayStart - 86400000);
+  if (d >= yesterdayStart && d < todayStart) {
+    return `어제 ${d.getHours() >= 12 ? '오후' : '오전'} ${d.getHours() > 12 ? d.getHours() - 12 : d.getHours() || 12}:${String(d.getMinutes()).padStart(2, '0')}`;
+  }
+  return `${d.getMonth() + 1}월 ${d.getDate()}일`;
 }
 
 function renderActivityFeed() {
@@ -320,6 +327,25 @@ function renderActivityFeed() {
     `;
     feed.appendChild(item);
   });
+}
+
+async function loadActivityLog() {
+  try {
+    const token = localStorage.getItem(TOKEN_KEY);
+    const res = await fetch('/api/activity', {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) return;
+    const rows = await res.json();
+    activityLog.length = 0;
+    rows.forEach(r => activityLog.push({
+      id: r.id,
+      msg: r.msg,
+      project: r.project_name,
+      time: r.created_at,
+    }));
+    renderActivityFeed();
+  } catch {}
 }
 
 function pushActivity(type, taskName, projectName) {
@@ -513,6 +539,7 @@ async function startApp() {
   updateUserBtn();
   renderSidebar();
   populateAssigneeSelect();
+  loadActivityLog();
 
   // DOM 레이아웃 완료 후 전체 노드가 보이도록 fitView
   requestAnimationFrame(() => graph.resetView());
