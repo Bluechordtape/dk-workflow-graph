@@ -50,6 +50,7 @@ module.exports = function (io) {
   // PATCH /api/data/task — 팀원용: 메모+상태만 저장 (자기 담당 업무)
   router.patch('/data/task', authenticateToken, async (req, res) => {
     const { taskId, updates } = req.body;
+    console.log(`[PATCH task] user=${req.user.name}(${req.user.role}) taskId=${taskId} updates=`, JSON.stringify(updates));
     if (!taskId || !updates) return res.status(400).json({ error: 'taskId, updates 필요' });
 
     const canComplete = ['admin', 'leader'].includes(req.user.role);
@@ -71,7 +72,8 @@ module.exports = function (io) {
       }
       if (!task) return res.status(404).json({ error: '업무를 찾을 수 없습니다' });
 
-      if (!canComplete && task.assignee !== req.user.name)
+      console.log(`[PATCH task] task.assignee="${task.assignee}" req.user.name="${req.user.name}"`);
+      if (!canComplete && task.assignee && task.assignee !== req.user.name)
         return res.status(403).json({ error: '담당 업무만 수정할 수 있습니다' });
 
       // member는 note, status, subtasks만 허용
@@ -99,11 +101,11 @@ module.exports = function (io) {
   // PATCH /api/data/task-status — 자기 담당 업무 상태 변경
   router.patch('/data/task-status', authenticateToken, async (req, res) => {
     const { taskId, status } = req.body;
-    // 팀원이 설정 가능한 상태
     const memberStatuses = ['pending', 'doing', 'delayed', 'review'];
-    // admin/leader만 가능한 상태
     const mgmtStatuses = ['done'];
     const allAllowed = [...memberStatuses, ...mgmtStatuses];
+
+    console.log(`[PATCH task-status] user=${req.user.name}(${req.user.role}) taskId=${taskId} status=${status}`);
 
     if (!taskId || !status)
       return res.status(400).json({ error: 'taskId, status 필요' });
@@ -116,9 +118,7 @@ module.exports = function (io) {
       return res.status(400).json({ error: '올바르지 않은 상태값' });
 
     try {
-      const result = await pool.query(
-        'SELECT data FROM workflow_data WHERE id = 1'
-      );
+      const result = await pool.query('SELECT data FROM workflow_data WHERE id = 1');
       if (result.rows.length === 0)
         return res.status(404).json({ error: '데이터 없음' });
 
@@ -130,11 +130,18 @@ module.exports = function (io) {
           if (task) break;
         }
       }
-      if (!task) return res.status(404).json({ error: '업무를 찾을 수 없습니다' });
+      if (!task) {
+        console.log(`[PATCH task-status] taskId=${taskId} 없음`);
+        return res.status(404).json({ error: '업무를 찾을 수 없습니다' });
+      }
 
-      // member는 자기 담당 업무만 변경 가능
-      if (!canComplete && task.assignee !== req.user.name)
+      console.log(`[PATCH task-status] task.assignee="${task.assignee}" req.user.name="${req.user.name}" canComplete=${canComplete}`);
+
+      // member는 자기 담당 업무만 변경 가능 (단, assignee가 비어있으면 허용)
+      if (!canComplete && task.assignee && task.assignee !== req.user.name) {
+        console.log(`[PATCH task-status] 403 — 담당자 불일치`);
         return res.status(403).json({ error: '담당 업무만 변경할 수 있습니다' });
+      }
 
       task.status = status;
 
@@ -145,7 +152,7 @@ module.exports = function (io) {
           SET data = EXCLUDED.data, updated_at = NOW()
       `, [JSON.stringify(data)]);
 
-      console.log('[Sync] PATCH /data/task-status → io.emit data:updated');
+      console.log(`[PATCH task-status] DB 저장 완료 → io.emit data:updated`);
       io.emit('data:updated', data);
       res.json({ ok: true, data });
     } catch (err) {

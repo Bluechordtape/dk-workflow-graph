@@ -16,7 +16,7 @@ import {
 } from './data.js';
 import { Graph } from './graph.js';
 
-const VERSION = 'v2.43';
+const VERSION = 'v2.44';
 
 let data = null;
 let graph = null;
@@ -546,7 +546,7 @@ async function startApp() {
             graph.setData(filteredData());
             buildFilters();
             if (activeTaskId === taskId) document.getElementById('task-status').value = st;
-          } catch (err) { alert(err.message); return; }
+          } catch (err) { console.error('[STATUS] saveTaskStatus 실패:', err.message); alert(err.message); return; }
         } else {
           console.log('[STATUS] saveData 경로 (canWrite)');
           pushUndo();
