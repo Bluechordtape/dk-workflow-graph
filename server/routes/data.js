@@ -38,14 +38,8 @@ module.exports = function (io) {
           SET data = EXCLUDED.data, updated_at = NOW()
       `, [JSON.stringify(data)]);
 
-      const socketId = req.headers['x-socket-id'];
-      if (socketId) {
-        console.log(`[Sync] PUT data:updated → except ${socketId}`);
-        io.except(socketId).emit('data:updated', data);
-      } else {
-        console.log('[Sync] PUT data:updated → all');
-        io.emit('data:updated', data);
-      }
+      console.log('[Sync] PUT /data → io.emit data:updated');
+      io.emit('data:updated', data);
       res.json({ ok: true });
     } catch (err) {
       console.error('[API] PUT /data 오류:', err.message);
@@ -93,17 +87,8 @@ module.exports = function (io) {
         ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()
       `, [JSON.stringify(data)]);
 
-      const socketId = req.headers['x-socket-id'];
-      if (socketId) io.except(socketId).emit('data:updated', data);
-      else          io.emit('data:updated', data);
-
-      // member 경로 fallback: DB 최신값으로 전체 브로드캐스트
-      const fresh = await pool.query('SELECT data FROM workflow_data LIMIT 1');
-      if (fresh.rows.length > 0) {
-        console.log(`[Sync] PATCH /data/task → io.emit data:updated`);
-        io.emit('data:updated', fresh.rows[0].data);
-      }
-
+      console.log('[Sync] PATCH /data/task → io.emit data:updated');
+      io.emit('data:updated', data);
       res.json({ ok: true, data });
     } catch (err) {
       console.error('[API] PATCH /data/task 오류:', err.message);
@@ -160,14 +145,8 @@ module.exports = function (io) {
           SET data = EXCLUDED.data, updated_at = NOW()
       `, [JSON.stringify(data)]);
 
-      const socketId = req.headers['x-socket-id'];
-      if (socketId) {
-        console.log(`[Sync] PATCH task-status data:updated → except ${socketId}`);
-        io.except(socketId).emit('data:updated', data);
-      } else {
-        console.log('[Sync] PATCH task-status data:updated → all');
-        io.emit('data:updated', data);
-      }
+      console.log('[Sync] PATCH /data/task-status → io.emit data:updated');
+      io.emit('data:updated', data);
       res.json({ ok: true, data });
     } catch (err) {
       console.error('[API] PATCH /data/task-status 오류:', err.message);

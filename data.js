@@ -118,18 +118,8 @@ export function normalize(d) {
 
 // ── 저장 ─────────────────────────────────────────────────
 export function saveData(data) {
-  console.log('[SAVE] fetch 시작, socket:', _socket?.id, 'socketId:', _socketId);
   fetch('/api/data', { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data) })
-    .then(res => {
-      console.log('[SAVE] fetch 완료, status:', res.status);
-      if (!res.ok) { console.error('[SAVE] 실패:', res.status); return; }
-      if (_socket) {
-        console.log('[SAVE] socket emit data:sync');
-        _socket.emit('data:sync', { timestamp: Date.now() });
-      } else {
-        console.warn('[SAVE] _socket 없음 — data:sync 미전송');
-      }
-    })
+    .then(res => { if (!res.ok) console.error('[SAVE] 실패: HTTP', res.status); })
     .catch(err => console.error('[SAVE] 오류:', err));
 }
 
