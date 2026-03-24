@@ -263,8 +263,12 @@ async function doLogin() {
   btn.textContent = '로그인 중...';
 
   try {
-    currentUser = await login(name, pass);
-    document.getElementById('login-overlay').classList.add('hidden');
+      const user = await login(name, pass);
+      console.log('LOGIN RESULT =', user);
+
+      currentUser = user;
+      console.log('CURRENT USER AFTER LOGIN =', currentUser);
+      document.getElementById('login-overlay').classList.add('hidden');
     await startApp();
   } catch (err) {
     showLoginError(err.message);
