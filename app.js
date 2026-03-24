@@ -691,8 +691,11 @@ let PERMISSIONS = {
 async function loadPermissions() {
   try {
     const remote = await fetchPermissions();
+    console.log('🔥 REMOTE PERMISSIONS =', remote);
     if (remote) PERMISSIONS = remote;
-  } catch { /* 기본값 유지 */ }
+    console.log('🔥 ACTIVE PERMISSIONS =', PERMISSIONS);
+  } catch (e) { console.error(e);}
+   
 }
 
 function can(action) {
@@ -2113,3 +2116,7 @@ init().catch(err => {
   document.getElementById('app-loading')?.remove();
   document.getElementById('login-overlay')?.classList.remove('hidden');
 });
+
+console.log('👤 role =', currentUser?.role);
+console.log('📌 deleteTask =', PERMISSIONS?.deleteTask);
+console.log('✅ can delete =', can('deleteTask'));
