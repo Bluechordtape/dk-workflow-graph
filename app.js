@@ -670,22 +670,22 @@ async function startApp() {
 
 // ── 권한 매트릭스 ─────────────────────────────────────────
 let PERMISSIONS = {
-  createTask:    ['admin', 'leader', 'manager'],
-  deleteTask:    ['admin'],
-  editTask:      ['admin', 'leader', 'manager'],
-  confirmDone:   ['admin', 'leader'],
+  createTask:    ['admin', 'leader', 'manager', 'member'],
+  deleteTask:    ['admin', 'leader', 'manager', 'member'],
+  editTask:      ['admin', 'leader', 'manager', 'member'],
+  confirmDone:   ['admin', 'leader', 'manager', 'member'],
   changeStatus:  ['admin', 'leader', 'manager', 'member'],
   editMemo:      ['admin', 'leader', 'manager', 'member'],
-  createProject: ['admin', 'leader', 'manager'],
-  deleteProject: ['admin'],
-  createGroup:   ['admin', 'leader', 'manager'],
-  deleteGroup:   ['admin', 'leader'],
-  createView:    ['admin', 'leader'],
-  editView:      ['admin', 'leader'],
-  importExport:  ['admin'],
-  backup:        ['admin'],
-  saveTemplate:  ['admin'],
-  manageUsers:   ['admin'],
+  createProject: ['admin', 'leader', 'manager', 'member'],
+  deleteProject: ['admin', 'leader', 'manager', 'member'],
+  createGroup:   ['admin', 'leader', 'manager', 'member'],
+  deleteGroup:   ['admin', 'leader', 'manager', 'member'],
+  createView:    ['admin', 'leader', 'manager', 'member'],
+  editView:      ['admin', 'leader', 'manager', 'member'],
+  importExport:  ['admin', 'leader', 'manager', 'member'],
+  backup:        ['admin', 'leader', 'manager', 'member'],
+  saveTemplate:  ['admin', 'leader', 'manager', 'member'],
+  manageUsers:   ['admin', 'leader', 'manager', 'member'],
 };
 
 async function loadPermissions() {
