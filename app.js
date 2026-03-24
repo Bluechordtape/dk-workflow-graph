@@ -16,7 +16,7 @@ import {
 } from './data.js';
 import { Graph } from './graph.js';
 
-const VERSION = 'v2.26';
+const VERSION = 'v2.27';
 
 let data = null;
 let graph = null;
@@ -1256,18 +1256,7 @@ function openPanel(task) {
   document.getElementById('task-due-date').value = task.dueDate || '';
   document.getElementById('task-note').value     = task.note || '';
 
-  const gs = document.getElementById('task-group');
-  gs.innerHTML = '<option value="">묶음 없음</option>';
-  // 해당 프로젝트 소속 묶음 우선 표시, 그 다음 projectId 없는 레거시 태그
-  const projectGroups = (data.groups || []).filter(g => g.projectId === task.projectId);
-  const legacyGroups  = (data.groups || []).filter(g => !g.projectId);
-  [...projectGroups, ...legacyGroups].forEach(g => {
-    const o = document.createElement('option');
-    o.value = g.id; o.textContent = g.name + (g.projectId ? '' : ' (태그)');
-    gs.appendChild(o);
-  });
-  gs.value = task.groupId || '';
-  updateGroupSwatch(task.groupId);
+  populateGroupSelect(task.projectId, task.groupId);
 
   const statusEl = document.getElementById('task-status');
   statusEl.querySelectorAll('option').forEach(opt => {
@@ -1280,6 +1269,21 @@ function openPanel(task) {
 
 }
 
+function populateGroupSelect(projectId, selectedGroupId) {
+  const gs = document.getElementById('task-group');
+  gs.innerHTML = '<option value="">묶음 없음</option>';
+  // 선택된 프로젝트 소속 묶음만 표시
+  (data.groups || [])
+    .filter(g => g.projectId === projectId)
+    .forEach(g => {
+      const o = document.createElement('option');
+      o.value = g.id; o.textContent = g.name;
+      gs.appendChild(o);
+    });
+  gs.value = selectedGroupId || '';
+  updateGroupSwatch(gs.value);
+}
+
 function updateGroupSwatch(groupId) {
   const g = (data.groups || []).find(g => g.id === groupId);
   const sw = document.getElementById('task-group-swatch');
@@ -1289,6 +1293,10 @@ function updateGroupSwatch(groupId) {
 
 document.getElementById('task-group')?.addEventListener('change', e => {
   updateGroupSwatch(e.target.value);
+});
+
+document.getElementById('task-project')?.addEventListener('change', e => {
+  populateGroupSelect(e.target.value, null);
 });
 
 function closePanel() {
