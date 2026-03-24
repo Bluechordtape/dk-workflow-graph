@@ -16,7 +16,7 @@ import {
 } from './data.js';
 import { Graph } from './graph.js';
 
-const VERSION = 'v2.28';
+const VERSION = 'v2.29';
 
 let data = null;
 let graph = null;
@@ -497,12 +497,8 @@ function applyRoleUI() {
   document.getElementById('btn-add-group').style.display       = can('createGroup')   ? '' : 'none';
   document.getElementById('btn-add-task').style.display        = can('createTask')    ? '' : 'none';
   document.getElementById('btn-add-project').style.display     = can('createProject') ? '' : 'none';
-  document.getElementById('btn-manage-projects').style.display = can('createProject') ? '' : 'none';
   document.getElementById('btn-manage-users').style.display    = can('manageUsers')   ? '' : 'none';
-  document.getElementById('btn-import').style.display          = can('importExport')  ? '' : 'none';
-  document.getElementById('btn-export').style.display          = can('importExport')  ? '' : 'none';
   document.getElementById('btn-backup').style.display          = can('backup')        ? '' : 'none';
-  document.getElementById('btn-template-save').style.display   = can('saveTemplate')  ? '' : 'none';
   document.getElementById('btn-template-load').style.display   = '';
 
   const isViewer = currentUser?.role === 'viewer';
@@ -794,9 +790,7 @@ function updateOverview() {
   const donePct  = Math.round(done  / total * 100);
   const doingPct = Math.round(doing / total * 100);
 
-  const projectName = projectFilter
-    ? (fd.projects.find(p => p.id === projectFilter)?.name || '프로젝트')
-    : (activeView()?.name || '전체 프로젝트');
+  const projectName = activeView()?.name || '전체 프로젝트';
 
   const metaParts = [];
   if (done)    metaParts.push(`완료 ${done}개`);
@@ -1007,16 +1001,12 @@ function setupViewSidebar() {
 // ── ⋯ 더보기 드롭다운 ────────────────────────────────────
 const MORE_ITEMS = [
   { label: '템플릿 불러오기', id: 'btn-template-load' },
-  { label: '템플릿 저장',     id: 'btn-template-save' },
-  { label: '프로젝트 관리',   id: 'btn-manage-projects' },
   { label: '사용자 관리',     id: 'btn-manage-users' },
   null,
   { label: '그래프 보기',     id: 'btn-view-graph', activeClass: true },
   { label: '캘린더 보기',     id: 'btn-view-calendar', activeClass: true },
   null,
   { label: '백업/복구',       id: 'btn-backup' },
-  { label: '가져오기',        id: 'btn-import' },
-  { label: '내보내기',        id: 'btn-export' },
   null,
   { label: '권한 안내',       id: 'btn-perm' },
 ];
@@ -1094,14 +1084,8 @@ function setupToolbar() {
   document.getElementById('btn-redo').addEventListener('click', redo);
   document.getElementById('btn-reset-view').addEventListener('click', () => graph.resetView());
   document.querySelector('#toolbar .brand')?.addEventListener('click', () => setViewMode('graph'));
-  document.getElementById('btn-export').addEventListener('click', () => exportJSON(data));
-  document.getElementById('btn-import').addEventListener('click', () =>
-    importJSON(d => { data = d; graph.setData(filteredData()); buildFilters(); closePanel(); renderSidebar(); })
-  );
   document.getElementById('btn-add-project').addEventListener('click', openProjectsModal);
-  document.getElementById('btn-manage-projects').addEventListener('click', openProjectsModal);
   document.getElementById('btn-backup').addEventListener('click', openBackupModal);
-  document.getElementById('btn-template-save').addEventListener('click', () => openModal('modal-save-template'));
   document.getElementById('btn-template-load').addEventListener('click', openTemplateLoadModal);
   document.getElementById('btn-add-group').addEventListener('click', () => {
     if (!canWrite()) return;
