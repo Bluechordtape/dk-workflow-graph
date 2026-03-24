@@ -93,17 +93,19 @@ io.on('connection', (socket) => {
   });
 
   socket.on('data:sync', async () => {
-    console.log(`[Sync] data:sync 수신 from ${socket.id}`);
+    const totalSockets = io.sockets.sockets.size;
+    console.log(`[SERVER] data:sync 수신 from ${socket.id} | 연결 소켓 수: ${totalSockets}`);
     try {
       const result = await pool.query('SELECT data FROM workflow_data LIMIT 1');
+      console.log(`[SERVER] DB 조회 완료, rows: ${result.rows.length}`);
       if (result.rows.length > 0) {
-        console.log(`[Sync] data:sync → data:updated broadcast (except sender)`);
+        console.log(`[SERVER] broadcast emit data:updated → ${totalSockets - 1}명`);
         socket.broadcast.emit('data:updated', result.rows[0].data);
       } else {
-        console.warn('[Sync] data:sync — workflow_data 테이블에 데이터 없음');
+        console.warn('[SERVER] data:sync — workflow_data 테이블에 데이터 없음');
       }
     } catch (err) {
-      console.error('[Sync] data:sync 오류:', err.message);
+      console.error('[SERVER] data:sync 오류:', err.message);
     }
   });
 

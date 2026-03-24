@@ -16,7 +16,7 @@ import {
 } from './data.js';
 import { Graph } from './graph.js';
 
-const VERSION = 'v2.39';
+const VERSION = 'v2.40';
 
 let data = null;
 let graph = null;
@@ -292,6 +292,7 @@ function initSocket() {
     if (currentUser) socket.emit('user:join', currentUser);
   });
   socket.on('data:updated', (newData) => {
+    console.log('[RECEIVE] data:updated 수신', newData ? 'ok' : 'empty');
     if (!newData) return;
     data = normalize(newData);
     graph.setData(filteredData());
@@ -529,11 +530,14 @@ async function startApp() {
         showFlowDeletePopup(flowId, midX, midY, stopGlow);
       },
       onStatusChange: async (taskId, st) => {
+        console.log('[STATUS] 변경:', taskId, st, '| canWrite:', canWrite());
         const _scTask = data.tasks.find(t => t.id === taskId);
+        if (!_scTask) { console.warn('[STATUS] task 없음:', taskId); return; }
         const _scOld = _scTask?.status;
         const _scName = _scTask?.name || '';
         const _scProj = (data.projects || []).find(p => p.id === _scTask?.projectId)?.name || '';
         if (!canWrite()) {
+          console.log('[STATUS] saveTaskStatus 경로 (member)');
           try {
             const result = await saveTaskStatus(taskId, st);
             data = normalize(result.data);
@@ -542,6 +546,7 @@ async function startApp() {
             if (activeTaskId === taskId) document.getElementById('task-status').value = st;
           } catch (err) { alert(err.message); return; }
         } else {
+          console.log('[STATUS] saveData 경로 (canWrite)');
           pushUndo();
           updateTask(data, taskId, { status: st });
           saveData(data);
