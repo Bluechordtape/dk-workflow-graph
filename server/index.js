@@ -79,6 +79,17 @@ io.on('connection', (socket) => {
     io.emit('users:online', getUniqueUsers());
   });
 
+  socket.on('data:sync', async () => {
+    try {
+      const result = await pool.query('SELECT data FROM workflow_data WHERE id = 1');
+      if (result.rows.length > 0) {
+        io.except(socket.id).emit('data:updated', result.rows[0].data);
+      }
+    } catch (err) {
+      console.error('[Socket] data:sync 오류:', err.message);
+    }
+  });
+
   socket.on('activity:push', async (activity) => {
     try {
       await pool.query(

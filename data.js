@@ -2,9 +2,11 @@
 
 let _socketId = null;
 let _token = null;
+let _socket = null;
 
 export function setSocketId(id) { _socketId = id; }
 export function setToken(token) { _token = token; }
+export function setSocket(s) { _socket = s; }
 
 function authHeaders(extra = {}) {
   const h = { 'Content-Type': 'application/json', ...extra };
@@ -117,6 +119,10 @@ export function normalize(d) {
 // ── 저장 ─────────────────────────────────────────────────
 export function saveData(data) {
   fetch('/api/data', { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data) })
+    .then(res => {
+      if (!res.ok) { console.error('저장 실패: HTTP', res.status); return; }
+      _socket?.emit('data:sync', { timestamp: Date.now() });
+    })
     .catch(err => console.error('저장 실패:', err));
 }
 

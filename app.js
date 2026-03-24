@@ -1,7 +1,7 @@
 // app.js
 import {
   loadData, saveData, saveTaskStatus, exportJSON, importJSON,
-  setSocketId, setToken,
+  setSocketId, setToken, setSocket,
   addProject, deleteProject,
   addTask, updateTask, deleteTask,
   addFlow, deleteFlow,
@@ -16,7 +16,7 @@ import {
 } from './data.js';
 import { Graph } from './graph.js';
 
-const VERSION = 'v2.34';
+const VERSION = 'v2.35';
 
 let data = null;
 let graph = null;
@@ -271,16 +271,18 @@ let socket = null;
 function initSocket() {
   if (typeof io === 'undefined') return;
   socket = io();
+  setSocket(socket);
   socket.on('connect', () => {
     setSocketId(socket.id);
-    // 접속 시 유저 정보 서버에 알림
     if (currentUser) socket.emit('user:join', currentUser);
   });
   socket.on('data:updated', (newData) => {
+    if (!newData) return;
     data = normalize(newData);
     graph.setData(filteredData());
     buildFilters();
     renderSidebar();
+    updateOverview();
     if (viewMode === 'calendar') renderCalendar();
   });
   socket.on('users:online', (users) => {
@@ -290,6 +292,15 @@ function initSocket() {
     activityLog.unshift(activity);
     if (activityLog.length > 30) activityLog.pop();
     renderActivityFeed();
+  });
+  socket.on('disconnect', () => {
+    console.log('[Socket] 연결 끊김, 재연결 시도...');
+  });
+  socket.on('reconnect', () => {
+    console.log('[Socket] 재연결됨');
+    setSocketId(socket.id);
+    if (currentUser) socket.emit('user:join', currentUser);
+    socket.emit('data:sync', { timestamp: Date.now() });
   });
 }
 
