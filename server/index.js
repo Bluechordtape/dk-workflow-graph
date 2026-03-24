@@ -66,6 +66,10 @@ io.on('connection', (socket) => {
     io.emit('users:online', getUniqueUsers());
   });
 
+  socket.on('activity:push', (activity) => {
+    io.emit('activity:new', activity);
+  });
+
   socket.on('disconnect', () => {
     console.log(`[Socket] 해제: ${socket.id}`);
     onlineUsers.delete(socket.id);

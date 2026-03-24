@@ -16,7 +16,7 @@ import {
 } from './data.js';
 import { Graph } from './graph.js';
 
-const VERSION = 'v2.31';
+const VERSION = 'v2.32';
 
 let data = null;
 let graph = null;
@@ -267,9 +267,10 @@ function showLoginError(msg) {
 }
 
 // ── Socket.io ─────────────────────────────────────────────
+let socket = null;
 function initSocket() {
   if (typeof io === 'undefined') return;
-  const socket = io();
+  socket = io();
   socket.on('connect', () => {
     setSocketId(socket.id);
     // 접속 시 유저 정보 서버에 알림
@@ -285,6 +286,67 @@ function initSocket() {
   socket.on('users:online', (users) => {
     renderOnlineUsers(users);
   });
+  socket.on('activity:new', (activity) => {
+    activityLog.unshift(activity);
+    if (activityLog.length > 30) activityLog.pop();
+    renderActivityFeed();
+  });
+}
+
+// ── Activity Feed ─────────────────────────────────────────
+const activityLog = [];
+
+function getElapsed(iso) {
+  const diff = Date.now() - new Date(iso).getTime();
+  const min = Math.floor(diff / 60000);
+  if (min < 1) return '방금';
+  if (min < 60) return `${min}분 전`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}시간 전`;
+  return `${Math.floor(hr / 24)}일 전`;
+}
+
+function renderActivityFeed() {
+  const feed = document.getElementById('sidebar-activity');
+  if (!feed) return;
+  feed.innerHTML = '';
+  activityLog.slice(0, 10).forEach(a => {
+    const item = document.createElement('div');
+    item.className = 'activity-item';
+    const elapsed = getElapsed(a.time);
+    item.innerHTML = `
+      <div class="activity-msg">${a.msg}</div>
+      <div class="activity-meta">${a.project ? a.project + ' · ' : ''}${elapsed}</div>
+    `;
+    feed.appendChild(item);
+  });
+}
+
+function pushActivity(type, taskName, projectName) {
+  if (!currentUser || !socket) return;
+  const messages = {
+    start:   `${currentUser.name}님이 [${taskName}]을 시작했습니다`,
+    review:  `${currentUser.name}님이 [${taskName}] 완료요청을 했습니다`,
+    confirm: `${currentUser.name}님이 [${taskName}]을 완료 확정했습니다`,
+    reject:  `${currentUser.name}님이 [${taskName}]을 반려했습니다`,
+    create:  `${currentUser.name}님이 [${taskName}]을 추가했습니다`,
+  };
+  const msg = messages[type];
+  if (!msg) return;
+  socket.emit('activity:push', {
+    id: Date.now(),
+    msg,
+    project: projectName || '',
+    time: new Date().toISOString(),
+  });
+}
+
+function _emitStatusActivity(oldStatus, newStatus, taskName, projectName) {
+  if (oldStatus === newStatus) return;
+  if (oldStatus === 'pending' && newStatus === 'doing') pushActivity('start', taskName, projectName);
+  else if (oldStatus === 'doing' && newStatus === 'review') pushActivity('review', taskName, projectName);
+  else if (oldStatus === 'review' && newStatus === 'done') pushActivity('confirm', taskName, projectName);
+  else if (oldStatus === 'review' && newStatus === 'doing') pushActivity('reject', taskName, projectName);
 }
 
 // ── 접속자 아바타 렌더링 ─────────────────────────────────
@@ -385,6 +447,10 @@ async function startApp() {
         showFlowDeletePopup(flowId, midX, midY, stopGlow);
       },
       onStatusChange: async (taskId, st) => {
+        const _scTask = data.tasks.find(t => t.id === taskId);
+        const _scOld = _scTask?.status;
+        const _scName = _scTask?.name || '';
+        const _scProj = (data.projects || []).find(p => p.id === _scTask?.projectId)?.name || '';
         if (!canWrite()) {
           try {
             const result = await saveTaskStatus(taskId, st);
@@ -392,7 +458,7 @@ async function startApp() {
             graph.setData(filteredData());
             buildFilters();
             if (activeTaskId === taskId) document.getElementById('task-status').value = st;
-          } catch (err) { alert(err.message); }
+          } catch (err) { alert(err.message); return; }
         } else {
           pushUndo();
           updateTask(data, taskId, { status: st });
@@ -401,6 +467,7 @@ async function startApp() {
           buildFilters();
           if (activeTaskId === taskId) document.getElementById('task-status').value = st;
         }
+        _emitStatusActivity(_scOld, st, _scName, _scProj);
       },
       onNodeMoved: (moved) => {
         if (!moved) return;
@@ -1116,6 +1183,8 @@ function setupToolbar() {
     });
     saveData(data);
     graph.setData(filteredData());
+    const _addProj = (data.projects || []).find(p => p.id === task.projectId)?.name || '';
+    pushActivity('create', task.name || '새 업무', _addProj);
     openPanel(task);
   });
   document.getElementById('btn-perm').addEventListener('click', openPermModal);
@@ -1308,6 +1377,11 @@ function closePanel() {
 
 async function saveTask() {
   if (!activeTaskId) return;
+  const _stTask = data.tasks.find(t => t.id === activeTaskId);
+  const _stOldStatus = _stTask?.status;
+  const _stName = _stTask?.name || '';
+  const _stProj = (data.projects || []).find(p => p.id === _stTask?.projectId)?.name || '';
+  const _stNewStatus = document.getElementById('task-status').value;
   pushUndo();
   if (canWrite()) {
     updateTask(data, activeTaskId, {
@@ -1334,6 +1408,7 @@ async function saveTask() {
       buildFilters();
     } catch (err) { alert(err.message); return; }
   }
+  _emitStatusActivity(_stOldStatus, _stNewStatus, _stName, _stProj);
   closePanel();
 }
 

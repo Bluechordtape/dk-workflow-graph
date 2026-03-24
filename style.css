@@ -971,6 +971,34 @@ body {
   white-space: nowrap;
 }
 
+.sidebar-section-title {
+  font-size: 10px;
+  font-weight: 700;
+  color: #9CA3AF;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 12px 12px 6px;
+}
+.activity-item {
+  padding: 7px 12px;
+  border-bottom: 1px solid #F9FAFB;
+}
+.activity-msg {
+  font-size: 11px;
+  color: #374151;
+  line-height: 1.4;
+  word-break: keep-all;
+}
+.activity-msg strong {
+  font-weight: 700;
+  color: #111827;
+}
+.activity-meta {
+  font-size: 10px;
+  color: #9CA3AF;
+  margin-top: 2px;
+}
+
 .view-item {
   display: flex;
   align-items: center;
