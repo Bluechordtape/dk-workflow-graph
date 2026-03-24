@@ -16,7 +16,7 @@ import {
 } from './data.js';
 import { Graph } from './graph.js';
 
-const VERSION = 'v2.37';
+const VERSION = 'v2.38';
 
 let data = null;
 let graph = null;
@@ -95,8 +95,8 @@ function filteredData() {
     );
     slice = { projects: visible, tasks, flows, groups };
   }
-  // 사용자 개인 위치 오버레이 적용 (data 객체는 변경 안 함)
-  return applyUserLayout(slice);
+  // 블록 위치는 공유 데이터(data.tasks[].x,y)를 사용 (applyUserLayout 제거)
+  return slice;
 }
 
 // ── 언도/리두 ─────────────────────────────────────────────
@@ -537,10 +537,20 @@ async function startApp() {
       },
       onNodeMoved: (moved) => {
         if (!moved) return;
-        moved.tasks.forEach(({ id, x, y })    => { userLayout.tasks[id]    = { x, y }; });
-        moved.groups.forEach(({ id, x, y })   => { userLayout.groups[id]   = { x, y }; });
-        moved.projects.forEach(({ id, x, y }) => { userLayout.projects[id] = { x, y }; });
-        scheduleSaveLayout();
+        // 공유 데이터에 직접 x,y 반영 → saveData()로 브로드캐스트
+        moved.tasks.forEach(({ id, x, y }) => {
+          const t = data.tasks.find(t => t.id === id);
+          if (t) { t.x = x; t.y = y; }
+        });
+        moved.groups.forEach(({ id, x, y }) => {
+          const g = (data.groups || []).find(g => g.id === id);
+          if (g) { g.x = x; g.y = y; }
+        });
+        moved.projects.forEach(({ id, x, y }) => {
+          const p = (data.projects || []).find(p => p.id === id);
+          if (p) { p.x = x; p.y = y; }
+        });
+        saveData(data);
       },
       onViewportChange: (x, y, s) => saveViewport(x, y, s),
     });
