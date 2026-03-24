@@ -97,6 +97,13 @@ module.exports = function (io) {
       if (socketId) io.except(socketId).emit('data:updated', data);
       else          io.emit('data:updated', data);
 
+      // member 경로 fallback: DB 최신값으로 전체 브로드캐스트
+      const fresh = await pool.query('SELECT data FROM workflow_data LIMIT 1');
+      if (fresh.rows.length > 0) {
+        console.log(`[Sync] PATCH /data/task → io.emit data:updated`);
+        io.emit('data:updated', fresh.rows[0].data);
+      }
+
       res.json({ ok: true, data });
     } catch (err) {
       console.error('[API] PATCH /data/task 오류:', err.message);
