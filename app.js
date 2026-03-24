@@ -698,6 +698,7 @@ async function loadPermissions() {
     console.log('🔥 REMOTE PERMISSIONS =', remote);
     if (remote) PERMISSIONS = remote;
     console.log('🔥 ACTIVE PERMISSIONS =', PERMISSIONS);
+    applyRoleUI(); // 추가
   } catch (e) { console.error(e);}
    
 }
@@ -715,6 +716,10 @@ function isPrivileged() { return can('createView'); }
 
 // ── 역할별 UI 제어 ────────────────────────────────────────
 function applyRoleUI() {
+  console.log('applyRoleUI role =', currentUser?.role);
+  console.log('applyRoleUI deleteTask =', PERMISSIONS?.deleteTask);
+  console.log("applyRoleUI can delete =", can('deleteTask'));
+  
   const canEdit  = can('editTask');
   const canDone  = can('confirmDone');
 
