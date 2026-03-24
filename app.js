@@ -16,7 +16,7 @@ import {
 } from './data.js';
 import { Graph } from './graph.js';
 
-const VERSION = 'v2.27';
+const VERSION = 'v2.28';
 
 let data = null;
 let graph = null;
@@ -25,6 +25,7 @@ let currentUser = null; // { id, email, name, role }
 let userNames = [];     // 전체 팀원 이름 목록
 let calendarDate = new Date();
 let viewMode = 'graph'; // 'graph' | 'calendar'
+const hiddenProjectIds = new Set(); // 사이드바 체크박스로 숨긴 프로젝트
 
 // ── 사용자별 레이아웃 (서버 저장, 개인 위치 오버레이) ─────
 let userLayout = { tasks: {}, groups: {}, projects: {} };
@@ -80,6 +81,19 @@ function filteredData() {
       (tSet.has(f.from) || gSet.has(f.from)) && (tSet.has(f.to) || gSet.has(f.to))
     );
     slice = { projects, tasks, flows, groups };
+  }
+  // 사이드바 체크박스 숨김 필터
+  if (hiddenProjectIds.size > 0) {
+    const visible = slice.projects.filter(p => !hiddenProjectIds.has(p.id));
+    const vSet = new Set(visible.map(p => p.id));
+    const tasks = slice.tasks.filter(t => vSet.has(t.projectId));
+    const tSet = new Set(tasks.map(t => t.id));
+    const groups = (slice.groups || []).filter(g => !g.projectId || vSet.has(g.projectId));
+    const gSet = new Set(groups.map(g => g.id));
+    const flows = (slice.flows || []).filter(f =>
+      (tSet.has(f.from) || gSet.has(f.from)) && (tSet.has(f.to) || gSet.has(f.to))
+    );
+    slice = { projects: visible, tasks, flows, groups };
   }
   // 사용자 개인 위치 오버레이 적용 (data 객체는 변경 안 함)
   return applyUserLayout(slice);
@@ -340,9 +354,7 @@ async function startApp() {
         pushUndo();
         const fd = filteredData();
         // context.projectId: 클릭한 프로젝트/묶음 영역, context.groupId: 클릭한 묶음
-        const projectId = context.projectId
-          || document.getElementById('filter-project').value
-          || fd.projects[0]?.id;
+        const projectId = context.projectId || fd.projects[0]?.id;
         const task = addTask(data, {
           x, y,
           projectId,
@@ -737,21 +749,6 @@ function buildFilters() {
   userNames.forEach(a => { const o = document.createElement('option'); o.value = a; o.textContent = a; asel.appendChild(o); });
   asel.value = av;
 
-  const psel = document.getElementById('filter-project');
-  const pv = psel.value;
-  psel.innerHTML = '<option value="">프로젝트 전체</option>';
-  fd.projects.filter(p => !p.archived).forEach(p => {
-    const o = document.createElement('option'); o.value = p.id; o.textContent = p.name; psel.appendChild(o);
-  });
-  const archived = fd.projects.filter(p => p.archived);
-  if (archived.length) {
-    const sep = document.createElement('option'); sep.disabled = true; sep.textContent = '── 보관됨 ──'; psel.appendChild(sep);
-    archived.forEach(p => {
-      const o = document.createElement('option'); o.value = p.id; o.textContent = `${p.name} (보관됨)`; psel.appendChild(o);
-    });
-  }
-  psel.value = pv;
-
   const ps = document.getElementById('task-project');
   const ppv = ps.value;
   ps.innerHTML = '';
@@ -770,7 +767,6 @@ function buildFilters() {
 function applyFilter() {
   graph.setFilter({
     assignee: document.getElementById('filter-assignee').value,
-    project:  document.getElementById('filter-project').value,
     status:   document.getElementById('filter-status').value
   });
   updateOverview();
@@ -781,12 +777,10 @@ function updateOverview() {
   const fd = filteredData();
   if (!fd?.tasks) { bar.style.display = 'none'; return; }
 
-  const projectFilter  = document.getElementById('filter-project').value;
   const assigneeFilter = document.getElementById('filter-assignee').value;
 
   let tasks = fd.tasks;
-  if (projectFilter)  tasks = tasks.filter(t => t.projectId === projectFilter);
-  if (assigneeFilter) tasks = tasks.filter(t => t.assignee  === assigneeFilter);
+  if (assigneeFilter) tasks = tasks.filter(t => t.assignee === assigneeFilter);
 
   if (tasks.length === 0) { bar.style.display = 'none'; return; }
 
@@ -917,6 +911,30 @@ function renderSidebar() {
   // + 새 시트 버튼 표시 제어
   const btn = document.getElementById('btn-add-view');
   if (btn) btn.style.display = isPrivileged() ? '' : 'none';
+
+  renderProjectSection();
+}
+
+function renderProjectSection() {
+  const section = document.getElementById('sidebar-projects');
+  if (!section) return;
+  section.innerHTML = '';
+  (data.projects || []).filter(p => !p.archived).forEach(p => {
+    const item = document.createElement('label');
+    item.className = 'sidebar-project-item';
+    item.innerHTML = `
+      <input type="checkbox" ${!hiddenProjectIds.has(p.id) ? 'checked' : ''}>
+      <span class="sidebar-project-dot" style="background:${p.color || '#212121'}"></span>
+      <span class="sidebar-project-name">${p.name}</span>
+    `;
+    item.querySelector('input').addEventListener('change', (e) => {
+      if (e.target.checked) hiddenProjectIds.delete(p.id);
+      else hiddenProjectIds.add(p.id);
+      graph.setData(filteredData());
+      updateOverview();
+    });
+    section.appendChild(item);
+  });
 }
 
 // ── 뷰 시트 생성/편집 모달 ───────────────────────────────
@@ -1069,7 +1087,7 @@ function setupToolbar() {
   if (toolbarSetup) return;
   toolbarSetup = true;
 
-  ['filter-assignee','filter-project','filter-status'].forEach(id =>
+  ['filter-assignee','filter-status'].forEach(id =>
     document.getElementById(id).addEventListener('change', applyFilter)
   );
   document.getElementById('btn-undo').addEventListener('click', undo);
@@ -1095,9 +1113,8 @@ function setupToolbar() {
       o.value = p.id; o.textContent = p.name;
       sel.appendChild(o);
     });
-    // 현재 필터 프로젝트 기본 선택
-    const fp = document.getElementById('filter-project').value;
-    if (fp) sel.value = fp;
+    // 첫 번째 프로젝트 기본 선택
+    if (sel.options.length > 0) sel.selectedIndex = 0;
     _selectedGroupColor = GROUP_COLORS[0];
     document.getElementById('grp-name').value = '';
     buildGroupColorPalette();
@@ -1110,7 +1127,7 @@ function setupToolbar() {
     const task = addTask(data, {
       x: 120 + Math.random() * 200,
       y: 120 + Math.random() * 200,
-      projectId: document.getElementById('filter-project').value || fd.projects[0]?.id,
+      projectId: fd.projects[0]?.id,
       assignee: currentUser.name
     });
     saveData(data);
@@ -1226,6 +1243,7 @@ function renderProjectList() {
     item.querySelector('.tmpl-del').addEventListener('click', () => {
       if (!confirm(`"${p.name}" 프로젝트를 삭제할까요?\n모든 업무와 연결이 삭제됩니다.`)) return;
       pushUndo();
+      hiddenProjectIds.delete(p.id);
       deleteProject(data, p.id);
       saveData(data);
       graph.setData(filteredData());
