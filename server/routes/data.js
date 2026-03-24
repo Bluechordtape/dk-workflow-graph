@@ -28,7 +28,7 @@ module.exports = function (io) {
   });
 
   // PUT /api/data — admin, leader, manager 가능
-  router.put('/data', authenticateToken, requireRole('admin', 'leader', 'manager'), async (req, res) => {
+  router.put('/data', authenticateToken, requireRole('admin', 'leader', 'manager', 'member'), async (req, res) => {
     try {
       const data = req.body;
       await pool.query(`
