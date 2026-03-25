@@ -16,7 +16,7 @@ import {
 } from './data.js';
 import { Graph } from './graph.js';
 
-const VERSION = 'v2.50';
+const VERSION = 'v2.51';
 
 let data = null;
 let graph = null;
@@ -1031,32 +1031,35 @@ function updateMemberStatusBar() {
   const map = {};
   data.tasks.forEach(t => {
     if (!t.assignee || t.assignee === '미배정') return;
-    if (!map[t.assignee]) map[t.assignee] = { doing: 0, review: 0, delayed: 0 };
-    if (['doing', 'wip'].includes(t.status)) map[t.assignee].doing++;
-    if (t.status === 'review')  map[t.assignee].review++;
-    if (t.status === 'delayed') map[t.assignee].delayed++;
+    const s = t.status;
+    if (!['doing', 'wip', 'review', 'delayed'].includes(s)) return;
+    if (!map[t.assignee]) map[t.assignee] = [];
+    map[t.assignee].push({ name: t.name, status: s });
   });
 
-  const entries = Object.entries(map).filter(([, v]) => v.doing + v.review + v.delayed > 0);
-
+  const entries = Object.entries(map).filter(([, tasks]) => tasks.length > 0);
   if (entries.length === 0) {
-    bar.innerHTML = '<span style="font-size:12px;color:#9CA3AF;padding:0 16px">현재 진행 중인 업무가 없습니다</span>';
-    bar.style.display = 'flex';
+    bar.style.display = 'none';
     return;
   }
 
+  const colorMap = {
+    doing:   'background:#EDE9FE;color:#5B21B6',
+    wip:     'background:#EDE9FE;color:#5B21B6',
+    review:  'background:#FEF9C3;color:#854D0E',
+    delayed: 'background:#FEE2E2;color:#991B1B',
+  };
+
   bar.style.display = 'flex';
-  bar.innerHTML = entries.map(([name, cnt]) => {
+  bar.innerHTML = entries.map(([name, tasks]) => {
     const initial = name.charAt(0);
-    const badges = [
-      cnt.doing   ? `<span class="msb-badge doing">${cnt.doing}개 진행중</span>` : '',
-      cnt.review  ? `<span class="msb-badge review">${cnt.review}개 완료요청</span>` : '',
-      cnt.delayed ? `<span class="msb-badge delayed">${cnt.delayed}개 지연</span>` : '',
-    ].filter(Boolean).join('');
+    const pills = tasks.map(t =>
+      `<span class="msb-pill" style="${colorMap[t.status] || ''}">${t.name}</span>`
+    ).join('');
     return `<div class="msb-item">
       <div class="msb-avatar">${initial}</div>
       <span class="msb-name">${name}</span>
-      ${badges}
+      <div class="msb-pills">${pills}</div>
     </div>`;
   }).join('<div class="msb-sep"></div>');
 }

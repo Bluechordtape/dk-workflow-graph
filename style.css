@@ -1608,16 +1608,22 @@ body {
   color: #212121;
   white-space: nowrap;
 }
-.msb-badge {
+.msb-pills {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: nowrap;
+}
+.msb-pill {
   font-size: 11px;
   font-weight: 500;
   padding: 2px 8px;
   border-radius: 4px;
   white-space: nowrap;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.msb-badge.doing   { background: #EDE9FE; color: #5B21B6; }
-.msb-badge.review  { background: #FEF9C3; color: #854D0E; }
-.msb-badge.delayed { background: #FEE2E2; color: #991B1B; }
 .msb-sep {
   width: 1px;
   height: 20px;
