@@ -16,7 +16,7 @@ import {
 } from './data.js';
 import { Graph } from './graph.js';
 
-const VERSION = 'v2.49';
+const VERSION = 'v2.50';
 
 let data = null;
 let graph = null;
@@ -307,6 +307,7 @@ function initSocket() {
     buildFilters();
     renderSidebar();
     updateOverview();
+    updateMemberStatusBar();
     renderActivityFeed();
     if (viewMode === 'calendar') renderCalendar();
   });
@@ -1028,16 +1029,21 @@ function updateMemberStatusBar() {
   if (!bar || !data) return;
 
   const map = {};
-  (data.tasks || []).forEach(t => {
-    if (!t.assignee) return;
+  data.tasks.forEach(t => {
+    if (!t.assignee || t.assignee === '미배정') return;
     if (!map[t.assignee]) map[t.assignee] = { doing: 0, review: 0, delayed: 0 };
-    if (t.status === 'doing' || t.status === 'wip') map[t.assignee].doing++;
-    if (t.status === 'review') map[t.assignee].review++;
+    if (['doing', 'wip'].includes(t.status)) map[t.assignee].doing++;
+    if (t.status === 'review')  map[t.assignee].review++;
     if (t.status === 'delayed') map[t.assignee].delayed++;
   });
 
   const entries = Object.entries(map).filter(([, v]) => v.doing + v.review + v.delayed > 0);
-  if (entries.length === 0) { bar.style.display = 'none'; return; }
+
+  if (entries.length === 0) {
+    bar.innerHTML = '<span style="font-size:12px;color:#9CA3AF;padding:0 16px">현재 진행 중인 업무가 없습니다</span>';
+    bar.style.display = 'flex';
+    return;
+  }
 
   bar.style.display = 'flex';
   bar.innerHTML = entries.map(([name, cnt]) => {
@@ -1046,14 +1052,12 @@ function updateMemberStatusBar() {
       cnt.doing   ? `<span class="msb-badge doing">${cnt.doing}개 진행중</span>` : '',
       cnt.review  ? `<span class="msb-badge review">${cnt.review}개 완료요청</span>` : '',
       cnt.delayed ? `<span class="msb-badge delayed">${cnt.delayed}개 지연</span>` : '',
-    ].join('');
-    return `
-      <div class="msb-item">
-        <div class="msb-avatar">${initial}</div>
-        <span class="msb-name">${name}</span>
-        ${badges}
-      </div>
-    `;
+    ].filter(Boolean).join('');
+    return `<div class="msb-item">
+      <div class="msb-avatar">${initial}</div>
+      <span class="msb-name">${name}</span>
+      ${badges}
+    </div>`;
   }).join('<div class="msb-sep"></div>');
 }
 
