@@ -799,6 +799,81 @@ export class Graph {
       this._transform();
       this.cb.onViewportChange?.(this.offsetX, this.offsetY, this.scale);
     }, { passive: false });
+
+    // ── 터치 제스처 ──────────────────────────────────────
+    let _tc = null; // touch context
+
+    this.container.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 1) {
+        _tc = {
+          x: e.touches[0].clientX,
+          y: e.touches[0].clientY,
+          ox: this.offsetX,
+          oy: this.offsetY,
+          time: Date.now(),
+          moved: false,
+          tapCount: _tc?.tapCount || 0,
+          lastTap: _tc?.lastTap || 0,
+        };
+      } else if (e.touches.length === 2) {
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        _tc = { ..._tc, pinchDist: Math.sqrt(dx*dx + dy*dy), pinching: true };
+      }
+    }, { passive: true });
+
+    this.container.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      if (!_tc) return;
+
+      if (e.touches.length === 1 && !_tc.pinching) {
+        const dx = e.touches[0].clientX - _tc.x;
+        const dy = e.touches[0].clientY - _tc.y;
+        if (Math.abs(dx) > 3 || Math.abs(dy) > 3) _tc.moved = true;
+        this.offsetX = _tc.ox + dx;
+        this.offsetY = _tc.oy + dy;
+        this._transform();
+        this.cb.onViewportChange?.(this.offsetX, this.offsetY, this.scale);
+
+      } else if (e.touches.length === 2 && _tc.pinchDist) {
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        const ratio = dist / _tc.pinchDist;
+        const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        const cy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+        const rect = this.container.getBoundingClientRect();
+        const mx = cx - rect.left;
+        const my = cy - rect.top;
+        const newScale = Math.min(3, Math.max(0.2, this.scale * ratio));
+        this.offsetX = mx - (mx - this.offsetX) * (newScale / this.scale);
+        this.offsetY = my - (my - this.offsetY) * (newScale / this.scale);
+        this.scale = newScale;
+        _tc.pinchDist = dist;
+        this._transform();
+        this.cb.onViewportChange?.(this.offsetX, this.offsetY, this.scale);
+      }
+    }, { passive: false });
+
+    this.container.addEventListener('touchend', (e) => {
+      if (!_tc) return;
+      const t = e.changedTouches[0];
+      const dt = Date.now() - _tc.time;
+
+      if (!_tc.moved && !_tc.pinching && dt < 300) {
+        const el = document.elementFromPoint(t.clientX, t.clientY);
+        if (el) {
+          const now = Date.now();
+          if (now - (_tc.lastTap || 0) < 300) {
+            el.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, clientX: t.clientX, clientY: t.clientY }));
+          } else {
+            el.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: t.clientX, clientY: t.clientY }));
+          }
+          _tc.lastTap = now;
+        }
+      }
+      if (e.touches.length === 0) _tc = null;
+    }, { passive: true });
   }
 
   _transform() {

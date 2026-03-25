@@ -16,7 +16,7 @@ import {
 } from './data.js';
 import { Graph } from './graph.js';
 
-const VERSION = 'v2.47';
+const VERSION = 'v2.48';
 
 let data = null;
 let graph = null;
@@ -670,6 +670,31 @@ async function startApp() {
   const onlinePanel = document.getElementById('online-panel');
   if (onlinePanel) makeDraggable(onlinePanel);
   initCollapsible();
+  initMobileSidebar();
+}
+
+// 모바일 사이드바 토글
+function initMobileSidebar() {
+  const btn = document.getElementById('btn-mobile-sidebar');
+  const sidebar = document.getElementById('view-sidebar');
+  const overlay = document.getElementById('sidebar-overlay');
+  if (!btn || !sidebar) return;
+
+  btn.addEventListener('click', () => {
+    sidebar.classList.toggle('mobile-open');
+    overlay.classList.toggle('show');
+  });
+
+  overlay.addEventListener('click', () => {
+    sidebar.classList.remove('mobile-open');
+    overlay.classList.remove('show');
+  });
+
+  // 캔버스 터치 시 사이드바 닫기
+  document.getElementById('graph-container')?.addEventListener('touchstart', () => {
+    sidebar.classList.remove('mobile-open');
+    overlay.classList.remove('show');
+  }, { passive: true });
 }
 
 // ── 권한 매트릭스 ─────────────────────────────────────────

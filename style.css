@@ -1561,3 +1561,66 @@ body {
   padding: 1px 5px;
   flex-shrink: 0;
 }
+
+/* ── 모바일 전용 버튼 ── */
+#btn-mobile-sidebar { display: none; }
+@media (max-width: 768px) {
+  #btn-mobile-sidebar { display: flex; }
+}
+
+@media (max-width: 768px) {
+  /* 툴바 간소화 */
+  #toolbar { padding: 0 8px; gap: 4px; overflow-x: auto; }
+
+  /* 사이드바: 숨겼다가 버튼으로 슬라이드 인 */
+  #view-sidebar {
+    position: fixed !important;
+    left: -220px;
+    top: 52px;
+    height: calc(100vh - 52px);
+    z-index: 150;
+    transition: left 0.25s ease;
+    box-shadow: 4px 0 12px rgba(0,0,0,0.12);
+    width: 200px !important;
+  }
+  #view-sidebar.mobile-open {
+    left: 0 !important;
+  }
+
+  /* 사이드바 열릴 때 배경 오버레이 */
+  #sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 52px 0 0 0;
+    background: rgba(0,0,0,0.3);
+    z-index: 140;
+  }
+  #sidebar-overlay.show { display: block; }
+
+  /* 사이드 패널 전체 너비 */
+  #side-panel.open {
+    width: 100vw !important;
+    position: fixed !important;
+    top: 52px;
+    left: 0;
+    height: calc(100vh - 52px);
+    z-index: 200;
+    overflow-y: auto;
+  }
+
+  /* 노드 터치 영역 확보 */
+  .nh {
+    width: 20px !important;
+    height: 20px !important;
+  }
+
+  /* 오버뷰 바 숨김 */
+  #overview-bar { display: none !important; }
+
+  /* 모달 전체 너비 */
+  .modal-box {
+    width: 95vw !important;
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+}
