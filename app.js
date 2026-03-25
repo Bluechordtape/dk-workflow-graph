@@ -16,7 +16,7 @@ import {
 } from './data.js';
 import { Graph } from './graph.js';
 
-const VERSION = 'v3.02';
+const VERSION = 'v3.03';
 
 let data = null;
 let graph = null;
@@ -1074,8 +1074,9 @@ function updateMemberStatusBar() {
   });
 
   const entries = Object.entries(map).filter(([, tasks]) => tasks.length > 0);
+  bar.style.display = 'flex';
   if (entries.length === 0) {
-    bar.style.display = 'none';
+    bar.innerHTML = '<span style="font-size:12px;color:#9CA3AF;padding:0 16px">현재 진행 중인 업무가 없습니다</span>';
     return;
   }
 
