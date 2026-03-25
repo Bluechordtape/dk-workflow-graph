@@ -2,14 +2,14 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>DK Workflow</title>
   <link rel="preconnect" href="https://cdn.jsdelivr.net">
   <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=3.03">
+  <link rel="stylesheet" href="style.css?v=3.04">
   <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
@@ -80,6 +80,22 @@
     <span id="loading-version" style="font-size:11px;color:#BDBDBD;margin-top:4px">v2.23</span>
   </div>
 </div>
+
+<header id="mobile-header" style="display:none">
+  <div class="mobile-header-logo">
+    <svg width="20" height="20" viewBox="0 0 20 20">
+      <rect x="1" y="1" width="8" height="8" rx="2" fill="#EBEBEB"/>
+      <rect x="11" y="1" width="8" height="8" rx="2" fill="#212121"/>
+      <rect x="1" y="11" width="8" height="8" rx="2" fill="#212121"/>
+      <rect x="11" y="11" width="8" height="8" rx="2" fill="#C8102E"/>
+    </svg>
+    <span class="mobile-header-title">Loom</span>
+  </div>
+  <div class="mobile-header-right">
+    <button class="mobile-add-btn" id="m-btn-add-task-header">+ 업무</button>
+    <button class="mobile-header-btn" id="m-btn-fit">⊡</button>
+  </div>
+</header>
 
 <!-- ── 툴바 ── -->
 <div id="toolbar">
@@ -272,6 +288,35 @@
       <button id="btn-copy-task" class="btn-small" style="display:none">↗ 다른 시트로 복제</button>
 
     </div>
+  </div>
+</div>
+
+<!-- 현황 탭 -->
+<div id="mobile-panel-status" class="mobile-panel hidden">
+  <div class="mobile-panel-header">담당자 현황</div>
+  <div id="mobile-status-list"></div>
+</div>
+
+<!-- 활동 탭 -->
+<div id="mobile-panel-activity" class="mobile-panel hidden">
+  <div class="mobile-panel-header">최근 활동</div>
+  <div id="mobile-activity-list"></div>
+</div>
+
+<!-- 메뉴 탭 -->
+<div id="mobile-panel-menu" class="mobile-panel hidden">
+  <div class="mobile-panel-header">메뉴</div>
+  <div class="mobile-menu-list">
+    <div class="mobile-menu-section">프로젝트</div>
+    <div id="mobile-project-list"></div>
+    <div class="mobile-menu-section">기능</div>
+    <button class="mobile-menu-item" id="m-btn-add-task">+ 업무 추가</button>
+    <button class="mobile-menu-item" id="m-btn-add-project">+ 프로젝트 추가</button>
+    <button class="mobile-menu-item" id="m-btn-template">템플릿</button>
+    <button class="mobile-menu-item" id="m-btn-backup">백업</button>
+    <div class="mobile-menu-section">계정</div>
+    <div id="mobile-user-info" class="mobile-menu-item"></div>
+    <button class="mobile-menu-item danger" id="m-btn-logout">로그아웃</button>
   </div>
 </div>
 
@@ -555,6 +600,40 @@
   </div>
 </div>
 
-<script type="module" src="app.js?v=3.03"></script>
+<nav id="mobile-tabbar">
+  <button class="tab-item active" data-tab="graph">
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+      <rect x="2" y="2" width="6" height="6" rx="1.5" fill="currentColor"/>
+      <rect x="12" y="2" width="6" height="6" rx="1.5" fill="currentColor" opacity="0.4"/>
+      <rect x="2" y="12" width="6" height="6" rx="1.5" fill="currentColor" opacity="0.4"/>
+      <rect x="12" y="12" width="6" height="6" rx="1.5" fill="currentColor"/>
+    </svg>
+    <span>그래프</span>
+  </button>
+  <button class="tab-item" data-tab="status">
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+      <circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="1.5"/>
+      <path d="M10 6v4l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>
+    <span>현황</span>
+  </button>
+  <button class="tab-item" data-tab="activity">
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+      <path d="M4 4h12v10H4z" stroke="currentColor" stroke-width="1.5" rx="2"/>
+      <path d="M7 8h6M7 11h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>
+    <span>활동</span>
+  </button>
+  <button class="tab-item" data-tab="menu">
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+      <circle cx="10" cy="10" r="2" fill="currentColor"/>
+      <circle cx="4" cy="10" r="2" fill="currentColor"/>
+      <circle cx="16" cy="10" r="2" fill="currentColor"/>
+    </svg>
+    <span>메뉴</span>
+  </button>
+</nav>
+
+<script type="module" src="app.js?v=3.04"></script>
 </body>
 </html>

@@ -310,6 +310,7 @@ function initSocket() {
     updateMemberStatusBar();
     renderActivityFeed();
     if (viewMode === 'calendar') renderCalendar();
+    refreshActiveMobileTab();
   });
   socket.on('users:online', (users) => {
     renderOnlineUsers(users);
@@ -673,6 +674,7 @@ async function startApp() {
   initCollapsible();
   initMobileSidebar();
   initSidebarResize();
+  initMobileTabs();
 }
 
 function initSidebarResize() {
@@ -2202,6 +2204,179 @@ document.getElementById('btn-backup-create').addEventListener('click', async () 
     await refreshBackupList();
   } catch (err) { alert(err.message); }
 });
+
+// ── 모바일 탭바 ──────────────────────────────────────────
+function initMobileTabs() {
+  if (window.innerWidth > 768) return;
+
+  const tabs = document.querySelectorAll('.tab-item');
+  const panels = {
+    graph: null,
+    status: document.getElementById('mobile-panel-status'),
+    activity: document.getElementById('mobile-panel-activity'),
+    menu: document.getElementById('mobile-panel-menu'),
+  };
+
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      tabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      const name = tab.dataset.tab;
+
+      Object.values(panels).forEach(p => p?.classList.add('hidden'));
+
+      if (name === 'graph') {
+        // 그래프 그대로
+      } else {
+        panels[name]?.classList.remove('hidden');
+        if (name === 'status') renderMobileStatus();
+        if (name === 'activity') renderMobileActivity();
+        if (name === 'menu') renderMobileMenu();
+      }
+    });
+  });
+
+  document.getElementById('m-btn-add-task-header')?.addEventListener('click', () => {
+    document.getElementById('btn-add-task')?.click();
+  });
+  document.getElementById('m-btn-fit')?.addEventListener('click', () => {
+    graph?.resetView();
+  });
+
+  document.getElementById('m-btn-add-task')?.addEventListener('click', () => {
+    document.getElementById('btn-add-task')?.click();
+    switchTab('graph');
+  });
+  document.getElementById('m-btn-add-project')?.addEventListener('click', () => {
+    document.getElementById('btn-add-project')?.click();
+    switchTab('graph');
+  });
+  document.getElementById('m-btn-template')?.addEventListener('click', () => {
+    document.getElementById('btn-template-load')?.click();
+  });
+  document.getElementById('m-btn-backup')?.addEventListener('click', () => {
+    document.getElementById('btn-backup')?.click();
+  });
+  document.getElementById('m-btn-logout')?.addEventListener('click', () => {
+    document.getElementById('btn-logout')?.click();
+  });
+}
+
+function switchTab(name) {
+  document.querySelectorAll('.tab-item').forEach(t => {
+    t.classList.toggle('active', t.dataset.tab === name);
+  });
+  ['status','activity','menu'].forEach(p => {
+    document.getElementById(`mobile-panel-${p}`)?.classList.toggle('hidden', p !== name);
+  });
+}
+
+function refreshActiveMobileTab() {
+  if (window.innerWidth > 768) return;
+  const active = document.querySelector('.tab-item.active');
+  if (!active) return;
+  const name = active.dataset.tab;
+  if (name === 'status') renderMobileStatus();
+  if (name === 'activity') renderMobileActivity();
+}
+
+function renderMobileStatus() {
+  const list = document.getElementById('mobile-status-list');
+  if (!list || !data) return;
+
+  const map = {};
+  data.tasks.forEach(t => {
+    if (!t.assignee || t.assignee === '미배정') return;
+    if (!['doing','wip','review','delayed'].includes(t.status)) return;
+    if (!map[t.assignee]) map[t.assignee] = [];
+    map[t.assignee].push(t);
+  });
+
+  const colorMap = {
+    doing:   { bar: '#7C3AED', bg: '#EDE9FE', text: '#5B21B6', label: '진행 중' },
+    wip:     { bar: '#7C3AED', bg: '#EDE9FE', text: '#5B21B6', label: '진행 중' },
+    review:  { bar: '#EAB308', bg: '#FEF9C3', text: '#854D0E', label: '완료요청' },
+    delayed: { bar: '#EF4444', bg: '#FEE2E2', text: '#991B1B', label: '지연' },
+  };
+
+  list.innerHTML = '';
+  if (Object.keys(map).length === 0) {
+    list.innerHTML = '<div style="padding:24px;text-align:center;color:#9CA3AF;font-size:14px">진행 중인 업무가 없습니다</div>';
+    return;
+  }
+
+  Object.entries(map).forEach(([name, tasks]) => {
+    const item = document.createElement('div');
+    item.className = 'mobile-status-item';
+    item.innerHTML = `
+      <div class="mobile-status-header">
+        <div class="mobile-status-avatar">${name.charAt(0)}</div>
+        <span class="mobile-status-name">${name}</span>
+        <span class="mobile-status-count">${tasks.length}개</span>
+      </div>
+      ${tasks.map(t => {
+        const c = colorMap[t.status] || colorMap.doing;
+        return `<div class="mobile-task-row">
+          <div class="mobile-task-bar" style="background:${c.bar}"></div>
+          <span class="mobile-task-name">${t.name}</span>
+          <span class="mobile-task-badge" style="background:${c.bg};color:${c.text}">${c.label}</span>
+        </div>`;
+      }).join('')}
+    `;
+    list.appendChild(item);
+  });
+}
+
+function renderMobileActivity() {
+  const list = document.getElementById('mobile-activity-list');
+  if (!list) return;
+  list.innerHTML = '';
+  if (activityLog.length === 0) {
+    list.innerHTML = '<div style="padding:24px;text-align:center;color:#9CA3AF;font-size:14px">최근 활동이 없습니다</div>';
+    return;
+  }
+  activityLog.slice(0, 20).forEach(a => {
+    const item = document.createElement('div');
+    item.className = 'mobile-activity-item';
+    item.innerHTML = `
+      <div class="mobile-activity-msg">${a.msg}</div>
+      <div class="mobile-activity-meta">${a.project || ''} · ${getElapsed(a.time)}</div>
+    `;
+    list.appendChild(item);
+  });
+}
+
+function renderMobileMenu() {
+  const userInfo = document.getElementById('mobile-user-info');
+  if (userInfo && currentUser) {
+    userInfo.textContent = `${currentUser.name} (${currentUser.role})`;
+    userInfo.style.color = '#9CA3AF';
+    userInfo.style.fontSize = '14px';
+  }
+
+  const projList = document.getElementById('mobile-project-list');
+  if (projList && data) {
+    projList.innerHTML = '';
+    data.projects.forEach(p => {
+      const item = document.createElement('div');
+      item.className = 'mobile-project-item';
+      const isHidden = hiddenProjectIds.has(p.id);
+      item.innerHTML = `
+        <input type="checkbox" ${!isHidden ? 'checked' : ''}
+          style="width:18px;height:18px;accent-color:#212121;flex-shrink:0">
+        <div class="mobile-project-dot" style="background:${p.color||'#212121'}"></div>
+        <span class="mobile-project-name">${p.name}</span>
+      `;
+      item.querySelector('input').addEventListener('change', (e) => {
+        if (e.target.checked) hiddenProjectIds.delete(p.id);
+        else hiddenProjectIds.add(p.id);
+        graph.setData(filteredData());
+        updateOverview();
+      });
+      projList.appendChild(item);
+    });
+  }
+}
 
 // ── 진입점 ───────────────────────────────────────────────
 window.__doLogin = doLogin;

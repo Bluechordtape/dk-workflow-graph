@@ -1708,3 +1708,296 @@ body {
     overflow-y: auto;
   }
 }
+
+/* ── 모바일 탭바 & 패널 (max-width: 768px) ───────────────── */
+@media (max-width: 768px) {
+
+  /* 기존 툴바/사이드바 완전 숨김 */
+  #toolbar { display: none !important; }
+  #view-sidebar { display: none !important; }
+  #overview-bar { display: none !important; }
+  #member-status-bar { display: none !important; }
+  #online-panel { display: none !important; }
+  #sidebar-resizer { display: none !important; }
+
+  /* 모바일 헤더 */
+  #mobile-header {
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    height: 52px;
+    background: #FFFFFF;
+    border-bottom: 1px solid #E5E7EB;
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+  }
+  .mobile-header-logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .mobile-header-title {
+    font-size: 16px;
+    font-weight: 800;
+    color: #212121;
+    letter-spacing: -0.5px;
+  }
+  .mobile-header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .mobile-header-btn {
+    width: 36px;
+    height: 36px;
+    border: none;
+    background: #F3F4F6;
+    border-radius: 8px;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  .mobile-add-btn {
+    height: 36px;
+    padding: 0 14px;
+    background: #C8102E;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  /* 메인 영역 조정 */
+  #main {
+    margin-top: 52px !important;
+    margin-bottom: 56px !important;
+    height: calc(100vh - 52px - 56px) !important;
+  }
+  #graph-container {
+    height: 100% !important;
+  }
+
+  /* 하단 탭바 */
+  #mobile-tabbar {
+    display: flex !important;
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    height: 56px;
+    background: #FFFFFF;
+    border-top: 1px solid #E5E7EB;
+    z-index: 100;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .tab-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    border: none;
+    background: none;
+    color: #9CA3AF;
+    font-size: 10px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .tab-item.active { color: #C8102E; }
+  .tab-item svg { flex-shrink: 0; }
+
+  /* 모바일 패널 */
+  .mobile-panel {
+    position: fixed;
+    top: 52px;
+    left: 0; right: 0;
+    bottom: 56px;
+    background: #F9FAFB;
+    z-index: 90;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .mobile-panel.hidden { display: none !important; }
+  .mobile-panel-header {
+    padding: 16px 16px 8px;
+    font-size: 18px;
+    font-weight: 800;
+    color: #212121;
+    letter-spacing: -0.5px;
+    background: #fff;
+    border-bottom: 1px solid #E5E7EB;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+
+  /* 현황 탭 */
+  .mobile-status-item {
+    background: #fff;
+    margin: 8px 12px;
+    border-radius: 12px;
+    border: 1px solid #E5E7EB;
+    overflow: hidden;
+  }
+  .mobile-status-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    border-bottom: 1px solid #F3F4F6;
+  }
+  .mobile-status-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #212121;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .mobile-status-name {
+    font-size: 14px;
+    font-weight: 700;
+    color: #212121;
+  }
+  .mobile-status-count {
+    font-size: 12px;
+    color: #9CA3AF;
+    margin-left: auto;
+  }
+  .mobile-task-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-bottom: 1px solid #F9FAFB;
+  }
+  .mobile-task-bar {
+    width: 3px;
+    height: 28px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+  .mobile-task-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #111827;
+    flex: 1;
+  }
+  .mobile-task-badge {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+  }
+
+  /* 활동 탭 */
+  .mobile-activity-item {
+    background: #fff;
+    margin: 4px 12px;
+    border-radius: 10px;
+    padding: 12px 14px;
+    border: 1px solid #F3F4F6;
+  }
+  .mobile-activity-msg {
+    font-size: 13px;
+    color: #374151;
+    line-height: 1.5;
+  }
+  .mobile-activity-meta {
+    font-size: 11px;
+    color: #9CA3AF;
+    margin-top: 4px;
+  }
+
+  /* 메뉴 탭 */
+  .mobile-menu-section {
+    padding: 14px 16px 6px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #9CA3AF;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+  }
+  .mobile-menu-item {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding: 14px 16px;
+    background: #fff;
+    border: none;
+    border-bottom: 1px solid #F3F4F6;
+    font-size: 15px;
+    color: #212121;
+    text-align: left;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .mobile-menu-item.danger { color: #C8102E; }
+  .mobile-project-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background: #fff;
+    border-bottom: 1px solid #F3F4F6;
+  }
+  .mobile-project-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+  .mobile-project-name {
+    font-size: 14px;
+    color: #212121;
+    flex: 1;
+  }
+
+  /* 사이드 패널 전체화면 */
+  #side-panel.open {
+    width: 100vw !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    height: 100vh !important;
+    z-index: 300 !important;
+    overflow-y: auto !important;
+  }
+  #panel-close {
+    width: 44px !important;
+    height: 44px !important;
+    font-size: 22px !important;
+  }
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    font-size: 16px !important;
+    min-height: 44px !important;
+  }
+  .btn-row button { min-height: 48px !important; font-size: 15px !important; }
+
+  /* 모달 */
+  .modal-box { width: 95vw !important; max-height: 85vh; overflow-y: auto; }
+
+  /* 노드 터치 영역 */
+  .nh { width: 22px !important; height: 22px !important; }
+}
+
+/* 데스크탑에서 모바일 전용 요소 숨김 */
+@media (min-width: 769px) {
+  #mobile-tabbar { display: none !important; }
+  #mobile-header { display: none !important; }
+  .mobile-panel { display: none !important; }
+}
