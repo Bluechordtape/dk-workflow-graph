@@ -1,6 +1,6 @@
 {
   "name": "dk-workflow-graph",
-  "version": "1.0.13",
+  "version": "1.0.14",
   "description": "DK Workflow Graph - 실시간 협업 워크플로우 시각화",
   "main": "server/index.js",
   "scripts": {

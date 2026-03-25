@@ -1145,8 +1145,10 @@ function focusTask(taskId) {
     animateViewport(targetX, targetY, graph.scale);
   } else {
     const pos = userLayout?.tasks?.[taskId] || { x: task.x, y: task.y };
-    const targetX = cw / 2 - (pos.x + 115) * targetScale;
-    const targetY = ch / 2 - (pos.y + 50) * targetScale;
+    const nodeCenterX = pos.x + 230 / 2;
+    const nodeCenterY = pos.y + 100 / 2;
+    const targetX = cw / 2 - nodeCenterX * targetScale;
+    const targetY = ch / 2 - nodeCenterY * targetScale;
     animateViewport(targetX, targetY, targetScale);
   }
 
