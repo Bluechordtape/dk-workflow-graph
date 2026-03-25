@@ -1129,35 +1129,36 @@ function focusTask(taskId) {
 
   if (window.innerWidth <= 768) switchTab('graph');
 
-  const pos = (userLayout?.tasks?.[taskId]) || { x: task.x, y: task.y };
-
-  const nodeW = 230;
-  const nodeH = 100;
-
+  const nodeEl = document.querySelector(`.task-node[data-id="${taskId}"]`);
   const container = document.getElementById('graph-container');
   const cw = container.clientWidth;
   const ch = container.clientHeight;
-
   const targetScale = Math.max(graph.scale, 0.8);
 
-  const nodeCenterX = pos.x + nodeW / 2;
-  const nodeCenterY = pos.y + nodeH / 2;
-
-  const targetX = cw / 2 - nodeCenterX * targetScale;
-  const targetY = ch / 2 - nodeCenterY * targetScale;
-
-  animateViewport(targetX, targetY, targetScale);
+  if (nodeEl) {
+    const rect = nodeEl.getBoundingClientRect();
+    const containerRect = container.getBoundingClientRect();
+    const nodeCenterX = rect.left - containerRect.left + rect.width / 2;
+    const nodeCenterY = rect.top - containerRect.top + rect.height / 2;
+    const targetX = graph.offsetX + (cw / 2 - nodeCenterX);
+    const targetY = graph.offsetY + (ch / 2 - nodeCenterY);
+    animateViewport(targetX, targetY, graph.scale);
+  } else {
+    const pos = userLayout?.tasks?.[taskId] || { x: task.x, y: task.y };
+    const targetX = cw / 2 - (pos.x + 115) * targetScale;
+    const targetY = ch / 2 - (pos.y + 50) * targetScale;
+    animateViewport(targetX, targetY, targetScale);
+  }
 
   setTimeout(() => {
-    const nodeEl = document.querySelector(`.task-node[data-id="${taskId}"] .node-inner`);
-    if (nodeEl) {
-      const orig = nodeEl.style.boxShadow;
-      nodeEl.style.transition = 'box-shadow 0.2s';
-      nodeEl.style.boxShadow = '0 0 0 3px #C8102E';
+    const inner = document.querySelector(`.task-node[data-id="${taskId}"] .node-inner`);
+    if (inner) {
+      inner.style.transition = 'box-shadow 0.2s';
+      inner.style.boxShadow = '0 0 0 3px #C8102E';
       setTimeout(() => {
-        nodeEl.style.boxShadow = orig;
-        setTimeout(() => nodeEl.style.transition = '', 300);
-      }, 800);
+        inner.style.boxShadow = '';
+        setTimeout(() => inner.style.transition = '', 300);
+      }, 1000);
     }
   }, 420);
 }
