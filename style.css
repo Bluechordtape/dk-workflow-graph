@@ -1681,16 +1681,7 @@ body {
   }
   #sidebar-overlay.show { display: block; }
 
-  /* 사이드 패널 전체 너비 */
-  #side-panel.open {
-    width: 100vw !important;
-    position: fixed !important;
-    top: 52px;
-    left: 0;
-    height: calc(100vh - 52px);
-    z-index: 200;
-    overflow-y: auto;
-  }
+  /* 사이드 패널 — 하단 블록에서 재정의됨 */
 
   /* 노드 터치 영역 확보 */
   .nh {
@@ -1973,20 +1964,93 @@ body {
     left: 0 !important;
     height: 100vh !important;
     z-index: 300 !important;
-    overflow-y: auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
   }
+
+  /* 헤더 고정 */
+  .panel-header {
+    flex-shrink: 0 !important;
+    padding: 16px 20px !important;
+    border-bottom: 1px solid #E5E7EB !important;
+  }
+
+  /* 닫기 버튼 크게 */
   #panel-close {
     width: 44px !important;
     height: 44px !important;
     font-size: 22px !important;
   }
-  .form-group input,
-  .form-group select,
-  .form-group textarea {
-    font-size: 16px !important;
-    min-height: 44px !important;
+
+  /* 스크롤 영역 */
+  .panel-body {
+    flex: 1 !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    padding: 16px 20px !important;
+    padding-bottom: 120px !important;
   }
-  .btn-row button { min-height: 48px !important; font-size: 15px !important; }
+
+  /* 입력 필드 크게 */
+  .form-group input,
+  .form-group select {
+    font-size: 16px !important;
+    min-height: 48px !important;
+    padding: 12px 14px !important;
+  }
+
+  .form-group label {
+    font-size: 13px !important;
+    margin-bottom: 6px !important;
+  }
+
+  /* 메모 textarea 크게 */
+  .form-group textarea,
+  #task-note {
+    font-size: 16px !important;
+    min-height: 140px !important;
+    padding: 12px 14px !important;
+    line-height: 1.6 !important;
+  }
+
+  /* 저장/삭제 버튼 하단 고정 */
+  .btn-row {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    padding: 12px 16px !important;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom)) !important;
+    background: #fff !important;
+    border-top: 1px solid #E5E7EB !important;
+    z-index: 10 !important;
+    display: flex !important;
+    gap: 10px !important;
+  }
+
+  .btn-row button {
+    flex: 1 !important;
+    min-height: 52px !important;
+    font-size: 16px !important;
+    font-weight: 700 !important;
+    border-radius: 10px !important;
+  }
+
+  /* 세부업무 행 터치 영역 */
+  .subtask-row {
+    min-height: 44px !important;
+    gap: 10px !important;
+  }
+  .subtask-row input[type=checkbox] {
+    width: 20px !important;
+    height: 20px !important;
+  }
+  .sub-del {
+    width: 36px !important;
+    height: 36px !important;
+    font-size: 20px !important;
+  }
 
   /* 모달 */
   .modal-box { width: 95vw !important; max-height: 85vh; overflow-y: auto; }
