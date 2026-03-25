@@ -1129,27 +1129,37 @@ function focusTask(taskId) {
 
   if (window.innerWidth <= 768) switchTab('graph');
 
-  const pos = userLayout?.tasks?.[taskId] || { x: task.x, y: task.y };
+  const pos = (userLayout?.tasks?.[taskId]) || { x: task.x, y: task.y };
+
+  const nodeW = 230;
+  const nodeH = 100;
+
   const container = document.getElementById('graph-container');
-  const cx = container.clientWidth / 2;
-  const cy = container.clientHeight / 2;
-  const targetScale = Math.min(graph.scale, 1.2);
-  const targetX = cx - pos.x * targetScale - 95 * targetScale;
-  const targetY = cy - pos.y * targetScale - 44 * targetScale;
+  const cw = container.clientWidth;
+  const ch = container.clientHeight;
+
+  const targetScale = Math.max(graph.scale, 0.8);
+
+  const nodeCenterX = pos.x + nodeW / 2;
+  const nodeCenterY = pos.y + nodeH / 2;
+
+  const targetX = cw / 2 - nodeCenterX * targetScale;
+  const targetY = ch / 2 - nodeCenterY * targetScale;
 
   animateViewport(targetX, targetY, targetScale);
 
   setTimeout(() => {
-    const nodeEl = document.querySelector(`.task-node[data-id="${taskId}"]`);
+    const nodeEl = document.querySelector(`.task-node[data-id="${taskId}"] .node-inner`);
     if (nodeEl) {
-      nodeEl.style.transition = 'opacity 0.3s';
-      nodeEl.style.opacity = '0.3';
+      const orig = nodeEl.style.boxShadow;
+      nodeEl.style.transition = 'box-shadow 0.2s';
+      nodeEl.style.boxShadow = '0 0 0 3px #C8102E';
       setTimeout(() => {
-        nodeEl.style.opacity = '1';
+        nodeEl.style.boxShadow = orig;
         setTimeout(() => nodeEl.style.transition = '', 300);
-      }, 300);
+      }, 800);
     }
-  }, 400);
+  }, 420);
 }
 
 function animateViewport(targetX, targetY, targetScale) {
