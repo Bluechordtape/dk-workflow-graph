@@ -430,7 +430,7 @@ async function loadActivityLog() {
   } catch {}
 }
 
-function pushActivity(type, taskName, projectName) {
+function pushActivity(type, taskName, projectName, customMsg) {
   if (!currentUser || !socket) return;
   const messages = {
     start:   `${currentUser.name}님이 [${taskName}]을 시작했습니다`,
@@ -438,6 +438,9 @@ function pushActivity(type, taskName, projectName) {
     confirm: `${currentUser.name}님이 [${taskName}]을 완료 확정했습니다`,
     reject:  `${currentUser.name}님이 [${taskName}]을 반려했습니다`,
     create:  `${currentUser.name}님이 [${taskName}]을 추가했습니다`,
+    delayed: `${currentUser.name}님이 [${taskName}]을 지연으로 표시했습니다`,
+    pending: `${currentUser.name}님이 [${taskName}]을 착수전으로 변경했습니다`,
+    custom:  customMsg ? `${currentUser.name}님이 ${customMsg}` : '',
   };
   const msg = messages[type];
   if (!msg) return;
@@ -445,16 +448,28 @@ function pushActivity(type, taskName, projectName) {
     id: Date.now(),
     msg,
     project: projectName || '',
+    userName: currentUser.name,
     time: new Date().toISOString(),
   });
 }
 
 function _emitStatusActivity(oldStatus, newStatus, taskName, projectName) {
   if (oldStatus === newStatus) return;
-  if (oldStatus === 'pending' && newStatus === 'doing') pushActivity('start', taskName, projectName);
-  else if (oldStatus === 'doing' && newStatus === 'review') pushActivity('review', taskName, projectName);
-  else if (oldStatus === 'review' && newStatus === 'done') pushActivity('confirm', taskName, projectName);
-  else if (oldStatus === 'review' && newStatus === 'doing') pushActivity('reject', taskName, projectName);
+  const statusMessages = {
+    doing:   `[${taskName}]을 시작했습니다`,
+    pending: `[${taskName}]을 착수전으로 변경했습니다`,
+    review:  `[${taskName}] 완료요청을 했습니다`,
+    done:    `[${taskName}]을 완료 확정했습니다`,
+    delayed: `[${taskName}]을 지연으로 표시했습니다`,
+  };
+  // review→doing은 반려
+  if (oldStatus === 'review' && newStatus === 'doing') {
+    pushActivity('reject', taskName, projectName);
+    return;
+  }
+  if (statusMessages[newStatus]) {
+    pushActivity('custom', taskName, projectName, statusMessages[newStatus]);
+  }
 }
 
 // ── 뷰포트 저장/로드 ──────────────────────────────────────
