@@ -1562,6 +1562,65 @@ body {
   flex-shrink: 0;
 }
 
+/* ── 담당자별 현황 바 ── */
+#member-status-bar {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 0 16px;
+  height: 40px;
+  background: #FFFFFF;
+  border-bottom: 1px solid #E5E7EB;
+  flex-shrink: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+#member-status-bar::-webkit-scrollbar { display: none; }
+
+.msb-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  flex-shrink: 0;
+}
+.msb-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #212121;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.msb-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: #212121;
+  white-space: nowrap;
+}
+.msb-badge {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.msb-badge.doing   { background: #EDE9FE; color: #5B21B6; }
+.msb-badge.review  { background: #FEF9C3; color: #854D0E; }
+.msb-badge.delayed { background: #FEE2E2; color: #991B1B; }
+.msb-sep {
+  width: 1px;
+  height: 20px;
+  background: #E5E7EB;
+  flex-shrink: 0;
+}
+
 /* ── 모바일 전용 버튼 ── */
 #btn-mobile-sidebar { display: none; }
 @media (max-width: 768px) {

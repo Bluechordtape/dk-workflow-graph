@@ -16,7 +16,7 @@ import {
 } from './data.js';
 import { Graph } from './graph.js';
 
-const VERSION = 'v2.48';
+const VERSION = 'v2.49';
 
 let data = null;
 let graph = null;
@@ -1020,6 +1020,41 @@ function applyFilter() {
     status:   document.getElementById('filter-status').value
   });
   updateOverview();
+  updateMemberStatusBar();
+}
+
+function updateMemberStatusBar() {
+  const bar = document.getElementById('member-status-bar');
+  if (!bar || !data) return;
+
+  const map = {};
+  (data.tasks || []).forEach(t => {
+    if (!t.assignee) return;
+    if (!map[t.assignee]) map[t.assignee] = { doing: 0, review: 0, delayed: 0 };
+    if (t.status === 'doing' || t.status === 'wip') map[t.assignee].doing++;
+    if (t.status === 'review') map[t.assignee].review++;
+    if (t.status === 'delayed') map[t.assignee].delayed++;
+  });
+
+  const entries = Object.entries(map).filter(([, v]) => v.doing + v.review + v.delayed > 0);
+  if (entries.length === 0) { bar.style.display = 'none'; return; }
+
+  bar.style.display = 'flex';
+  bar.innerHTML = entries.map(([name, cnt]) => {
+    const initial = name.charAt(0);
+    const badges = [
+      cnt.doing   ? `<span class="msb-badge doing">${cnt.doing}개 진행중</span>` : '',
+      cnt.review  ? `<span class="msb-badge review">${cnt.review}개 완료요청</span>` : '',
+      cnt.delayed ? `<span class="msb-badge delayed">${cnt.delayed}개 지연</span>` : '',
+    ].join('');
+    return `
+      <div class="msb-item">
+        <div class="msb-avatar">${initial}</div>
+        <span class="msb-name">${name}</span>
+        ${badges}
+      </div>
+    `;
+  }).join('<div class="msb-sep"></div>');
 }
 
 function updateOverview() {
@@ -1403,9 +1438,6 @@ function setupToolbar() {
   });
   document.getElementById('btn-logout').addEventListener('click', () => {
     if (confirm(`${currentUser?.name}님, 로그아웃 하시겠습니까?`)) logout();
-  });
-  document.getElementById('btn-reconnect-socket').addEventListener('click', () => {
-    reconnectSocket();
   });
   document.getElementById('btn-view-graph').addEventListener('click', () => setViewMode('graph'));
   document.getElementById('btn-view-calendar').addEventListener('click', () => setViewMode('calendar'));
