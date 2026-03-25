@@ -401,12 +401,13 @@ function renderActivityFeed() {
   feed.innerHTML = '';
   activityLog.slice(0, 10).forEach(a => {
     const item = document.createElement('div');
-    item.className = 'activity-item';
+    item.className = 'activity-item' + (a.taskId ? ' clickable' : '');
     const elapsed = getElapsed(a.time);
     item.innerHTML = `
       <div class="activity-msg">${a.msg}</div>
       <div class="activity-meta">${a.project ? a.project + ' · ' : ''}${elapsed}</div>
     `;
+    if (a.taskId) item.addEventListener('click', () => focusTask(a.taskId));
     feed.appendChild(item);
   });
 }
@@ -424,13 +425,14 @@ async function loadActivityLog() {
       id: r.id,
       msg: r.msg,
       project: r.project_name,
+      taskId: r.task_id || null,
       time: r.created_at,
     }));
     renderActivityFeed();
   } catch {}
 }
 
-function pushActivity(type, taskName, projectName, customMsg) {
+function pushActivity(type, taskName, projectName, customMsg, taskId) {
   if (!currentUser || !socket) return;
   const messages = {
     start:   `${currentUser.name}님이 [${taskName}]을 시작했습니다`,
@@ -448,12 +450,13 @@ function pushActivity(type, taskName, projectName, customMsg) {
     id: Date.now(),
     msg,
     project: projectName || '',
+    taskId: taskId || null,
     userName: currentUser.name,
     time: new Date().toISOString(),
   });
 }
 
-function _emitStatusActivity(oldStatus, newStatus, taskName, projectName) {
+function _emitStatusActivity(oldStatus, newStatus, taskName, projectName, taskId) {
   if (oldStatus === newStatus) return;
   const statusMessages = {
     doing:   `[${taskName}]을 시작했습니다`,
@@ -464,11 +467,11 @@ function _emitStatusActivity(oldStatus, newStatus, taskName, projectName) {
   };
   // review→doing은 반려
   if (oldStatus === 'review' && newStatus === 'doing') {
-    pushActivity('reject', taskName, projectName);
+    pushActivity('reject', taskName, projectName, null, taskId);
     return;
   }
   if (statusMessages[newStatus]) {
-    pushActivity('custom', taskName, projectName, statusMessages[newStatus]);
+    pushActivity('custom', taskName, projectName, statusMessages[newStatus], taskId);
   }
 }
 
@@ -625,7 +628,7 @@ async function startApp() {
           buildFilters();
           if (activeTaskId === taskId) document.getElementById('task-status').value = st;
         }
-        _emitStatusActivity(_scOld, st, _scName, _scProj);
+        _emitStatusActivity(_scOld, st, _scName, _scProj, taskId);
       },
       onNodeMoved: (moved) => {
         if (!moved) return;
@@ -1569,7 +1572,7 @@ function setupToolbar() {
     saveData(data);
     graph.setData(filteredData());
     const _addProj = (data.projects || []).find(p => p.id === task.projectId)?.name || '';
-    pushActivity('create', task.name || '새 업무', _addProj);
+    pushActivity('create', task.name || '새 업무', _addProj, null, task.id);
     openPanel(task);
   });
   document.getElementById('btn-perm').addEventListener('click', openPermModal);
@@ -1793,7 +1796,7 @@ async function saveTask() {
       buildFilters();
     } catch (err) { alert(err.message); return; }
   }
-  _emitStatusActivity(_stOldStatus, _stNewStatus, _stName, _stProj);
+  _emitStatusActivity(_stOldStatus, _stNewStatus, _stName, _stProj, activeTaskId);
   closePanel();
 }
 
@@ -2419,11 +2422,12 @@ function renderMobileActivity() {
   }
   activityLog.slice(0, 20).forEach(a => {
     const item = document.createElement('div');
-    item.className = 'mobile-activity-item';
+    item.className = 'mobile-activity-item' + (a.taskId ? ' clickable' : '');
     item.innerHTML = `
       <div class="mobile-activity-msg">${a.msg}</div>
       <div class="mobile-activity-meta">${a.project || ''} · ${getElapsed(a.time)}</div>
     `;
+    if (a.taskId) item.addEventListener('click', () => { focusTask(a.taskId); switchTab('graph'); });
     list.appendChild(item);
   });
 }

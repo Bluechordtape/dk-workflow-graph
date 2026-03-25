@@ -10,7 +10,7 @@ module.exports = function () {
   router.get('/activity', authenticateToken, async (req, res) => {
     try {
       const result = await pool.query(
-        'SELECT * FROM activity_log ORDER BY created_at DESC LIMIT 10'
+        'SELECT id, msg, project_name, user_name, task_id, created_at FROM activity_log ORDER BY created_at DESC LIMIT 10'
       );
       res.json(result.rows);
     } catch (err) {

@@ -41,9 +41,13 @@ pool.query(`
     msg TEXT NOT NULL,
     project_name TEXT,
     user_name TEXT,
+    task_id TEXT,
     created_at TIMESTAMP DEFAULT NOW()
   )
 `).catch(err => console.error('[DB] activity_log 테이블 생성 실패:', err.message));
+
+pool.query('ALTER TABLE activity_log ADD COLUMN IF NOT EXISTS task_id TEXT')
+  .catch(err => console.error('[DB] task_id 컬럼 추가 실패:', err.message));
 
 // ── 미들웨어 ──────────────────────────────────────────────
 app.use(express.json({ limit: '10mb' }));
@@ -112,8 +116,8 @@ io.on('connection', (socket) => {
   socket.on('activity:push', async (activity) => {
     try {
       await pool.query(
-        'INSERT INTO activity_log (msg, project_name, user_name) VALUES ($1, $2, $3)',
-        [activity.msg, activity.project || '', activity.userName || '']
+        'INSERT INTO activity_log (msg, project_name, user_name, task_id) VALUES ($1, $2, $3, $4)',
+        [activity.msg, activity.project || '', activity.userName || '', activity.taskId || null]
       );
       await pool.query(
         'DELETE FROM activity_log WHERE id NOT IN (SELECT id FROM activity_log ORDER BY created_at DESC LIMIT 100)'
