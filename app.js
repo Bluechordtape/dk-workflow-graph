@@ -675,6 +675,7 @@ async function startApp() {
   initMobileSidebar();
   initSidebarResize();
   initMobileTabs();
+  setTimeout(() => updateMemberStatusBar(), 100);
 }
 
 function initSidebarResize() {
@@ -1072,7 +1073,7 @@ function updateMemberStatusBar() {
     const s = t.status;
     if (!['doing', 'wip', 'review', 'delayed'].includes(s)) return;
     if (!map[t.assignee]) map[t.assignee] = [];
-    map[t.assignee].push({ name: t.name, status: s });
+    map[t.assignee].push({ id: t.id, name: t.name, status: s });
   });
 
   const entries = Object.entries(map).filter(([, tasks]) => tasks.length > 0);
@@ -1093,7 +1094,7 @@ function updateMemberStatusBar() {
   bar.innerHTML = entries.map(([name, tasks]) => {
     const initial = name.charAt(0);
     const pills = tasks.map(t =>
-      `<span class="msb-pill" style="${colorMap[t.status] || ''}">${t.name}</span>`
+      `<span class="msb-pill" style="${colorMap[t.status] || ''};cursor:pointer" data-task-id="${t.id}" title="${t.name} 클릭하여 이동">${t.name}</span>`
     ).join('');
     return `<div class="msb-item">
       <div class="msb-avatar">${initial}</div>
@@ -1101,6 +1102,59 @@ function updateMemberStatusBar() {
       <div class="msb-pills">${pills}</div>
     </div>`;
   }).join('<div class="msb-sep"></div>');
+
+  bar.querySelectorAll('.msb-pill[data-task-id]').forEach(pill => {
+    pill.addEventListener('click', () => focusTask(pill.dataset.taskId));
+  });
+}
+
+function focusTask(taskId) {
+  const task = data.tasks.find(t => t.id === taskId);
+  if (!task || !graph) return;
+
+  if (window.innerWidth <= 768) switchTab('graph');
+
+  const pos = userLayout?.tasks?.[taskId] || { x: task.x, y: task.y };
+  const container = document.getElementById('graph-container');
+  const cx = container.clientWidth / 2;
+  const cy = container.clientHeight / 2;
+  const targetScale = Math.min(graph.scale, 1.2);
+  const targetX = cx - pos.x * targetScale - 95 * targetScale;
+  const targetY = cy - pos.y * targetScale - 44 * targetScale;
+
+  animateViewport(targetX, targetY, targetScale);
+
+  setTimeout(() => {
+    const nodeEl = document.querySelector(`.task-node[data-id="${taskId}"]`);
+    if (nodeEl) {
+      nodeEl.style.transition = 'opacity 0.3s';
+      nodeEl.style.opacity = '0.3';
+      setTimeout(() => {
+        nodeEl.style.opacity = '1';
+        setTimeout(() => nodeEl.style.transition = '', 300);
+      }, 300);
+    }
+  }, 400);
+}
+
+function animateViewport(targetX, targetY, targetScale) {
+  const startX = graph.offsetX;
+  const startY = graph.offsetY;
+  const startScale = graph.scale;
+  const duration = 400;
+  const start = performance.now();
+
+  function step(now) {
+    const t = Math.min((now - start) / duration, 1);
+    const ease = t < 0.5 ? 2*t*t : -1+(4-2*t)*t;
+    graph.offsetX = startX + (targetX - startX) * ease;
+    graph.offsetY = startY + (targetY - startY) * ease;
+    graph.scale   = startScale + (targetScale - startScale) * ease;
+    graph._transform();
+    if (t < 1) requestAnimationFrame(step);
+    else graph.cb.onViewportChange?.(graph.offsetX, graph.offsetY, graph.scale);
+  }
+  requestAnimationFrame(step);
 }
 
 function updateOverview() {
