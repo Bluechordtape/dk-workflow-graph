@@ -918,6 +918,21 @@ body {
 }
 .tmpl-del:hover { background: #F5F5F5; color: #C8102E; }
 
+/* ── 사이드바 리사이저 ── */
+#sidebar-resizer {
+  width: 4px;
+  background: transparent;
+  cursor: col-resize;
+  flex-shrink: 0;
+  transition: background 0.15s;
+  position: relative;
+  z-index: 10;
+}
+#sidebar-resizer:hover,
+#sidebar-resizer.dragging {
+  background: #C8102E;
+}
+
 /* ── 뷰 사이드바 ─────────────────────────────────────────── */
 #view-sidebar {
   width: 200px;

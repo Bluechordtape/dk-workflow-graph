@@ -16,7 +16,7 @@ import {
 } from './data.js';
 import { Graph } from './graph.js';
 
-const VERSION = 'v3.01';
+const VERSION = 'v3.02';
 
 let data = null;
 let graph = null;
@@ -672,6 +672,42 @@ async function startApp() {
   if (onlinePanel) makeDraggable(onlinePanel);
   initCollapsible();
   initMobileSidebar();
+  initSidebarResize();
+}
+
+function initSidebarResize() {
+  const resizer = document.getElementById('sidebar-resizer');
+  const sidebar = document.getElementById('view-sidebar');
+  if (!resizer || !sidebar) return;
+
+  let startX, startW;
+
+  resizer.addEventListener('mousedown', (e) => {
+    startX = e.clientX;
+    startW = sidebar.offsetWidth;
+    resizer.classList.add('dragging');
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    const onMove = (e) => {
+      const newW = Math.max(140, Math.min(400, startW + (e.clientX - startX)));
+      sidebar.style.width = newW + 'px';
+    };
+    const onUp = () => {
+      resizer.classList.remove('dragging');
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      localStorage.setItem('sidebar-width', sidebar.offsetWidth);
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+    e.preventDefault();
+  });
+
+  const saved = localStorage.getItem('sidebar-width');
+  if (saved) sidebar.style.width = saved + 'px';
 }
 
 // 모바일 사이드바 토글
@@ -1209,20 +1245,55 @@ function renderProjectSection() {
   const section = document.getElementById('sidebar-projects');
   if (!section) return;
   section.innerHTML = '';
+
   (data.projects || []).filter(p => !p.archived).forEach(p => {
-    const item = document.createElement('label');
+    const item = document.createElement('div');
     item.className = 'sidebar-project-item';
-    item.innerHTML = `
-      <input type="checkbox" ${!hiddenProjectIds.has(p.id) ? 'checked' : ''}>
-      <span class="sidebar-project-dot" style="background:${p.color || '#212121'}"></span>
-      <span class="sidebar-project-name">${p.name}</span>
-    `;
-    item.querySelector('input').addEventListener('change', (e) => {
+
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = !hiddenProjectIds.has(p.id);
+    cb.addEventListener('change', (e) => {
+      e.stopPropagation();
       if (e.target.checked) hiddenProjectIds.delete(p.id);
       else hiddenProjectIds.add(p.id);
       graph.setData(filteredData());
       updateOverview();
+      updateMemberStatusBar();
     });
+
+    const dot = document.createElement('span');
+    dot.className = 'sidebar-project-dot';
+    dot.style.background = p.color || '#212121';
+
+    const name = document.createElement('span');
+    name.className = 'sidebar-project-name';
+    name.textContent = p.name;
+    name.style.cursor = 'pointer';
+    name.style.flex = '1';
+    name.title = p.name;
+
+    const isSolo = hiddenProjectIds.size === (data.projects.filter(x => !x.archived).length - 1) && !hiddenProjectIds.has(p.id);
+    if (isSolo) name.style.fontWeight = '700';
+
+    name.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const allOthersHidden = data.projects.filter(x => !x.archived && x.id !== p.id).every(x => hiddenProjectIds.has(x.id));
+      if (allOthersHidden) {
+        hiddenProjectIds.clear();
+      } else {
+        hiddenProjectIds.clear();
+        data.projects.forEach(x => { if (x.id !== p.id) hiddenProjectIds.add(x.id); });
+      }
+      graph.setData(filteredData());
+      updateOverview();
+      updateMemberStatusBar();
+      renderProjectSection();
+    });
+
+    item.appendChild(cb);
+    item.appendChild(dot);
+    item.appendChild(name);
     section.appendChild(item);
   });
 }
