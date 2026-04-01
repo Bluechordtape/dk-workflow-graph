@@ -2,6 +2,8 @@
 
 export const NODE_W = 230;
 export const NODE_H = 118;
+export const DONE_NODE_W = 153;
+export const DONE_NODE_H = 79;
 
 // Layout constants
 const PROJECT_HEADER_H = 52;
@@ -417,8 +419,8 @@ export class Graph {
       el.querySelectorAll('.nh').forEach(h => {
         h.addEventListener('mousedown', (e) => {
           e.stopPropagation(); e.preventDefault();
-          const cx = h.dataset.side === 'right' ? task.x + NODE_W : task.x;
-          const cy = task.y + NODE_H / 2;
+          const cx = h.dataset.side === 'right' ? task.x + DONE_NODE_W : task.x;
+          const cy = task.y + DONE_NODE_H / 2;
           this._conn = { fromId: task.id, fromType: 'task', x: cx, y: cy };
           this.tempPath.style.display = '';
         });
@@ -518,13 +520,16 @@ export class Graph {
 
       let x1, y1, x2, y2;
       if (fromTask) {
-        x1 = fromTask.x + NODE_W; y1 = fromTask.y + NODE_H / 2;
+        const fw = fromTask.status === 'done' ? DONE_NODE_W : NODE_W;
+        const fh = fromTask.status === 'done' ? DONE_NODE_H : NODE_H;
+        x1 = fromTask.x + fw; y1 = fromTask.y + fh / 2;
       } else {
         const b = this._groupBBox(fromGroup);
         x1 = b.x + b.w; y1 = b.y + b.h / 2;
       }
       if (toTask) {
-        x2 = toTask.x; y2 = toTask.y + NODE_H / 2;
+        const th = toTask.status === 'done' ? DONE_NODE_H : NODE_H;
+        x2 = toTask.x; y2 = toTask.y + th / 2;
       } else {
         const b = this._groupBBox(toGroup);
         x2 = b.x; y2 = b.y + b.h / 2;
