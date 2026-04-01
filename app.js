@@ -1,4 +1,4 @@
-// app.js
+﻿// app.js
 import {
   loadData, saveData, saveTaskStatus, exportJSON, importJSON,
   setSocketId, setToken, setSocket,
