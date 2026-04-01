@@ -61,17 +61,17 @@ export class Graph {
     const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
     defs.innerHTML = `
       <marker id="arr" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto" markerUnits="strokeWidth">
-        <path d="M0,0 L7,2.5 L0,5 Z" fill="#6B7280"/>
+        <path d="M0,0 L7,2.5 L0,5 Z" fill="#B5BCC8"/>
       </marker>
       <marker id="arr-group" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto" markerUnits="strokeWidth">
-        <path d="M0,0 L7,2.5 L0,5 Z" fill="#6B7280"/>
+        <path d="M0,0 L7,2.5 L0,5 Z" fill="#B5BCC8"/>
       </marker>`;
     this.svg.appendChild(defs);
 
     this.tempPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     this.tempPath.setAttribute('fill', 'none');
-    this.tempPath.setAttribute('stroke', '#6B7280');
-    this.tempPath.setAttribute('stroke-width', '2');
+    this.tempPath.setAttribute('stroke', '#B5BCC8');
+    this.tempPath.setAttribute('stroke-width', '1.5');
     this.tempPath.setAttribute('stroke-dasharray', '6,3');
     this.tempPath.style.display = 'none';
     this.svg.appendChild(this.tempPath);
@@ -533,7 +533,7 @@ export class Graph {
       const isGroup = !fromTask || !toTask;
       const cx = (x1 + x2) / 2;
 
-      const normalStroke = '#6B7280';
+      const normalStroke = '#B5BCC8';
       const midX = cx;
       const midY = (y1 + y2) / 2;
 
@@ -542,7 +542,7 @@ export class Graph {
       path.setAttribute('d', `M${x1},${y1} C${cx},${y1} ${cx},${y2} ${x2},${y2}`);
       path.setAttribute('fill', 'none');
       path.setAttribute('stroke', normalStroke);
-      path.setAttribute('stroke-width', '2');
+      path.setAttribute('stroke-width', '1.5');
       if (isGroup) path.setAttribute('stroke-dasharray', '4 4');
       path.setAttribute('marker-end', isGroup ? 'url(#arr-group)' : 'url(#arr)');
       path.style.pointerEvents = 'none';
@@ -647,7 +647,7 @@ export class Graph {
       if (c.tagName !== 'defs' && c !== this.tempPath) {
         const isConn = connectedFlows.has(c.dataset?.flowId);
         c.style.opacity = isConn ? '1' : '0.15';
-        if (isConn) { c.setAttribute('stroke', '#212121'); c.setAttribute('stroke-width', '2'); }
+        if (isConn) { c.setAttribute('stroke', '#6B7280'); c.setAttribute('stroke-width', '1.5'); }
       }
     });
   }
@@ -659,8 +659,8 @@ export class Graph {
     Array.from(this.svg.children).forEach(c => {
       if (c.tagName !== 'defs' && c !== this.tempPath) {
         c.style.opacity = '';
-        c.setAttribute('stroke', '#6B7280');
-        c.setAttribute('stroke-width', '2');
+        c.setAttribute('stroke', '#B5BCC8');
+        c.setAttribute('stroke-width', '1.5');
       }
     });
   }
