@@ -1016,6 +1016,10 @@ body {
 #sidebar-projects {
   overflow-y: visible;
 }
+#sidebar-activity {
+  max-height: 420px;
+  overflow-y: auto;
+}
 .sidebar-section-body.collapsed { max-height: 0 !important; }
 .activity-item {
   padding: 7px 12px;

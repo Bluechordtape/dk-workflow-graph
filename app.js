@@ -16,7 +16,7 @@ import {
 } from './data.js';
 import { Graph } from './graph.js';
 
-const VERSION = 'v3.03';
+const VERSION = +n+;
 
 let data = null;
 let graph = null;
@@ -399,7 +399,7 @@ function renderActivityFeed() {
   const feed = document.getElementById('sidebar-activity');
   if (!feed) return;
   feed.innerHTML = '';
-  activityLog.slice(0, 10).forEach(a => {
+  activityLog.slice(0, 30).forEach(a => {
     const item = document.createElement('div');
     item.className = 'activity-item' + (a.taskId ? ' clickable' : '');
     const elapsed = getElapsed(a.time);
