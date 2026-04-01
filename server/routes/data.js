@@ -100,7 +100,7 @@ module.exports = function (io) {
 
   // PATCH /api/data/task-status — 자기 담당 업무 상태 변경
   router.patch('/data/task-status', authenticateToken, async (req, res) => {
-    const { taskId, status } = req.body;
+    const { taskId, status, done_color } = req.body;
     const memberStatuses = ['pending', 'doing', 'delayed', 'review'];
     const mgmtStatuses = ['done'];
     const allAllowed = [...memberStatuses, ...mgmtStatuses];
@@ -144,6 +144,9 @@ module.exports = function (io) {
       }
 
       task.status = status;
+      if (status === 'done' && done_color && ['red', 'black'].includes(done_color)) {
+        if (!task.done_color) task.done_color = done_color;
+      }
 
       await pool.query(`
         INSERT INTO workflow_data (id, data, updated_at)

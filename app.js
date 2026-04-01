@@ -16,7 +16,7 @@ import {
 } from './data.js';
 import { Graph } from './graph.js';
 
-const VERSION = 'v3.13';
+const VERSION = 'v3.14';
 
 let data = null;
 let graph = null;
@@ -601,7 +601,7 @@ async function startApp() {
         if (!canWrite()) { stopGlow(); return; }
         showFlowDeletePopup(flowId, midX, midY, stopGlow);
       },
-      onStatusChange: async (taskId, st) => {
+      onStatusChange: async (taskId, st, done_color) => {
         console.log('[STATUS] 변경:', taskId, st, '| canWrite:', canWrite());
         const _scTask = data.tasks.find(t => t.id === taskId);
         if (!_scTask) { console.warn('[STATUS] task 없음:', taskId); return; }
@@ -611,7 +611,7 @@ async function startApp() {
         if (!canWrite()) {
           console.log('[STATUS] saveTaskStatus 경로 (member)');
           try {
-            const result = await saveTaskStatus(taskId, st);
+            const result = await saveTaskStatus(taskId, st, null, done_color);
             data = normalize(result.data);
             console.log('[STATUS] socket emit data:sync (member)');
             socket?.emit('data:sync', { timestamp: Date.now() });
@@ -622,7 +622,9 @@ async function startApp() {
         } else {
           console.log('[STATUS] saveData 경로 (canWrite)');
           pushUndo();
-          updateTask(data, taskId, { status: st });
+          const updates = { status: st };
+          if (st === 'done' && done_color && !_scTask.done_color) updates.done_color = done_color;
+          updateTask(data, taskId, updates);
           saveData(data);
           graph.setData(filteredData());
           buildFilters();

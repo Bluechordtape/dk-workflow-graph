@@ -135,13 +135,15 @@ export async function updateTaskMember(taskId, updates) {
 }
 
 // ── 상태만 변경 (member 전용) ─────────────────────────────
-export async function saveTaskStatus(taskId, status, socketId) {
+export async function saveTaskStatus(taskId, status, socketId, done_color) {
   const headers = authHeaders();
   if (socketId) headers['x-socket-id'] = socketId;
+  const body = { taskId, status };
+  if (done_color) body.done_color = done_color;
   const res = await fetch('/api/data/task-status', {
     method: 'PATCH',
     headers,
-    body: JSON.stringify({ taskId, status })
+    body: JSON.stringify(body)
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));

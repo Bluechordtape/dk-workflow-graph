@@ -1,9 +1,9 @@
 ﻿// graph.js — 3-tier hierarchy: Project > Group(Category) > Task
 
-export const NODE_W = 230;
-export const NODE_H = 118;
-export const DONE_NODE_W = 153;
-export const DONE_NODE_H = 79;
+export const NODE_W = 200;
+export const NODE_H = 60;
+export const DONE_NODE_W = 28;
+export const DONE_NODE_H = 28;
 
 // Layout constants
 const PROJECT_HEADER_H = 52;
@@ -18,12 +18,28 @@ const MIN_GROUP_W      = 270;
 const MIN_GROUP_H      = 100;
 
 const STATUS = {
-  pending: { label: '착수전',   bar: '#D1D5DB', bg: '#F3F4F6', text: '#4B5563', bdg: '#E5E7EB' },
-  doing:   { label: '진행 중',  bar: '#7C3AED', bg: '#EDE9FE', text: '#5B21B6', bdg: '#C4B5FD' },
-  delayed: { label: '지연',     bar: '#EF4444', bg: '#FEE2E2', text: '#991B1B', bdg: '#FECACA' },
-  review:  { label: '완료요청', bar: '#EAB308', bg: '#FEF9C3', text: '#854D0E', bdg: '#FCD34D' },
-  done:    { label: '완료',     bar: '#22C55E', bg: '#DCFCE7', text: '#15803D', bdg: '#86EFAC' },
+  pending: { label: '착수전',   ico: '▶', color: '#FAC775', lbl: '#856a30', bg: '#1a1500', border: '#5a4a00' },
+  doing:   { label: '진행중',   ico: '⏸', color: '#378ADD', lbl: '#378ADD', bg: '#0d1620', border: '#378ADD' },
+  review:  { label: '완료요청', ico: '↑', color: '#7F77DD', lbl: '#7F77DD', bg: '#151320', border: '#7F77DD' },
+  done:    { label: '완료',     ico: '✓', color: '#1D9E75', lbl: '#1D9E75', bg: '#0d1a15', border: '#1D9E75' },
+  delayed: { label: '지연',     ico: '▶', color: '#E03535', lbl: '#E03535', bg: '#1f0d0d', border: '#E03535' },
 };
+
+const STATUS_CYCLE = ['pending', 'doing', 'review', 'done', 'delayed'];
+
+const EDGE_COLOR = {
+  pending: '#FAC775',
+  doing:   '#378ADD',
+  review:  '#7F77DD',
+  done:    '#1D9E75',
+  delayed: '#E03535',
+};
+
+function getDoneColor(task) {
+  if (task.done_color) return task.done_color;
+  const hash = String(task.id).split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+  return hash % 11 < 3 ? 'red' : 'black';
+}
 
 export class Graph {
   constructor(container, cb) {
@@ -61,18 +77,19 @@ export class Graph {
     this.svg.style.cssText = 'position:absolute;top:0;left:0;pointer-events:none;overflow:visible;';
 
     const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-    defs.innerHTML = `
-      <marker id="arr" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto" markerUnits="strokeWidth">
-        <path d="M0,0 L7,2.5 L0,5 Z" fill="#B5BCC8"/>
-      </marker>
-      <marker id="arr-group" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto" markerUnits="strokeWidth">
-        <path d="M0,0 L7,2.5 L0,5 Z" fill="#B5BCC8"/>
+    const markerDefs = Object.entries(EDGE_COLOR).map(([k, col]) => `
+      <marker id="arr-${k}" markerWidth="6" markerHeight="5" refX="5" refY="2.5" orient="auto" markerUnits="strokeWidth">
+        <polygon points="-5,-3 1,0 -5,3" fill="${col}" opacity="0.8" transform="translate(6,2.5)"/>
+      </marker>`).join('');
+    defs.innerHTML = markerDefs + `
+      <marker id="arr-group" markerWidth="6" markerHeight="5" refX="5" refY="2.5" orient="auto" markerUnits="strokeWidth">
+        <polygon points="-5,-3 1,0 -5,3" fill="#555" opacity="0.8" transform="translate(6,2.5)"/>
       </marker>`;
     this.svg.appendChild(defs);
 
     this.tempPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     this.tempPath.setAttribute('fill', 'none');
-    this.tempPath.setAttribute('stroke', '#B5BCC8');
+    this.tempPath.setAttribute('stroke', '#555');
     this.tempPath.setAttribute('stroke-width', '1.5');
     this.tempPath.setAttribute('stroke-dasharray', '6,3');
     this.tempPath.style.display = 'none';
@@ -267,10 +284,10 @@ export class Graph {
     pill.className = 'project-label-pill';
     pill.style.cssText = `
       display:inline-flex;align-items:center;gap:8px;
-      padding:6px 16px;border-radius:100px;
-      background:#F3F4F6;color:#212121;
-      border:1.5px solid #E5E7EB;
-      font-size:21px;font-weight:800;letter-spacing:-0.5px;
+      padding:4px 14px;border-radius:0;
+      background:#1e1e1e;color:#aaa;
+      border:1px solid #2e2e2e;
+      font-size:18px;font-weight:700;letter-spacing:-0.5px;
     `;
     pill.appendChild(colorDot);
     pill.appendChild(document.createTextNode(project.name));
@@ -318,7 +335,7 @@ export class Graph {
     colorBar.style.background = group.color;
 
     const nameSpan = document.createElement('span');
-    nameSpan.style.cssText = 'font-size:15px;font-weight:700;color:#374151;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
+    nameSpan.style.cssText = 'font-size:13px;font-weight:600;color:#666;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
     nameSpan.textContent = group.name;
 
     header.appendChild(colorBar);
@@ -382,39 +399,36 @@ export class Graph {
   }
 
   _makeNode(task, color, dim) {
-    const st = STATUS[task.status] || STATUS.pending;
     const el = document.createElement('div');
     el.className = 'task-node' + (dim ? ' dim' : '');
     el.dataset.id = task.id;
     el.style.left = `${task.x}px`;
     el.style.top  = `${task.y}px`;
-    el.style.setProperty('--sc', st.bar);
 
-
-    // 완료된 태스크는 간소화된 노드로 표시
+    // ── 완료: 28×28 미니 사각형 ──────────────────────────
     if (task.status === 'done') {
       el.classList.add('task-node-done');
+      const dc = getDoneColor(task);
+      const doneBg     = dc === 'red' ? '#E03535' : '#1a1a1a';
+      const doneBorder = dc === 'red' ? 'none'    : '1.5px solid #444';
       el.innerHTML = `
         <div class="nh nh-l" data-id="${task.id}" data-side="left"></div>
-        <div class="node-done-inner">
-          <span class="node-done-name">${task.name}</span>
-          <div class="node-done-circle">✓</div>
-        </div>
+        <div class="node-done-mini" title="${task.name}" style="background:${doneBg};border:${doneBorder}"></div>
         <div class="nh nh-r" data-id="${task.id}" data-side="right"></div>`;
 
-      const inner = el.querySelector('.node-done-inner');
-      inner.addEventListener('mouseenter', () => this._applyHover(task.id));
-      inner.addEventListener('mouseleave', () => this._clearHover());
-      inner.addEventListener('dblclick', () => this.cb.onNodeClick?.(task));
-      inner.addEventListener('mousedown', (e) => {
+      const mini = el.querySelector('.node-done-mini');
+      mini.addEventListener('mouseenter', () => this._applyHover(task.id));
+      mini.addEventListener('mouseleave', () => this._clearHover());
+      mini.addEventListener('dblclick', () => this.cb.onNodeClick?.(task));
+      mini.addEventListener('mousedown', (e) => {
         if (e.button !== 0) return;
         e.stopPropagation();
-        this._drag = {
-          type: 'task',
-          id:   task.id,
-          sm:   { x: e.clientX, y: e.clientY },
-          sp:   { x: task.x, y: task.y },
-        };
+        this._drag = { type: 'task', id: task.id, sm: { x: e.clientX, y: e.clientY }, sp: { x: task.x, y: task.y } };
+      });
+      mini.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const next = STATUS_CYCLE[(STATUS_CYCLE.indexOf('done') + 1) % STATUS_CYCLE.length];
+        this.cb.onStatusChange?.(task.id, next);
       });
       el.querySelectorAll('.nh').forEach(h => {
         h.addEventListener('mousedown', (e) => {
@@ -428,66 +442,45 @@ export class Graph {
       return el;
     }
 
-    const role   = this.userCtx?.role;
-    const myName = this.userCtx?.name;
-    const isMine = task.assignee === myName;
-    const isMgmt = ['admin', 'leader', 'manager'].includes(role);
-    const canAct  = isMgmt || isMine;
-    const st2 = task.status;
-
-    const isLeader = ['admin', 'leader'].includes(role);
-    let actionBtn = '';
-    if (st2 === 'pending' && canAct)
-      actionBtn = `<button class="node-action btn-start" data-id="${task.id}">▶ 시작</button>`;
-    else if ((st2 === 'doing' || st2 === 'delayed') && canAct)
-      actionBtn = `<button class="node-action btn-req" data-id="${task.id}">완료 요청</button>`;
-    else if (st2 === 'review' && isLeader)
-      actionBtn = `
-        <button class="node-action btn-cfm" data-id="${task.id}">✓ 완료 확정</button>
-        <button class="node-action btn-rej" data-id="${task.id}">반려</button>`;
-    else if (st2 === 'review' && canAct)
-      actionBtn = `<button class="node-action btn-req" data-id="${task.id}">완료 요청</button>`;
-
-    const dday = this._dday(task);
-
+    // ── 일반: orb + 콘텐츠 카드 ──────────────────────────
+    const st = STATUS[task.status] || STATUS.pending;
     el.innerHTML = `
       <div class="nh nh-l" data-id="${task.id}" data-side="left"></div>
-      <div class="node-inner">
-        <div class="node-row1">
-          <span class="node-dot" style="background:${st.bar}"></span>
-          <span class="node-name">${task.name}</span>
-          <span class="node-badge" style="background:${st.bg};color:${st.text};border:1px solid ${st.bdg}">${st.label}</span>
+      <div class="node-card">
+        <div class="node-orb" data-id="${task.id}"
+             style="background:${st.bg};border:2px solid ${st.border}">
+          <span class="orb-ico" style="color:${st.color}">${st.ico}</span>
+          <span class="orb-lbl" style="color:${st.lbl}">${st.label}</span>
         </div>
-        <div class="node-row2">
-          <span class="node-assignee">${task.assignee || '미배정'}</span>
-          ${dday ? `<span class="node-dday" style="color:${dday.color}">${dday.label}</span>` : ''}
+        <div class="node-content">
+          <div class="node-name">${task.name}</div>
+          <div class="node-assignee">${task.assignee || '미배정'}</div>
         </div>
-        ${actionBtn ? `<div class="node-action-row">${actionBtn}</div>` : ''}
       </div>
       <div class="nh nh-r" data-id="${task.id}" data-side="right"></div>`;
 
-    const inner = el.querySelector('.node-inner');
-    inner.addEventListener('mouseenter', () => this._applyHover(task.id));
-    inner.addEventListener('mouseleave', () => this._clearHover());
-    inner.addEventListener('dblclick', (e) => {
-      if (e.target.closest('.node-action')) return;
+    const card = el.querySelector('.node-card');
+    card.addEventListener('mouseenter', () => this._applyHover(task.id));
+    card.addEventListener('mouseleave', () => this._clearHover());
+    card.addEventListener('dblclick', (e) => {
+      if (e.target.closest('.node-orb')) return;
       this.cb.onNodeClick?.(task);
     });
-    inner.addEventListener('mousedown', (e) => {
-      if (e.button !== 0 || e.target.closest('.node-action')) return;
+    card.addEventListener('mousedown', (e) => {
+      if (e.button !== 0 || e.target.closest('.node-orb')) return;
       e.stopPropagation();
-      this._drag = {
-        type: 'task',
-        id:   task.id,
-        sm:   { x: e.clientX, y: e.clientY },
-        sp:   { x: task.x, y: task.y },
-      };
+      this._drag = { type: 'task', id: task.id, sm: { x: e.clientX, y: e.clientY }, sp: { x: task.x, y: task.y } };
     });
 
-    el.querySelector('.btn-start')?.addEventListener('click', (e) => { e.stopPropagation(); this.cb.onStatusChange?.(task.id, 'doing'); });
-    el.querySelector('.btn-req')?.addEventListener('click',   (e) => { e.stopPropagation(); this.cb.onStatusChange?.(task.id, 'review'); });
-    el.querySelector('.btn-cfm')?.addEventListener('click',   (e) => { e.stopPropagation(); this.cb.onStatusChange?.(task.id, 'done'); });
-    el.querySelector('.btn-rej')?.addEventListener('click',   (e) => { e.stopPropagation(); this.cb.onStatusChange?.(task.id, 'doing'); });
+    // orb 클릭 → 상태 순환
+    el.querySelector('.node-orb').addEventListener('click', (e) => {
+      e.stopPropagation();
+      const cur  = task.status || 'pending';
+      const idx  = STATUS_CYCLE.indexOf(cur);
+      const next = STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length];
+      const dc   = next === 'done' ? getDoneColor(task) : undefined;
+      this.cb.onStatusChange?.(task.id, next, dc);
+    });
 
     el.querySelectorAll('.nh').forEach(h => {
       h.addEventListener('mousedown', (e) => {
@@ -518,43 +511,69 @@ export class Graph {
       if (!fromTask && !fromGroup) continue;
       if (!toTask   && !toGroup)   continue;
 
-      let x1, y1, x2, y2;
-      if (fromTask) {
-        const fw = fromTask.status === 'done' ? DONE_NODE_W : NODE_W;
-        const fh = fromTask.status === 'done' ? DONE_NODE_H : NODE_H;
-        x1 = fromTask.x + fw; y1 = fromTask.y + fh / 2;
-      } else {
-        const b = this._groupBBox(fromGroup);
-        x1 = b.x + b.w; y1 = b.y + b.h / 2;
-      }
-      if (toTask) {
-        const th = toTask.status === 'done' ? DONE_NODE_H : NODE_H;
-        x2 = toTask.x; y2 = toTask.y + th / 2;
-      } else {
-        const b = this._groupBBox(toGroup);
-        x2 = b.x; y2 = b.y + b.h / 2;
-      }
+      // 크로스 프로젝트 여부
+      const isCross = fromTask && toTask &&
+        fromTask.projectId && toTask.projectId &&
+        fromTask.projectId !== toTask.projectId;
 
       const isGroup = !fromTask || !toTask;
-      const cx = (x1 + x2) / 2;
+      const fromStatus = fromTask?.status || 'pending';
+      const edgeColor  = EDGE_COLOR[fromStatus] || '#555';
+      const isDashed   = fromStatus === 'delayed';
 
-      const normalStroke = '#B5BCC8';
-      const midX = cx;
+      let x1, y1, x2, y2, pathD;
+
+      if (isCross) {
+        // 수직 S커브: 출발 카드 하단 → 도착 카드 상단
+        const fW = fromTask.status === 'done' ? DONE_NODE_W : NODE_W;
+        const fH = fromTask.status === 'done' ? DONE_NODE_H : NODE_H;
+        const tW = toTask.status   === 'done' ? DONE_NODE_W : NODE_W;
+        x1 = fromTask.x + fW / 2; y1 = fromTask.y + fH;
+        x2 = toTask.x   + tW / 2; y2 = toTask.y;
+        const my = (y1 + y2) / 2;
+        pathD = `M${x1},${y1} C${x1},${my} ${x2},${my} ${x2},${y2}`;
+      } else {
+        // 수평 S커브: 출발 카드 오른쪽 → 도착 카드 왼쪽
+        if (fromTask) {
+          const fw = fromTask.status === 'done' ? DONE_NODE_W : NODE_W;
+          const fh = fromTask.status === 'done' ? DONE_NODE_H : NODE_H;
+          x1 = fromTask.x + fw; y1 = fromTask.y + fh / 2;
+        } else {
+          const b = this._groupBBox(fromGroup);
+          x1 = b.x + b.w; y1 = b.y + b.h / 2;
+        }
+        if (toTask) {
+          const th = toTask.status === 'done' ? DONE_NODE_H : NODE_H;
+          x2 = toTask.x; y2 = toTask.y + th / 2;
+        } else {
+          const b = this._groupBBox(toGroup);
+          x2 = b.x; y2 = b.y + b.h / 2;
+        }
+        const cx = (x1 + x2) / 2;
+        pathD = `M${x1},${y1} C${cx},${y1} ${cx},${y2} ${x2},${y2}`;
+      }
+
+      const midX = (x1 + x2) / 2;
       const midY = (y1 + y2) / 2;
+      const markerId = isGroup ? 'arr-group' : `arr-${fromStatus}`;
 
       // 표시선
       const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      path.setAttribute('d', `M${x1},${y1} C${cx},${y1} ${cx},${y2} ${x2},${y2}`);
+      path.setAttribute('d', pathD);
       path.setAttribute('fill', 'none');
-      path.setAttribute('stroke', normalStroke);
+      path.setAttribute('stroke', edgeColor);
       path.setAttribute('stroke-width', '1.5');
-      if (isGroup) path.setAttribute('stroke-dasharray', '4 4');
-      path.setAttribute('marker-end', isGroup ? 'url(#arr-group)' : 'url(#arr)');
+      path.setAttribute('stroke-linecap', 'round');
+      path.setAttribute('opacity', '0.6');
+      if (isDashed || isGroup) path.setAttribute('stroke-dasharray', isDashed ? '5 4' : '4 4');
+      path.setAttribute('marker-end', `url(#${markerId})`);
+      path.dataset.flowId     = flow.id;
+      path.dataset.normalStroke = edgeColor;
       path.style.pointerEvents = 'none';
 
-      // 히트 영역 (넓은 투명 선, 길게 누르기용)
+      // 히트 영역
       const hitPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      hitPath.setAttribute('d', `M${x1},${y1} C${cx},${y1} ${cx},${y2} ${x2},${y2}`);
+      hitPath.setAttribute('d', pathD);
       hitPath.setAttribute('fill', 'none');
       hitPath.setAttribute('stroke', 'transparent');
       hitPath.setAttribute('stroke-width', '14');
@@ -566,12 +585,12 @@ export class Graph {
       const startGlow = () => {
         path.setAttribute('stroke', '#C8102E');
         path.setAttribute('stroke-width', '2');
-        path.style.filter = 'none';
+        path.setAttribute('opacity', '1');
       };
       const stopGlow = () => {
-        path.setAttribute('stroke', normalStroke);
-        path.setAttribute('stroke-width', '2');
-        path.style.filter = '';
+        path.setAttribute('stroke', edgeColor);
+        path.setAttribute('stroke-width', '1.5');
+        path.setAttribute('opacity', '0.6');
       };
       hitPath.addEventListener('pointerdown', e => {
         e.preventDefault();
@@ -652,7 +671,7 @@ export class Graph {
       if (c.tagName !== 'defs' && c !== this.tempPath) {
         const isConn = connectedFlows.has(c.dataset?.flowId);
         c.style.opacity = isConn ? '1' : '0.15';
-        if (isConn) { c.setAttribute('stroke', '#6B7280'); c.setAttribute('stroke-width', '1.5'); }
+        if (isConn) { c.setAttribute('stroke', c.dataset?.normalStroke || '#555'); c.setAttribute('stroke-width', '2'); c.setAttribute('opacity', '1'); }
       }
     });
   }
@@ -664,8 +683,9 @@ export class Graph {
     Array.from(this.svg.children).forEach(c => {
       if (c.tagName !== 'defs' && c !== this.tempPath) {
         c.style.opacity = '';
-        c.setAttribute('stroke', '#B5BCC8');
+        c.setAttribute('stroke', c.dataset?.normalStroke || '#555');
         c.setAttribute('stroke-width', '1.5');
+        if (c.dataset?.normalStroke) c.setAttribute('opacity', '0.6');
       }
     });
   }
