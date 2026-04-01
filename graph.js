@@ -403,7 +403,7 @@ export class Graph {
       const inner = el.querySelector('.node-done-inner');
       inner.addEventListener('mouseenter', () => this._applyHover(task.id));
       inner.addEventListener('mouseleave', () => this._clearHover());
-      inner.addEventListener('click', () => this.cb.onNodeClick?.(task));
+      inner.addEventListener('dblclick', () => this.cb.onNodeClick?.(task));
       inner.addEventListener('mousedown', (e) => {
         if (e.button !== 0) return;
         e.stopPropagation();
@@ -467,7 +467,7 @@ export class Graph {
     const inner = el.querySelector('.node-inner');
     inner.addEventListener('mouseenter', () => this._applyHover(task.id));
     inner.addEventListener('mouseleave', () => this._clearHover());
-    inner.addEventListener('click', (e) => {
+    inner.addEventListener('dblclick', (e) => {
       if (e.target.closest('.node-action')) return;
       this.cb.onNodeClick?.(task);
     });
