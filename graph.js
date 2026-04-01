@@ -389,6 +389,43 @@ export class Graph {
     el.style.setProperty('--sc', st.bar);
 
 
+    // 완료된 태스크는 간소화된 노드로 표시
+    if (task.status === 'done') {
+      el.classList.add('task-node-done');
+      el.innerHTML = `
+        <div class="nh nh-l" data-id="${task.id}" data-side="left"></div>
+        <div class="node-done-inner">
+          <span class="node-done-name">${task.name}</span>
+          <div class="node-done-circle">✓</div>
+        </div>
+        <div class="nh nh-r" data-id="${task.id}" data-side="right"></div>`;
+
+      const inner = el.querySelector('.node-done-inner');
+      inner.addEventListener('mouseenter', () => this._applyHover(task.id));
+      inner.addEventListener('mouseleave', () => this._clearHover());
+      inner.addEventListener('click', () => this.cb.onNodeClick?.(task));
+      inner.addEventListener('mousedown', (e) => {
+        if (e.button !== 0) return;
+        e.stopPropagation();
+        this._drag = {
+          type: 'task',
+          id:   task.id,
+          sm:   { x: e.clientX, y: e.clientY },
+          sp:   { x: task.x, y: task.y },
+        };
+      });
+      el.querySelectorAll('.nh').forEach(h => {
+        h.addEventListener('mousedown', (e) => {
+          e.stopPropagation(); e.preventDefault();
+          const cx = h.dataset.side === 'right' ? task.x + NODE_W : task.x;
+          const cy = task.y + NODE_H / 2;
+          this._conn = { fromId: task.id, fromType: 'task', x: cx, y: cy };
+          this.tempPath.style.display = '';
+        });
+      });
+      return el;
+    }
+
     const role   = this.userCtx?.role;
     const myName = this.userCtx?.name;
     const isMine = task.assignee === myName;
