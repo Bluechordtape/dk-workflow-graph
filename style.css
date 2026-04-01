@@ -576,8 +576,8 @@ body {
   flex: 1;
   background: #FFFFFF;
   border-radius: 8px;
-  border: 1px solid #A8A8A8;
-  border-left: 4px solid var(--sc, #BDBDBD);
+  border: 2px solid #555555;
+  border-left: 5px solid var(--sc, #888888);
   padding: 10px 12px 0;
   cursor: pointer;
   user-select: none;
@@ -586,12 +586,12 @@ body {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.22);
   transition: box-shadow 0.15s, border-color 0.15s;
 }
 .task-node:hover .node-inner {
-  box-shadow: 0 3px 12px rgba(0,0,0,0.12) !important;
-  border-color: #A8A8A8 !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.28) !important;
+  border-color: #333333 !important;
 }
 
 /* 1행: dot + 업무명 + 상태 뱃지 */
