@@ -1,4 +1,4 @@
-/* style.css */
+﻿/* style.css */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
@@ -110,7 +110,7 @@ body {
 .login-field select {
   height: 42px;
   padding: 0 12px;
-  border: 1px solid #E0E0E0;
+  border: 1px solid #A8A8A8;
   border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
@@ -148,7 +148,7 @@ body {
 .user-btn {
   height: 32px;
   padding: 0 12px;
-  border: 1px solid #E0E0E0 !important;
+  border: 1px solid #A8A8A8 !important;
   border-radius: 6px;
   background: #FAFAFA !important;
   font-size: 12px;
@@ -178,7 +178,7 @@ body {
 .logout-btn {
   height: 32px;
   padding: 0 10px;
-  border: 1px solid #E0E0E0;
+  border: 1px solid #A8A8A8;
   border-radius: 6px;
   background: #FAFAFA;
   font-size: 12px;
@@ -193,7 +193,7 @@ body {
 
 .label-action-btn {
   padding: 1px 6px;
-  border: 1px solid #E0E0E0;
+  border: 1px solid #A8A8A8;
   border-radius: 4px;
   background: none;
   font-size: 10px;
@@ -212,7 +212,7 @@ body {
   padding: 0 16px;
   height: 52px;
   background: #FFFFFF;
-  border-bottom: 1px solid #E0E0E0;
+  border-bottom: 1px solid #A8A8A8;
   flex-shrink: 0;
   z-index: 100;
   overflow: hidden;
@@ -261,7 +261,7 @@ body {
 #toolbar select {
   height: 32px;
   padding: 0 8px;
-  border: 1px solid #E0E0E0;
+  border: 1px solid #A8A8A8;
   border-radius: 6px;
   font-size: 12px;
   font-family: inherit;
@@ -279,7 +279,7 @@ body {
 #toolbar button {
   height: 32px;
   padding: 0 12px;
-  border: 1px solid #E0E0E0;
+  border: 1px solid #A8A8A8;
   border-radius: 6px;
   font-size: 12px;
   font-family: inherit;
@@ -576,7 +576,7 @@ body {
   flex: 1;
   background: #FFFFFF;
   border-radius: 8px;
-  border: 1px solid #E0E0E0;
+  border: 1px solid #A8A8A8;
   border-left: 4px solid var(--sc, #BDBDBD);
   padding: 10px 12px 0;
   cursor: pointer;
@@ -591,7 +591,7 @@ body {
 }
 .task-node:hover .node-inner {
   box-shadow: 0 3px 12px rgba(0,0,0,0.12) !important;
-  border-color: #BDBDBD !important;
+  border-color: #A8A8A8 !important;
 }
 
 /* 1행: dot + 업무명 + 상태 뱃지 */
@@ -686,7 +686,7 @@ body {
   width: 0;
   overflow: hidden;
   background: #FFFFFF;
-  border-left: 1px solid #E0E0E0;
+  border-left: 1px solid #A8A8A8;
   display: flex;
   flex-direction: column;
   transition: width 0.2s ease;
@@ -738,7 +738,7 @@ body {
 .form-group textarea {
   width: 100%;
   padding: 8px 10px;
-  border: 1px solid #E0E0E0;
+  border: 1px solid #A8A8A8;
   border-radius: 7px;
   font-size: 13px;
   font-family: inherit;
@@ -772,7 +772,7 @@ body {
   flex: 1;
   height: 36px;
   border-radius: 7px;
-  border: 1px solid #E0E0E0;
+  border: 1px solid #A8A8A8;
   font-size: 13px;
   font-weight: 600;
   font-family: inherit;
@@ -848,7 +848,7 @@ body {
   height: 36px;
   padding: 0 18px;
   border-radius: 7px;
-  border: 1px solid #E0E0E0;
+  border: 1px solid #A8A8A8;
   font-size: 13px;
   font-weight: 600;
   font-family: inherit;
@@ -1337,7 +1337,7 @@ body {
 }
 .user-item-actions select {
   height: 28px;
-  border: 1px solid #E0E0E0;
+  border: 1px solid #A8A8A8;
   border-radius: 6px;
   font-size: 12px;
   font-family: inherit;
@@ -1349,7 +1349,7 @@ body {
 .btn-small-action {
   height: 28px;
   padding: 0 10px;
-  border: 1px solid #E0E0E0;
+  border: 1px solid #A8A8A8;
   border-radius: 6px;
   background: #FFFFFF;
   font-size: 11px;
@@ -1393,7 +1393,7 @@ body {
 .flow-delete-btns { display: flex; gap: 8px; justify-content: center; }
 .flow-delete-cancel {
   height: 28px; padding: 0 12px;
-  border: 1px solid #E0E0E0; border-radius: 6px;
+  border: 1px solid #A8A8A8; border-radius: 6px;
   background: #FAFAFA; font-size: 12px; font-family: inherit;
   cursor: pointer; color: #374151;
 }
@@ -1416,7 +1416,7 @@ body {
   width: 100%;
   height: 34px;
   padding: 0 10px;
-  border: 1px solid #E0E0E0;
+  border: 1px solid #A8A8A8;
   border-radius: 7px;
   font-size: 13px;
   font-weight: 600;
@@ -2074,3 +2074,4 @@ body {
   #mobile-header { display: none !important; }
   .mobile-panel { display: none !important; }
 }
+

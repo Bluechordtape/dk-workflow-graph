@@ -1,4 +1,4 @@
-// graph.js — 3-tier hierarchy: Project > Group(Category) > Task
+﻿// graph.js — 3-tier hierarchy: Project > Group(Category) > Task
 
 export const NODE_W = 230;
 export const NODE_H = 118;
@@ -61,17 +61,17 @@ export class Graph {
     const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
     defs.innerHTML = `
       <marker id="arr" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto" markerUnits="strokeWidth">
-        <path d="M0,0 L7,2.5 L0,5 Z" fill="#D1D5DB"/>
+        <path d="M0,0 L7,2.5 L0,5 Z" fill="#6B7280"/>
       </marker>
       <marker id="arr-group" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto" markerUnits="strokeWidth">
-        <path d="M0,0 L7,2.5 L0,5 Z" fill="#BDBDBD"/>
+        <path d="M0,0 L7,2.5 L0,5 Z" fill="#6B7280"/>
       </marker>`;
     this.svg.appendChild(defs);
 
     this.tempPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     this.tempPath.setAttribute('fill', 'none');
-    this.tempPath.setAttribute('stroke', '#D1D5DB');
-    this.tempPath.setAttribute('stroke-width', '1.5');
+    this.tempPath.setAttribute('stroke', '#6B7280');
+    this.tempPath.setAttribute('stroke-width', '2');
     this.tempPath.setAttribute('stroke-dasharray', '6,3');
     this.tempPath.style.display = 'none';
     this.svg.appendChild(this.tempPath);
@@ -496,7 +496,7 @@ export class Graph {
       const isGroup = !fromTask || !toTask;
       const cx = (x1 + x2) / 2;
 
-      const normalStroke = isGroup ? '#BDBDBD' : '#D1D5DB';
+      const normalStroke = '#6B7280';
       const midX = cx;
       const midY = (y1 + y2) / 2;
 
@@ -505,7 +505,7 @@ export class Graph {
       path.setAttribute('d', `M${x1},${y1} C${cx},${y1} ${cx},${y2} ${x2},${y2}`);
       path.setAttribute('fill', 'none');
       path.setAttribute('stroke', normalStroke);
-      path.setAttribute('stroke-width', '1.5');
+      path.setAttribute('stroke-width', '2');
       if (isGroup) path.setAttribute('stroke-dasharray', '4 4');
       path.setAttribute('marker-end', isGroup ? 'url(#arr-group)' : 'url(#arr)');
       path.style.pointerEvents = 'none';
@@ -528,7 +528,7 @@ export class Graph {
       };
       const stopGlow = () => {
         path.setAttribute('stroke', normalStroke);
-        path.setAttribute('stroke-width', '1.5');
+        path.setAttribute('stroke-width', '2');
         path.style.filter = '';
       };
       hitPath.addEventListener('pointerdown', e => {
@@ -622,8 +622,8 @@ export class Graph {
     Array.from(this.svg.children).forEach(c => {
       if (c.tagName !== 'defs' && c !== this.tempPath) {
         c.style.opacity = '';
-        c.setAttribute('stroke', '#D1D5DB');
-        c.setAttribute('stroke-width', '1.5');
+        c.setAttribute('stroke', '#6B7280');
+        c.setAttribute('stroke-width', '2');
       }
     });
   }
@@ -881,3 +881,5 @@ export class Graph {
     this.canvas.style.transformOrigin = '0 0';
   }
 }
+
+
