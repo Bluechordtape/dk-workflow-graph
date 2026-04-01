@@ -576,7 +576,7 @@ body {
   flex: 1;
   background: #FFFFFF;
   border-radius: 8px;
-  border: 1.5px solid #C8CDD5;
+  border: 1.5px solid #9CA3AF;
   border-left: 5px solid var(--sc, #888888);
   padding: 10px 12px 0;
   cursor: pointer;
