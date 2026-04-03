@@ -18,11 +18,11 @@ const MIN_GROUP_W      = 270;
 const MIN_GROUP_H      = 100;
 
 const STATUS = {
-  pending: { label: '착수전',   ico: '▶', color: '#FAC775', lbl: '#856a30', bg: '#1a1500', border: '#5a4a00' },
-  doing:   { label: '진행중',   ico: '⏸', color: '#378ADD', lbl: '#378ADD', bg: '#0d1620', border: '#378ADD' },
-  review:  { label: '완료요청', ico: '↑', color: '#7F77DD', lbl: '#7F77DD', bg: '#151320', border: '#7F77DD' },
-  done:    { label: '완료',     ico: '✓', color: '#1D9E75', lbl: '#1D9E75', bg: '#0d1a15', border: '#1D9E75' },
-  delayed: { label: '지연',     ico: '▶', color: '#E03535', lbl: '#E03535', bg: '#1f0d0d', border: '#E03535' },
+  pending: { label: '착수전',   ico: '▶', color: '#D97706', lbl: '#92400E', bg: '#FFFBEB', border: '#FCD34D' },
+  doing:   { label: '진행중',   ico: '⏸', color: '#2563EB', lbl: '#1E40AF', bg: '#EFF6FF', border: '#93C5FD' },
+  review:  { label: '완료요청', ico: '↑', color: '#7C3AED', lbl: '#5B21B6', bg: '#F5F3FF', border: '#C4B5FD' },
+  done:    { label: '완료',     ico: '✓', color: '#16A34A', lbl: '#15803D', bg: '#F0FDF4', border: '#86EFAC' },
+  delayed: { label: '지연',     ico: '▶', color: '#DC2626', lbl: '#991B1B', bg: '#FEE2E2', border: '#FECACA' },
 };
 
 const STATUS_CYCLE = ['pending', 'doing', 'review', 'done', 'delayed'];
@@ -83,13 +83,13 @@ export class Graph {
       </marker>`).join('');
     defs.innerHTML = markerDefs + `
       <marker id="arr-group" markerWidth="6" markerHeight="5" refX="5" refY="2.5" orient="auto" markerUnits="strokeWidth">
-        <polygon points="-5,-3 1,0 -5,3" fill="#555" opacity="0.8" transform="translate(6,2.5)"/>
+        <polygon points="-5,-3 1,0 -5,3" fill="#B5BCC8" opacity="0.8" transform="translate(6,2.5)"/>
       </marker>`;
     this.svg.appendChild(defs);
 
     this.tempPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     this.tempPath.setAttribute('fill', 'none');
-    this.tempPath.setAttribute('stroke', '#555');
+    this.tempPath.setAttribute('stroke', '#B5BCC8');
     this.tempPath.setAttribute('stroke-width', '1.5');
     this.tempPath.setAttribute('stroke-dasharray', '6,3');
     this.tempPath.style.display = 'none';
@@ -284,10 +284,10 @@ export class Graph {
     pill.className = 'project-label-pill';
     pill.style.cssText = `
       display:inline-flex;align-items:center;gap:8px;
-      padding:4px 14px;border-radius:0;
-      background:#1e1e1e;color:#aaa;
-      border:1px solid #2e2e2e;
-      font-size:18px;font-weight:700;letter-spacing:-0.5px;
+      padding:6px 16px;border-radius:100px;
+      background:#F3F4F6;color:#212121;
+      border:1.5px solid #E5E7EB;
+      font-size:21px;font-weight:800;letter-spacing:-0.5px;
     `;
     pill.appendChild(colorDot);
     pill.appendChild(document.createTextNode(project.name));
@@ -335,7 +335,7 @@ export class Graph {
     colorBar.style.background = group.color;
 
     const nameSpan = document.createElement('span');
-    nameSpan.style.cssText = 'font-size:13px;font-weight:600;color:#666;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
+    nameSpan.style.cssText = 'font-size:15px;font-weight:700;color:#374151;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
     nameSpan.textContent = group.name;
 
     header.appendChild(colorBar);
@@ -409,8 +409,8 @@ export class Graph {
     if (task.status === 'done') {
       el.classList.add('task-node-done');
       const dc = getDoneColor(task);
-      const doneBg     = dc === 'red' ? '#E03535' : '#1a1a1a';
-      const doneBorder = dc === 'red' ? 'none'    : '1.5px solid #444';
+      const doneBg     = dc === 'red' ? '#FEE2E2' : '#F3F4F6';
+      const doneBorder = dc === 'red' ? '1.5px solid #EF4444' : '1.5px solid #D1D5DB';
       el.innerHTML = `
         <div class="nh nh-l" data-id="${task.id}" data-side="left"></div>
         <div class="node-done-mini" title="${task.name}" style="background:${doneBg};border:${doneBorder}"></div>
@@ -518,7 +518,7 @@ export class Graph {
 
       const isGroup = !fromTask || !toTask;
       const fromStatus = fromTask?.status || 'pending';
-      const edgeColor  = EDGE_COLOR[fromStatus] || '#555';
+      const edgeColor  = EDGE_COLOR[fromStatus] || '#B5BCC8';
       const isDashed   = fromStatus === 'delayed';
 
       let x1, y1, x2, y2, pathD;
@@ -671,7 +671,7 @@ export class Graph {
       if (c.tagName !== 'defs' && c !== this.tempPath) {
         const isConn = connectedFlows.has(c.dataset?.flowId);
         c.style.opacity = isConn ? '1' : '0.15';
-        if (isConn) { c.setAttribute('stroke', c.dataset?.normalStroke || '#555'); c.setAttribute('stroke-width', '2'); c.setAttribute('opacity', '1'); }
+        if (isConn) { c.setAttribute('stroke', c.dataset?.normalStroke || '#B5BCC8'); c.setAttribute('stroke-width', '2'); c.setAttribute('opacity', '1'); }
       }
     });
   }
@@ -683,7 +683,7 @@ export class Graph {
     Array.from(this.svg.children).forEach(c => {
       if (c.tagName !== 'defs' && c !== this.tempPath) {
         c.style.opacity = '';
-        c.setAttribute('stroke', c.dataset?.normalStroke || '#555');
+        c.setAttribute('stroke', c.dataset?.normalStroke || '#B5BCC8');
         c.setAttribute('stroke-width', '1.5');
         if (c.dataset?.normalStroke) c.setAttribute('opacity', '0.6');
       }

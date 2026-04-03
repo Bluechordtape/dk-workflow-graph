@@ -457,9 +457,9 @@ body {
   position: relative;
   overflow: hidden;
   cursor: default;
-  background: #111111;
+  background: #FFFFFF;
   background-image:
-    radial-gradient(circle, #2a2a2a 1px, transparent 1px);
+    radial-gradient(circle, #EBEBEB 1px, transparent 1px);
   background-size: 24px 24px;
 }
 
@@ -477,8 +477,8 @@ body {
 /* ── 프로젝트 박스 ────────────────────────────────────── */
 .project-box {
   position: absolute;
-  border: 1px solid #2a2a2a;
-  border-radius: 0;
+  border: 2px solid #E5E7EB;
+  border-radius: 16px;
   background: transparent;
   pointer-events: none;
 }
@@ -492,16 +492,17 @@ body {
   pointer-events: auto;
   cursor: grab;
   user-select: none;
-  border-bottom: 1px solid #2a2a2a;
-  background: #161616;
+  border-radius: 14px 14px 0 0;
+  border-bottom: 1px solid #E5E7EB;
+  background: #F0F0F0;
 }
 .project-box-header:active { cursor: grabbing; }
 
 /* ── 묶음(카테고리) 박스 ──────────────────────────────── */
 .group-box {
   position: absolute;
-  border: 1px dashed #2e2e2e;
-  border-radius: 0;
+  border: 1.5px dashed #BDBDBD;
+  border-radius: 12px;
   background: transparent;
   pointer-events: none;
 }
@@ -513,17 +514,17 @@ body {
   align-items: center;
   padding: 0 14px;
   pointer-events: auto;
+  border-radius: 11px 11px 0 0;
   cursor: grab;
   user-select: none;
 }
 .group-box-header:active { cursor: grabbing; }
 .group-color-bar {
-  width: 3px;
-  height: 14px;
-  border-radius: 0;
+  width: 5px;
+  height: 18px;
+  border-radius: 3px;
   flex-shrink: 0;
   margin-right: 9px;
-  opacity: 0.6;
 }
 /* 묶음 박스 호버 시 연결 핸들 표시 */
 .group-box .group-nh {
@@ -547,22 +548,26 @@ body {
   align-items: center;
   transition: opacity 0.15s;
 }
-.task-node.dim { opacity: 0.12; pointer-events: none; }
+.task-node.dim { opacity: 0.2; pointer-events: none; }
 
 /* 연결 핸들 */
 .nh {
   width: 10px;
   height: 10px;
-  border-radius: 0;
-  background: #444;
-  border: 1.5px solid #666;
+  border-radius: 50%;
+  background: #212121;
+  border: 2px solid #FFFFFF;
+  box-shadow: 0 0 0 1px #212121;
   flex-shrink: 0;
   cursor: crosshair;
   opacity: 0;
-  transition: opacity 0.12s, background 0.1s;
+  transition: opacity 0.15s, background 0.12s, box-shadow 0.12s;
   z-index: 10;
 }
-.nh:hover { background: #C8102E; border-color: #C8102E; }
+.nh:hover {
+  background: #C8102E;
+  box-shadow: 0 0 0 1px #C8102E;
+}
 .task-node:hover .nh { opacity: 1; }
 .nh-l { margin-right: -5px; }
 .nh-r { margin-left:  -5px; }
@@ -573,16 +578,17 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
-  background: #1a1a1a;
-  border: 0.5px solid #2e2e2e;
-  border-radius: 0;
+  background: #FFFFFF;
+  border: 1.5px solid #9CA3AF;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
   padding: 10px 10px 10px 8px;
   cursor: pointer;
   user-select: none;
   min-height: 60px;
   transition: border-color 0.12s;
 }
-.task-node:hover .node-card { border-color: #444; }
+.task-node:hover .node-card { border-color: #9CA3AF; box-shadow: 0 4px 16px rgba(0,0,0,0.12) !important; }
 
 /* orb — 상태 표시 + 클릭 버튼 */
 .node-orb {
@@ -620,10 +626,10 @@ body {
   gap: 4px;
 }
 .node-name {
-  font-size: 11px;
-  font-weight: 500;
-  color: #e0e0e0;
-  line-height: 1.35;
+  font-size: 13px;
+  font-weight: 600;
+  color: #212121;
+  line-height: 1.3;
   word-break: keep-all;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -632,7 +638,7 @@ body {
 }
 .node-assignee {
   font-size: 10px;
-  color: #555;
+  color: #9E9E9E;
   font-weight: 400;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -646,7 +652,7 @@ body {
 .node-done-mini {
   width: 28px;
   height: 28px;
-  border-radius: 0;
+  border-radius: 4px;
   cursor: pointer;
   transition: transform 0.12s;
   flex-shrink: 0;
@@ -1246,13 +1252,16 @@ body {
 .cal-task-chip:hover { opacity: 0.82; transform: translateX(1px); }
 
 /* ── 호버 하이라이트 ─────────────────────────────────────── */
-.task-node.dim-hover { opacity: 0.1; transition: opacity 0.15s; }
+.task-node.dim-hover { opacity: 0.25; transition: opacity 0.15s; }
 .task-node.highlight-self .node-card {
-  border-color: #666 !important;
-  box-shadow: 0 0 0 1px #444 !important;
+  box-shadow: 0 0 0 3px rgba(33,33,33,0.08), 0 3px 12px rgba(0,0,0,0.10) !important;
+  border-color: #6B7280 !important;
+  border-width: 1.5px !important;
 }
 .task-node.highlight-hover .node-card {
-  border-color: #444 !important;
+  box-shadow: 0 0 0 2px rgba(200,16,46,0.10) !important;
+  border-color: #C8102E !important;
+  border-width: 1px !important;
 }
 
 /* ── 사용자 관리 아이템 ──────────────────────────────────── */
