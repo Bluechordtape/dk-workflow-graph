@@ -56,6 +56,7 @@ export class Graph {
     this._taskEls    = new Map(); // taskId    → el
     this._groupEls   = new Map(); // groupId   → { el, group }
     this._projectEls = new Map(); // projectId → { el, project }
+    this._edgePaths  = new Map(); // flowId    → { path, hitPath }
 
     this._setup();
     this._bind();
@@ -494,10 +495,13 @@ export class Graph {
   }
 
   // ── 엣지 렌더링 ───────────────────────────────────────
-  _renderEdges() {
-    Array.from(this.svg.children).forEach(c => {
-      if (c.tagName !== 'defs' && c !== this.tempPath) c.remove();
-    });
+  _renderEdges(updateOnly = false) {
+    if (!updateOnly) {
+      Array.from(this.svg.children).forEach(c => {
+        if (c.tagName !== 'defs' && c !== this.tempPath) c.remove();
+      });
+      this._edgePaths.clear();
+    }
     if (!this.data?.flows) return;
 
     for (const flow of this.data.flows) {
@@ -603,8 +607,18 @@ export class Graph {
       hitPath.addEventListener('pointerleave', cancelHold);
       hitPath.addEventListener('pointermove',  cancelHold);
 
-      this.svg.insertBefore(path,    this.tempPath);
-      this.svg.insertBefore(hitPath, this.tempPath);
+      if (updateOnly) {
+        // 드래그 중: 기존 path d 속성만 갱신 (DOM 생성/삭제 없음)
+        const ep = this._edgePaths.get(flow.id);
+        if (ep) {
+          ep.path.setAttribute('d', pathD);
+          ep.hitPath.setAttribute('d', pathD);
+        }
+      } else {
+        this.svg.insertBefore(path,    this.tempPath);
+        this.svg.insertBefore(hitPath, this.tempPath);
+        this._edgePaths.set(flow.id, { path, hitPath });
+      }
     }
   }
 
@@ -768,7 +782,7 @@ export class Graph {
               pEntry.el.style.top  = `${initialBBox.y + dy}px`;
             }
           }
-          this._renderEdges();
+          this._renderEdges(true);
         });
         return;
       }
