@@ -151,8 +151,7 @@ export class Graph {
     this._transform();
   }
   getTransform() { return { x: this.offsetX, y: this.offsetY, k: this.scale }; }
-  isDragging() { return !!this._drag; }
-  isDragging() { return !!this._drag; }
+  isDragging() { return !!this._drag || (!!this._dragEndedAt && Date.now() - this._dragEndedAt < 400); }
 
   setViewport(x, y, scale) {
     this.offsetX = x;
@@ -767,6 +766,14 @@ export class Graph {
 
   _bind() {
     window.addEventListener('mousemove', (e) => {
+      // 마우스 버튼이 이미 해제됐으면 드래그 강제 종료 (브라우저 밖 mouseup 미감지 대비)
+      if (this._drag && e.buttons === 0) {
+        this._dragEndedAt = Date.now();
+        this._drag = null;
+        this._rafPending = false;
+        this._renderEdges();
+        return;
+      }
       // 드래그 처리
       if (this._drag) {
         // 최신 마우스 좌표를 항상 저장 (RAF 내에서 사용)
@@ -870,6 +877,7 @@ export class Graph {
         this._renderEdges();
         const moved = this._getMovedPositions();
         this.cb.onNodeMoved?.(moved);
+        this._dragEndedAt = Date.now();
         this._drag = null;
       }
       if (this._conn) {

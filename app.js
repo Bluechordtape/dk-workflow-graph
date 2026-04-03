@@ -16,7 +16,7 @@ import {
 } from './data.js';
 import { Graph } from './graph.js';
 
-const VERSION = 'v3.20';
+const VERSION = 'v3.21';
 
 let data = null;
 let graph = null;
@@ -304,7 +304,7 @@ function initSocket() {
     console.log('[RECEIVE] data:updated 수신 | 유저:', currentUser?.name, '| 데이터:', newData ? 'ok' : 'empty');
     if (!newData) return;
     data = normalize(newData);
-    graph.setData(filteredData());
+    if (!graph?.isDragging()) graph.setData(filteredData());
     buildFilters();
     renderSidebar();
     updateOverview();
