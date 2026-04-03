@@ -38,7 +38,10 @@ const EDGE_COLOR = {
 function getDoneColor(task) {
   if (task.done_color) return task.done_color;
   const hash = String(task.id).split('').reduce((a, c) => a + c.charCodeAt(0), 0);
-  return hash % 11 < 3 ? 'red' : 'black';
+  const r = hash % 9;
+  if (r < 4) return 'black';
+  else if (r < 7) return 'red';
+  else return 'gray';
 }
 
 export class Graph {
@@ -409,11 +412,13 @@ export class Graph {
     if (task.status === 'done') {
       el.classList.add('task-node-done');
       const dc = getDoneColor(task);
-      const doneBg     = dc === 'red' ? '#FEE2E2' : '#F3F4F6';
-      const doneBorder = dc === 'red' ? '1.5px solid #EF4444' : '1.5px solid #D1D5DB';
+      const doneBg = dc === 'red' ? '#E03535' : dc === 'gray' ? '#888888' : '#111111';
       el.innerHTML = `
         <div class="nh nh-l" data-id="${task.id}" data-side="left"></div>
-        <div class="node-done-mini" title="${task.name}" style="background:${doneBg};border:${doneBorder}"></div>
+        <div class="node-done-wrapper">
+          <div class="node-done-mini" title="${task.name}" style="background:${doneBg}"></div>
+          <div class="node-done-label">${task.name}</div>
+        </div>
         <div class="nh nh-r" data-id="${task.id}" data-side="right"></div>`;
 
       const mini = el.querySelector('.node-done-mini');

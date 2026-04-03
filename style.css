@@ -648,6 +648,14 @@ body {
 /* ── 완료 미니 카드 (28×28) ───────────────────────────── */
 .task-node-done {
   width: 28px;
+  align-items: flex-start;
+  overflow: visible;
+}
+.node-done-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
 }
 .node-done-mini {
   width: 28px;
@@ -657,7 +665,23 @@ body {
   transition: transform 0.12s;
   flex-shrink: 0;
 }
+.node-done-label {
+  width: 60px;
+  margin-top: 4px;
+  font-size: 9px;
+  color: #555;
+  text-align: center;
+  line-height: 1.3;
+  word-break: keep-all;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+}
 .task-node-done:hover .node-done-mini { transform: scale(1.15); }
+.task-node-done .nh { margin-top: 9px; }
 
 /* ── 사이드 패널 ──────────────────────────────────────── */
 #side-panel {
