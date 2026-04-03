@@ -309,7 +309,12 @@ export class Graph {
         taskOffsets:  projectTasks.map(t  => ({ t, ox: t.x, oy: t.y })),
         groupOffsets: projectGroups.map(g => ({ g, ox: g.x ?? 0, oy: g.y ?? 0, bbox: this._groupBBox(g) })),
         initialBBox: { ...curBBox },
+        draggedIds: new Set([project.id, ...projectGroups.map(g => g.id), ...projectTasks.map(t => t.id)]),
       };
+      // GPU 레이어 승격
+      projectTasks.forEach(t => { const el = this._taskEls.get(t.id); if (el) el.style.willChange = 'transform'; });
+      projectGroups.forEach(g => { const ge = this._groupEls.get(g.id); if (ge) ge.el.style.willChange = 'transform'; });
+      { const pe = this._projectEls.get(project.id); if (pe) pe.el.style.willChange = 'transform'; }
     });
 
     el.appendChild(header);
@@ -349,6 +354,7 @@ export class Graph {
       const curBBox = this._groupBBox(group);
       group.x = curBBox.x;
       group.y = curBBox.y;
+      const proj = group.projectId ? (this.data.projects || []).find(p => p.id === group.projectId) : null;
       this._drag = {
         type: 'group',
         id:   group.id,
@@ -356,7 +362,13 @@ export class Graph {
         sp:   { x: group.x, y: group.y },
         taskOffsets: groupTasks.map(t => ({ t, ox: t.x, oy: t.y })),
         initialBBox: { ...curBBox },
+        projectInitialBBox: proj ? { ...this._projectBBox(proj) } : null,
+        draggedIds: new Set([group.id, ...groupTasks.map(t => t.id)]),
       };
+      // GPU 레이어 승격
+      groupTasks.forEach(t => { const el = this._taskEls.get(t.id); if (el) el.style.willChange = 'transform'; });
+      const _ge = this._groupEls.get(group.id); if (_ge) _ge.el.style.willChange = 'transform';
+      if (proj) { const _pe = this._projectEls.get(proj.id); if (_pe) _pe.el.style.willChange = 'transform'; }
     });
 
     // 연결 핸들 (묶음 간 연결)
@@ -495,7 +507,7 @@ export class Graph {
   }
 
   // ── 엣지 렌더링 ───────────────────────────────────────
-  _renderEdges(updateOnly = false) {
+  _renderEdges(updateOnly = false, draggedIds = null) {
     if (!updateOnly) {
       Array.from(this.svg.children).forEach(c => {
         if (c.tagName !== 'defs' && c !== this.tempPath) c.remove();
@@ -505,6 +517,7 @@ export class Graph {
     if (!this.data?.flows) return;
 
     for (const flow of this.data.flows) {
+      if (updateOnly && draggedIds && !draggedIds.has(flow.from) && !draggedIds.has(flow.to)) continue;
       const fromTask  = (this.data.tasks  || []).find(t => t.id === flow.from);
       const toTask    = (this.data.tasks  || []).find(t => t.id === flow.to);
       const fromGroup = (this.data.groups || []).find(g => g.id === flow.from);
@@ -746,43 +759,39 @@ export class Graph {
               if (task.projectId) this._updateProjectEl(task.projectId);
             }
           } else if (type === 'group') {
+            const tdx = `translate(${dx}px,${dy}px)`;
             for (const { t, ox, oy } of taskOffsets) {
               t.x = ox + dx; t.y = oy + dy;
               const el = this._taskEls.get(t.id);
-              if (el) { el.style.left = `${t.x}px`; el.style.top = `${t.y}px`; }
+              if (el) el.style.transform = tdx;
             }
             const group = (this.data.groups || []).find(g => g.id === id);
             if (group) { group.x = sp.x + dx; group.y = sp.y + dy; }
-            // bbox 재계산 없이 초기 bbox에서 delta만 적용
             const gEntry = this._groupEls.get(id);
-            if (gEntry && initialBBox) {
-              gEntry.el.style.left = `${initialBBox.x + dx}px`;
-              gEntry.el.style.top  = `${initialBBox.y + dy}px`;
+            if (gEntry) gEntry.el.style.transform = tdx;
+            if (group?.projectId) {
+              const pEntry = this._projectEls.get(group.projectId);
+              const piBBox = this._drag?.projectInitialBBox;
+              if (pEntry) pEntry.el.style.transform = tdx;
             }
-            if (group?.projectId) this._updateProjectEl(group.projectId);
           } else if (type === 'project') {
+            const tdx = `translate(${dx}px,${dy}px)`;
             for (const { t, ox, oy } of taskOffsets) {
               t.x = ox + dx; t.y = oy + dy;
               const el = this._taskEls.get(t.id);
-              if (el) { el.style.left = `${t.x}px`; el.style.top = `${t.y}px`; }
+              if (el) el.style.transform = tdx;
             }
-            for (const { g, ox, oy, bbox } of (groupOffsets || [])) {
+            for (const { g, ox, oy } of (groupOffsets || [])) {
               g.x = ox + dx; g.y = oy + dy;
               const gEntry = this._groupEls.get(g.id);
-              if (gEntry && bbox) {
-                gEntry.el.style.left = `${bbox.x + dx}px`;
-                gEntry.el.style.top  = `${bbox.y + dy}px`;
-              }
+              if (gEntry) gEntry.el.style.transform = tdx;
             }
             const project = (this.data.projects || []).find(p => p.id === id);
             if (project) { project.x = sp.x + dx; project.y = sp.y + dy; }
             const pEntry = this._projectEls.get(id);
-            if (pEntry && initialBBox) {
-              pEntry.el.style.left = `${initialBBox.x + dx}px`;
-              pEntry.el.style.top  = `${initialBBox.y + dy}px`;
-            }
+            if (pEntry) pEntry.el.style.transform = tdx;
           }
-          this._renderEdges(true);
+          this._renderEdges(true, this._drag?.draggedIds);
         });
         return;
       }
@@ -809,6 +818,24 @@ export class Graph {
 
     window.addEventListener('mouseup', (e) => {
       if (this._drag) {
+        const { type, id, taskOffsets, groupOffsets } = this._drag;
+        // transform 해제 & 최종 좌표 left/top 확정
+        const fin = (el, x, y) => { if (!el) return; el.style.transform = ''; el.style.willChange = ''; if (x != null) { el.style.left = `${x}px`; el.style.top = `${y}px`; } };
+        if (type === 'task') {
+          const t = (this.data.tasks || []).find(t => t.id === id);
+          fin(this._taskEls.get(id), t?.x, t?.y);
+        } else if (type === 'group') {
+          for (const { t } of (taskOffsets || [])) fin(this._taskEls.get(t.id), t.x, t.y);
+          const ge = this._groupEls.get(id);
+          if (ge) { ge.el.style.transform = ''; ge.el.style.willChange = ''; this._updateGroupEl(id); }
+          const grp = (this.data.groups || []).find(g => g.id === id);
+          if (grp?.projectId) { const pe = this._projectEls.get(grp.projectId); if (pe) { pe.el.style.transform = ''; pe.el.style.willChange = ''; } this._updateProjectEl(grp.projectId); }
+        } else if (type === 'project') {
+          for (const { t } of (taskOffsets  || [])) fin(this._taskEls.get(t.id), t.x, t.y);
+          for (const { g } of (groupOffsets || [])) { const ge = this._groupEls.get(g.id); if (ge) { ge.el.style.transform = ''; ge.el.style.willChange = ''; this._updateGroupEl(g.id); } }
+          const pe = this._projectEls.get(id); if (pe) { pe.el.style.transform = ''; pe.el.style.willChange = ''; this._updateProjectEl(id); }
+        }
+        this._renderEdges();
         const moved = this._getMovedPositions();
         this.cb.onNodeMoved?.(moved);
         this._drag = null;
