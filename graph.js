@@ -58,6 +58,14 @@ export class Graph {
     this._projectEls = new Map(); // projectId → { el, project }
     this._edgePaths  = new Map(); // flowId    → { path, hitPath }
 
+    // 데이터 인덱스 (O(1) 조회용)
+    this._taskMap        = new Map(); // taskId    → task
+    this._groupMap       = new Map(); // groupId   → group
+    this._projectMap     = new Map(); // projectId → project
+    this._tasksByGroup   = new Map(); // groupId   → [tasks]
+    this._groupsByProject= new Map(); // projectId → [groups]
+    this._orphansByProject=new Map(); // projectId → [tasks without groupId]
+
     this._setup();
     this._bind();
   }
@@ -162,7 +170,7 @@ export class Graph {
 
   // ── 바운딩 박스 계산 ──────────────────────────────────
   _groupBBox(group) {
-    const tasks = (this.data.tasks || []).filter(t => t.groupId === group.id);
+    const tasks = this._tasksByGroup.get(group.id) || (this.data.tasks || []).filter(t => t.groupId === group.id);
     if (!tasks.length) {
       const x = group.x ?? 200;
       const y = group.y ?? 200;
@@ -182,8 +190,8 @@ export class Graph {
   }
 
   _projectBBox(project) {
-    const groups = (this.data.groups || []).filter(g => g.projectId === project.id);
-    const orphans = (this.data.tasks || []).filter(t => t.projectId === project.id && !t.groupId);
+    const groups  = this._groupsByProject.get(project.id)  || (this.data.groups || []).filter(g => g.projectId === project.id);
+    const orphans = this._orphansByProject.get(project.id) || (this.data.tasks  || []).filter(t => t.projectId === project.id && !t.groupId);
 
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     let hasContent = false;
@@ -229,6 +237,28 @@ export class Graph {
     this._groupEls.clear();
     this._projectEls.clear();
 
+    // 인덱스 맵 빌드
+    this._taskMap.clear(); this._groupMap.clear(); this._projectMap.clear();
+    this._tasksByGroup.clear(); this._groupsByProject.clear(); this._orphansByProject.clear();
+    for (const t of (this.data.tasks || [])) {
+      this._taskMap.set(t.id, t);
+      if (t.groupId) {
+        if (!this._tasksByGroup.has(t.groupId)) this._tasksByGroup.set(t.groupId, []);
+        this._tasksByGroup.get(t.groupId).push(t);
+      } else if (t.projectId) {
+        if (!this._orphansByProject.has(t.projectId)) this._orphansByProject.set(t.projectId, []);
+        this._orphansByProject.get(t.projectId).push(t);
+      }
+    }
+    for (const gr of (this.data.groups || [])) {
+      this._groupMap.set(gr.id, gr);
+      if (gr.projectId) {
+        if (!this._groupsByProject.has(gr.projectId)) this._groupsByProject.set(gr.projectId, []);
+        this._groupsByProject.get(gr.projectId).push(gr);
+      }
+    }
+    for (const p of (this.data.projects || [])) this._projectMap.set(p.id, p);
+
     // 1. 프로젝트 박스 (z=1)
     for (const project of (this.data.projects || [])) {
       if (project.archived) continue;
@@ -251,7 +281,7 @@ export class Graph {
 
     // 3. 태스크 노드 (z=3)
     for (const task of (this.data.tasks || [])) {
-      const project = (this.data.projects || []).find(p => p.id === task.projectId);
+      const project = this._projectMap.get(task.projectId);
       const color = project?.color || '#94a3b8';
       const hasFilter = this.filter.assignee || this.filter.project || this.filter.status;
       const dim = hasFilter && !this._taskVisible(task);
@@ -438,7 +468,8 @@ export class Graph {
       mini.addEventListener('mousedown', (e) => {
         if (e.button !== 0) return;
         e.stopPropagation();
-        this._drag = { type: 'task', id: task.id, sm: { x: e.clientX, y: e.clientY }, sp: { x: task.x, y: task.y } };
+        const _dtel = this._taskEls.get(task.id); if (_dtel) _dtel.style.willChange = 'transform';
+        this._drag = { type: 'task', id: task.id, sm: { x: e.clientX, y: e.clientY }, sp: { x: task.x, y: task.y }, draggedIds: new Set([task.id]) };
       });
 
       el.querySelectorAll('.nh').forEach(h => {
@@ -480,7 +511,8 @@ export class Graph {
     card.addEventListener('mousedown', (e) => {
       if (e.button !== 0 || e.target.closest('.node-orb')) return;
       e.stopPropagation();
-      this._drag = { type: 'task', id: task.id, sm: { x: e.clientX, y: e.clientY }, sp: { x: task.x, y: task.y } };
+      const _tel = this._taskEls.get(task.id); if (_tel) _tel.style.willChange = 'transform';
+      this._drag = { type: 'task', id: task.id, sm: { x: e.clientX, y: e.clientY }, sp: { x: task.x, y: task.y }, draggedIds: new Set([task.id]) };
     });
 
     // orb 클릭 → 상태 순환
@@ -518,10 +550,10 @@ export class Graph {
 
     for (const flow of this.data.flows) {
       if (updateOnly && draggedIds && !draggedIds.has(flow.from) && !draggedIds.has(flow.to)) continue;
-      const fromTask  = (this.data.tasks  || []).find(t => t.id === flow.from);
-      const toTask    = (this.data.tasks  || []).find(t => t.id === flow.to);
-      const fromGroup = (this.data.groups || []).find(g => g.id === flow.from);
-      const toGroup   = (this.data.groups || []).find(g => g.id === flow.to);
+      const fromTask  = this._taskMap.get(flow.from);
+      const toTask    = this._taskMap.get(flow.to);
+      const fromGroup = this._groupMap.get(flow.from);
+      const toGroup   = this._groupMap.get(flow.to);
 
       if (!fromTask && !fromGroup) continue;
       if (!toTask   && !toGroup)   continue;
@@ -718,16 +750,16 @@ export class Graph {
     const { type, id, taskOffsets, groupOffsets } = this._drag;
     const moved = { tasks: [], groups: [], projects: [] };
     if (type === 'task') {
-      const t = (this.data.tasks || []).find(t => t.id === id);
+      const t = this._taskMap.get(id);
       if (t) moved.tasks.push({ id: t.id, x: t.x, y: t.y });
     } else if (type === 'group') {
       for (const { t } of (taskOffsets || [])) moved.tasks.push({ id: t.id, x: t.x, y: t.y });
-      const g = (this.data.groups || []).find(g => g.id === id);
+      const g = this._groupMap.get(id);
       if (g) moved.groups.push({ id: g.id, x: g.x, y: g.y });
     } else if (type === 'project') {
       for (const { t } of (taskOffsets  || [])) moved.tasks.push({ id: t.id, x: t.x, y: t.y });
       for (const { g } of (groupOffsets || [])) moved.groups.push({ id: g.id, x: g.x, y: g.y });
-      const p = (this.data.projects || []).find(p => p.id === id);
+      const p = this._projectMap.get(id);
       if (p) moved.projects.push({ id: p.id, x: p.x, y: p.y });
     }
     return moved;
@@ -749,14 +781,12 @@ export class Graph {
           const dy = (this._lastMouse.y - sm.y) / this.scale;
 
           if (type === 'task') {
-            const task = (this.data.tasks || []).find(t => t.id === id);
+            const task = this._taskMap.get(id);
             if (task) {
               task.x = sp.x + dx;
               task.y = sp.y + dy;
               const el = this._taskEls.get(id);
-              if (el) { el.style.left = `${task.x}px`; el.style.top = `${task.y}px`; }
-              if (task.groupId)   this._updateGroupEl(task.groupId);
-              if (task.projectId) this._updateProjectEl(task.projectId);
+              if (el) el.style.transform = `translate(${dx}px,${dy}px)`;
             }
           } else if (type === 'group') {
             const tdx = `translate(${dx}px,${dy}px)`;
@@ -765,7 +795,7 @@ export class Graph {
               const el = this._taskEls.get(t.id);
               if (el) el.style.transform = tdx;
             }
-            const group = (this.data.groups || []).find(g => g.id === id);
+            const group = this._groupMap.get(id);
             if (group) { group.x = sp.x + dx; group.y = sp.y + dy; }
             const gEntry = this._groupEls.get(id);
             if (gEntry) gEntry.el.style.transform = tdx;
@@ -786,7 +816,7 @@ export class Graph {
               const gEntry = this._groupEls.get(g.id);
               if (gEntry) gEntry.el.style.transform = tdx;
             }
-            const project = (this.data.projects || []).find(p => p.id === id);
+            const project = this._projectMap.get(id);
             if (project) { project.x = sp.x + dx; project.y = sp.y + dy; }
             const pEntry = this._projectEls.get(id);
             if (pEntry) pEntry.el.style.transform = tdx;
@@ -822,8 +852,10 @@ export class Graph {
         // transform 해제 & 최종 좌표 left/top 확정
         const fin = (el, x, y) => { if (!el) return; el.style.transform = ''; el.style.willChange = ''; if (x != null) { el.style.left = `${x}px`; el.style.top = `${y}px`; } };
         if (type === 'task') {
-          const t = (this.data.tasks || []).find(t => t.id === id);
+          const t = this._taskMap.get(id);
           fin(this._taskEls.get(id), t?.x, t?.y);
+          if (t?.groupId)   this._updateGroupEl(t.groupId);
+          if (t?.projectId) this._updateProjectEl(t.projectId);
         } else if (type === 'group') {
           for (const { t } of (taskOffsets || [])) fin(this._taskEls.get(t.id), t.x, t.y);
           const ge = this._groupEls.get(id);

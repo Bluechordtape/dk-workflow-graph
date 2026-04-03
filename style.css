@@ -543,6 +543,7 @@ body {
 /* ── 태스크 노드 공통 ─────────────────────────────────── */
 .task-node {
   position: absolute;
+  contain: layout style;
   width: 200px;
   display: flex;
   align-items: center;
@@ -1280,7 +1281,6 @@ body {
 .task-node.highlight-self .node-card {
   box-shadow: 0 0 0 3px rgba(33,33,33,0.08), 0 3px 12px rgba(0,0,0,0.10) !important;
   border-color: #6B7280 !important;
-  border-width: 1.5px !important;
 }
 .task-node.highlight-hover .node-card {
   box-shadow: 0 0 0 2px rgba(200,16,46,0.10) !important;
