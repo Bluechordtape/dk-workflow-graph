@@ -16,7 +16,7 @@ import {
 } from './data.js';
 import { Graph } from './graph.js';
 
-const VERSION = 'v3.15';
+const VERSION = 'v3.16';
 
 let data = null;
 let graph = null;
@@ -139,7 +139,7 @@ function undo() {
   if (redoStack.length > 30) redoStack.shift();
   data = normalize(undoStack.pop());
   saveData(data);
-  graph.setData(filteredData());
+  if (!graph?.isDragging()) graph.setData(filteredData());
   buildFilters();
   renderSidebar();
   updateUndoRedoButtons();

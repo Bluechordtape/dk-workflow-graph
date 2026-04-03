@@ -142,6 +142,8 @@ export class Graph {
     this._transform();
   }
   getTransform() { return { x: this.offsetX, y: this.offsetY, k: this.scale }; }
+  isDragging() { return !!this._drag; }
+  isDragging() { return !!this._drag; }
 
   setViewport(x, y, scale) {
     this.offsetX = x;
@@ -706,6 +708,9 @@ export class Graph {
     window.addEventListener('mousemove', (e) => {
       // 드래그 처리
       if (this._drag) {
+        if (this._rafPending) return;
+        this._rafPending = true;
+        requestAnimationFrame(() => { this._rafPending = false; });
         const { type, id, sm, sp, taskOffsets, groupOffsets } = this._drag;
         const dx = (e.clientX - sm.x) / this.scale;
         const dy = (e.clientY - sm.y) / this.scale;
