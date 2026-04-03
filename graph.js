@@ -18,16 +18,22 @@ const MIN_GROUP_W      = 270;
 const MIN_GROUP_H      = 100;
 
 const STATUS = {
-  pending: { label: '착수전',   ico: '▶', color: '#D97706', lbl: '#92400E', bg: '#FFFBEB', border: '#FCD34D' },
-  doing:   { label: '진행중',   ico: '⏸', color: '#2563EB', lbl: '#1E40AF', bg: '#EFF6FF', border: '#93C5FD' },
-  review:  { label: '완료요청', ico: '↑', color: '#7C3AED', lbl: '#5B21B6', bg: '#F5F3FF', border: '#C4B5FD' },
-  done:    { label: '완료',     ico: '✓', color: '#16A34A', lbl: '#15803D', bg: '#F0FDF4', border: '#86EFAC' },
-  delayed: { label: '지연',     ico: '▶', color: '#DC2626', lbl: '#991B1B', bg: '#FEE2E2', border: '#FECACA' },
+  pending: { label: '착수전',   ico: '▶', color: '#fff', lbl: 'rgba(255,255,255,0.75)', bg: '#6B7280', border: '#6B7280' },
+  doing:   { label: '진행중',   ico: '⏸', color: '#fff', lbl: 'rgba(255,255,255,0.75)', bg: '#1754C4',   border: '#1754C4'   },
+  review:  { label: '완료요청', ico: '↑', color: '#fff', lbl: 'rgba(255,255,255,0.75)', bg: '#C8102E',  border: '#C8102E'  },
+  done:    { label: '완료',     ico: '✓', color: '#fff', lbl: 'rgba(255,255,255,0.75)', bg: '#0D7A4E',    border: '#0D7A4E'    },
+  delayed: { label: '지연',     ico: '▶', color: '#fff', lbl: 'rgba(255,255,255,0.75)', bg: '#D97706', border: '#D97706' },
 };
 
 const STATUS_CYCLE = ['pending', 'doing', 'review', 'done', 'delayed'];
 
-const EDGE_COLOR = '#555555';
+const EDGE_COLOR = {
+  pending: '#6B7280',
+  doing:   '#1754C4',
+  review:  '#C8102E',
+  done:    '#0D7A4E',
+  delayed: '#D97706',
+};
 
 function getDoneColor(task) {
   if (task.done_color) return task.done_color;
@@ -74,12 +80,13 @@ export class Graph {
     this.svg.style.cssText = 'position:absolute;top:0;left:0;pointer-events:none;overflow:visible;';
 
     const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-    defs.innerHTML = `
-      <marker id="arr" markerWidth="6" markerHeight="5" refX="5" refY="2.5" orient="auto" markerUnits="strokeWidth">
-        <polygon points="-5,-3 1,0 -5,3" fill="#555555" opacity="0.8" transform="translate(6,2.5)"/>
-      </marker>
+    const markerDefs = Object.entries(EDGE_COLOR).map(([k, col]) => `
+      <marker id="arr-${k}" markerWidth="6" markerHeight="5" refX="5" refY="2.5" orient="auto" markerUnits="strokeWidth">
+        <polygon points="-5,-3 1,0 -5,3" fill="${col}" opacity="0.9" transform="translate(6,2.5)"/>
+      </marker>`).join('');
+    defs.innerHTML = markerDefs + `
       <marker id="arr-group" markerWidth="6" markerHeight="5" refX="5" refY="2.5" orient="auto" markerUnits="strokeWidth">
-        <polygon points="-5,-3 1,0 -5,3" fill="#555555" opacity="0.8" transform="translate(6,2.5)"/>
+        <polygon points="-5,-3 1,0 -5,3" fill="#9CA3AF" opacity="0.8" transform="translate(6,2.5)"/>
       </marker>`;
     this.svg.appendChild(defs);
 
@@ -511,7 +518,8 @@ export class Graph {
         fromTask.projectId !== toTask.projectId;
 
       const isGroup = !fromTask || !toTask;
-      const edgeColor  = EDGE_COLOR;
+      const fromStatus = fromTask?.status || 'pending';
+      const edgeColor  = EDGE_COLOR[fromStatus] || '#9CA3AF';
 
       let x1, y1, x2, y2, pathD;
 
@@ -547,7 +555,7 @@ export class Graph {
 
       const midX = (x1 + x2) / 2;
       const midY = (y1 + y2) / 2;
-      const markerId = isGroup ? 'arr-group' : 'arr';
+      const markerId = isGroup ? 'arr-group' : `arr-${fromStatus}`;
 
       // 표시선
       const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
@@ -663,7 +671,7 @@ export class Graph {
       if (c.tagName !== 'defs' && c !== this.tempPath) {
         const isConn = connectedFlows.has(c.dataset?.flowId);
         c.style.opacity = isConn ? '1' : '0.15';
-        if (isConn) { c.setAttribute('stroke', c.dataset?.normalStroke || EDGE_COLOR); c.setAttribute('stroke-width', '2'); c.setAttribute('opacity', '1'); }
+        if (isConn) { c.setAttribute('stroke', c.dataset?.normalStroke || '#9CA3AF'); c.setAttribute('stroke-width', '2'); c.setAttribute('opacity', '1'); }
       }
     });
   }
@@ -675,7 +683,7 @@ export class Graph {
     Array.from(this.svg.children).forEach(c => {
       if (c.tagName !== 'defs' && c !== this.tempPath) {
         c.style.opacity = '';
-        c.setAttribute('stroke', c.dataset?.normalStroke || EDGE_COLOR);
+        c.setAttribute('stroke', c.dataset?.normalStroke || '#9CA3AF');
         c.setAttribute('stroke-width', '1.5');
         if (c.dataset?.normalStroke) c.setAttribute('opacity', '0.6');
       }

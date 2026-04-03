@@ -2167,6 +2167,11 @@ body {
   color: #fff;
   border-color: #111;
 }
+.status-chip[data-status="pending"].active { background:#6B7280; border-color:#6B7280; }
+.status-chip[data-status="doing"].active   { background:#1754C4;   border-color:#1754C4;   }
+.status-chip[data-status="review"].active  { background:#C8102E;  border-color:#C8102E;  }
+.status-chip[data-status="done"].active    { background:#0D7A4E;    border-color:#0D7A4E;    }
+.status-chip[data-status="delayed"].active { background:#D97706; border-color:#D97706; }
 .status-chip:hover:not(.active) {
   border-color: #9CA3AF;
   background: #F3F4F6;
@@ -2243,9 +2248,9 @@ body {
   border-radius: 3px;
   font-weight: 600;
 }
-.badge-pending  { background:#FAEEDA; color:#854F0B; }
-.badge-doing    { background:#E6F1FB; color:#185FA5; }
-.badge-review   { background:#EEEDFE; color:#3C3489; }
-.badge-done     { background:#E1F5EE; color:#0F6E56; }
-.badge-delayed  { background:#FCEBEB; color:#A32D2D; }
+.badge-pending  { background:#6B7280; color:#fff; }
+.badge-doing    { background:#1754C4;   color:#fff; }
+.badge-review   { background:#C8102E;  color:#fff; }
+.badge-done     { background:#0D7A4E;    color:#fff; }
+.badge-delayed  { background:#D97706; color:#fff; }
 

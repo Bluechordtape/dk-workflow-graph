@@ -1107,10 +1107,10 @@ function updateMemberStatusBar() {
   }
 
   const colorMap = {
-    doing:   'background:#EDE9FE;color:#5B21B6',
-    wip:     'background:#EDE9FE;color:#5B21B6',
-    review:  'background:#FEF9C3;color:#854D0E',
-    delayed: 'background:#FEE2E2;color:#991B1B',
+    doing:   'background:#1754C4;color:#fff',
+    wip:     'background:#1754C4;color:#fff',
+    review:  'background:#C8102E;color:#fff',
+    delayed: 'background:#D97706;color:#fff',
   };
 
   bar.style.display = 'flex';
