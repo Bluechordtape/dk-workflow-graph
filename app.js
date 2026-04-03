@@ -1107,9 +1107,9 @@ function updateMemberStatusBar() {
   }
 
   const colorMap = {
-    doing:   'background:#1754C4;color:#fff',
-    wip:     'background:#1754C4;color:#fff',
-    review:  'background:#C8102E;color:#fff',
+    doing:   'background:#C8102E;color:#fff',
+    wip:     'background:#C8102E;color:#fff',
+    review:  'background:#1754C4;color:#fff',
     delayed: 'background:#D97706;color:#fff',
   };
 

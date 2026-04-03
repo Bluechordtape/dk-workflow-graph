@@ -19,8 +19,8 @@ const MIN_GROUP_H      = 100;
 
 const STATUS = {
   pending: { label: '착수전',   ico: '▶', color: '#fff', lbl: 'rgba(255,255,255,0.75)', bg: '#6B7280', border: '#6B7280' },
-  doing:   { label: '진행중',   ico: '⏸', color: '#fff', lbl: 'rgba(255,255,255,0.75)', bg: '#1754C4',   border: '#1754C4'   },
-  review:  { label: '완료요청', ico: '↑', color: '#fff', lbl: 'rgba(255,255,255,0.75)', bg: '#C8102E',  border: '#C8102E'  },
+  doing:   { label: '진행중',   ico: '⏸', color: '#fff', lbl: 'rgba(255,255,255,0.75)', bg: '#C8102E',   border: '#C8102E'   },
+  review:  { label: '완료요청', ico: '↑', color: '#fff', lbl: 'rgba(255,255,255,0.75)', bg: '#1754C4',  border: '#1754C4'  },
   done:    { label: '완료',     ico: '✓', color: '#fff', lbl: 'rgba(255,255,255,0.75)', bg: '#0D7A4E',    border: '#0D7A4E'    },
   delayed: { label: '지연',     ico: '▶', color: '#fff', lbl: 'rgba(255,255,255,0.75)', bg: '#D97706', border: '#D97706' },
 };
@@ -29,8 +29,8 @@ const STATUS_CYCLE = ['pending', 'doing', 'review', 'done', 'delayed'];
 
 const EDGE_COLOR = {
   pending: '#6B7280',
-  doing:   '#1754C4',
-  review:  '#C8102E',
+  doing:   '#C8102E',
+  review:  '#1754C4',
   done:    '#0D7A4E',
   delayed: '#D97706',
 };
