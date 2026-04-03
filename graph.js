@@ -423,11 +423,7 @@ export class Graph {
         e.stopPropagation();
         this._drag = { type: 'task', id: task.id, sm: { x: e.clientX, y: e.clientY }, sp: { x: task.x, y: task.y } };
       });
-      mini.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const next = STATUS_CYCLE[(STATUS_CYCLE.indexOf('done') + 1) % STATUS_CYCLE.length];
-        this.cb.onStatusChange?.(task.id, next);
-      });
+
       el.querySelectorAll('.nh').forEach(h => {
         h.addEventListener('mousedown', (e) => {
           e.stopPropagation(); e.preventDefault();
