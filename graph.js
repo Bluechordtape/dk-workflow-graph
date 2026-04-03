@@ -412,7 +412,7 @@ export class Graph {
     if (task.status === 'done') {
       el.classList.add('task-node-done');
       const dc = getDoneColor(task);
-      const doneBg = dc === 'red' ? '#E03535' : dc === 'gray' ? '#888888' : '#111111';
+      const doneBg = dc === 'red' ? '#C8102E' : dc === 'gray' ? '#888888' : '#111111';
       el.innerHTML = `
         <div class="nh nh-l" data-id="${task.id}" data-side="left"></div>
         <div class="node-done-wrapper">
