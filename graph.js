@@ -93,7 +93,7 @@ export class Graph {
     this.tempPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     this.tempPath.setAttribute('fill', 'none');
     this.tempPath.setAttribute('stroke', '#B5BCC8');
-    this.tempPath.setAttribute('stroke-width', '1.5');
+    this.tempPath.setAttribute('stroke-width', '0.8');
     this.tempPath.setAttribute('stroke-dasharray', '6,3');
     this.tempPath.style.display = 'none';
     this.svg.appendChild(this.tempPath);
@@ -562,7 +562,7 @@ export class Graph {
       path.setAttribute('d', pathD);
       path.setAttribute('fill', 'none');
       path.setAttribute('stroke', edgeColor);
-      path.setAttribute('stroke-width', '1.5');
+      path.setAttribute('stroke-width', '0.8');
       path.setAttribute('stroke-linecap', 'round');
       path.setAttribute('opacity', '0.6');
       if (isGroup) path.setAttribute('stroke-dasharray', '4 4');
@@ -584,12 +584,12 @@ export class Graph {
       let holdTimer = null;
       const startGlow = () => {
         path.setAttribute('stroke', '#C8102E');
-        path.setAttribute('stroke-width', '2');
+        path.setAttribute('stroke-width', '1.4');
         path.setAttribute('opacity', '1');
       };
       const stopGlow = () => {
         path.setAttribute('stroke', edgeColor);
-        path.setAttribute('stroke-width', '1.5');
+        path.setAttribute('stroke-width', '0.8');
         path.setAttribute('opacity', '0.6');
       };
       hitPath.addEventListener('pointerdown', e => {
@@ -671,7 +671,7 @@ export class Graph {
       if (c.tagName !== 'defs' && c !== this.tempPath) {
         const isConn = connectedFlows.has(c.dataset?.flowId);
         c.style.opacity = isConn ? '1' : '0.15';
-        if (isConn) { c.setAttribute('stroke', c.dataset?.normalStroke || '#9CA3AF'); c.setAttribute('stroke-width', '2'); c.setAttribute('opacity', '1'); }
+        if (isConn) { c.setAttribute('stroke', c.dataset?.normalStroke || '#9CA3AF'); c.setAttribute('stroke-width', '1.4'); c.setAttribute('opacity', '1'); }
       }
     });
   }
@@ -684,7 +684,7 @@ export class Graph {
       if (c.tagName !== 'defs' && c !== this.tempPath) {
         c.style.opacity = '';
         c.setAttribute('stroke', c.dataset?.normalStroke || '#9CA3AF');
-        c.setAttribute('stroke-width', '1.5');
+        c.setAttribute('stroke-width', '0.8');
         if (c.dataset?.normalStroke) c.setAttribute('opacity', '0.6');
       }
     });
