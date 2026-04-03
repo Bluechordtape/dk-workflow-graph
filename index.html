@@ -12,7 +12,7 @@
   <meta name="application-name" content="Loom">
   <link rel="preconnect" href="https://cdn.jsdelivr.net">
   <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=3.06">
+  <link rel="stylesheet" href="style.css?v=3.15">
   <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
@@ -167,6 +167,7 @@
     <div class="sep tb-sec"></div>
     <button id="btn-perm" class="tb-sec" title="역할별 권한 안내">권한 안내</button>
 
+    <button id="search-toggle-btn" class="icon-btn" title="검색 (Ctrl+F)">🔍</button>
     <div class="sep"></div>
     <button id="btn-switch-user" class="user-btn"></button>
     <button id="btn-logout" class="logout-btn">로그아웃</button>
@@ -291,6 +292,48 @@
       <button id="btn-copy-task" class="btn-small" style="display:none">↗ 다른 시트로 복제</button>
 
     </div>
+  </div>
+</div>
+
+<!-- ── 검색 패널 ── -->
+<div id="search-panel" class="search-panel hidden">
+  <div class="search-panel-header">
+    <span>검색</span>
+    <button id="search-close" class="search-panel-close">✕</button>
+  </div>
+  <div class="search-panel-body">
+    <div>
+      <label class="search-label">키워드</label>
+      <input id="search-keyword" class="search-input" type="text" placeholder="업무명 검색…">
+    </div>
+    <div>
+      <label class="search-label">프로젝트</label>
+      <select id="search-project" class="search-select">
+        <option value="">전체</option>
+      </select>
+    </div>
+    <div>
+      <label class="search-label">담당자</label>
+      <select id="search-assignee" class="search-select">
+        <option value="">전체</option>
+      </select>
+    </div>
+    <div>
+      <label class="search-label">상태</label>
+      <div class="search-status-chips">
+        <button class="status-chip active" data-status="">전체</button>
+        <button class="status-chip" data-status="pending">착수전</button>
+        <button class="status-chip" data-status="doing">진행중</button>
+        <button class="status-chip" data-status="review">완료요청</button>
+        <button class="status-chip" data-status="done">완료</button>
+        <button class="status-chip" data-status="delayed">지연</button>
+      </div>
+    </div>
+    <button id="search-reset" class="search-reset">필터 초기화</button>
+  </div>
+  <div class="search-results">
+    <div id="search-count" class="search-results-count"></div>
+    <div id="search-list"></div>
   </div>
 </div>
 

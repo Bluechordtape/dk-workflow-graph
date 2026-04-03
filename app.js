@@ -16,12 +16,13 @@ import {
 } from './data.js';
 import { Graph } from './graph.js';
 
-const VERSION = 'v3.14';
+const VERSION = +n+;
 
 let data = null;
 let graph = null;
 let activeTaskId = null;
 let currentUser = null; // { id, email, name, role }
+let searchPanel = null;
 let userNames = [];     // 전체 팀원 이름 목록
 let calendarDate = new Date();
 let viewMode = 'graph'; // 'graph' | 'calendar'
@@ -311,6 +312,7 @@ function initSocket() {
     renderActivityFeed();
     if (viewMode === 'calendar') renderCalendar();
     refreshActiveMobileTab();
+    searchPanel?.refresh();
   });
   socket.on('users:online', (users) => {
     renderOnlineUsers(users);
@@ -695,6 +697,7 @@ async function startApp() {
   initMobileSidebar();
   initSidebarResize();
   initMobileTabs();
+  initSearchPanel();
   setTimeout(() => updateMemberStatusBar(), 100);
 }
 
@@ -2516,6 +2519,144 @@ async function init() {
   } else {
     await startApp();
   }
+}
+
+// ── 검색 패널 ──────────────────────────────────────────────────────────────
+const _STATUS_LABEL = { pending:'착수전', doing:'진행중', review:'완료요청', done:'완료', delayed:'지연' };
+const _STATUS_BADGE = { pending:'badge-pending', doing:'badge-doing', review:'badge-review', done:'badge-done', delayed:'badge-delayed' };
+
+let _searchState = { keyword:'', project:'', assignee:'', status:'' };
+
+function initSearchPanel() {
+  const panel     = document.getElementById('search-panel');
+  const toggleBtn = document.getElementById('search-toggle-btn');
+  const closeBtn  = document.getElementById('search-close');
+  const resetBtn  = document.getElementById('search-reset');
+  const kwInput   = document.getElementById('search-keyword');
+  const projSel   = document.getElementById('search-project');
+  const asnSel    = document.getElementById('search-assignee');
+  const chips     = document.querySelectorAll('.status-chip');
+
+  if (!panel || !toggleBtn) return;
+
+  function openPanel_()  { panel.classList.remove('hidden'); kwInput.focus(); }
+  function closePanel_() { panel.classList.add('hidden'); }
+
+  toggleBtn.addEventListener('click', () =>
+    panel.classList.contains('hidden') ? openPanel_() : closePanel_()
+  );
+  closeBtn.addEventListener('click', closePanel_);
+
+  document.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+      e.preventDefault();
+      openPanel_();
+    }
+    if (e.key === 'Escape' && !panel.classList.contains('hidden')) {
+      closePanel_();
+    }
+  });
+
+  function populateDropdowns() {
+    if (!data) return;
+    const projects = (data.projects || []).filter(p => !p.archived);
+    const assignees = [...new Set((data.tasks || []).map(t => t.assignee).filter(Boolean))].sort();
+    projSel.innerHTML = '<option value="">전체</option>' +
+      projects.map(p => `<option value="${p.id}">${_esc(p.name)}</option>`).join('');
+    asnSel.innerHTML = '<option value="">전체</option>' +
+      assignees.map(a => `<option value="${_esc(a)}">${_esc(a)}</option>`).join('');
+  }
+
+  function _esc(str) {
+    return String(str).replace(/[&<>"']/g, c =>
+      ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])
+    );
+  }
+
+  function _highlight(text, kw) {
+    const safe = _esc(text);
+    if (!kw) return safe;
+    const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return safe.replace(new RegExp(`(${escaped})`, 'gi'), '<mark>$1</mark>');
+  }
+
+  function runSearch() {
+    if (!data) return;
+    const kw = _searchState.keyword.trim().toLowerCase();
+    const results = (data.tasks || []).filter(t => {
+      const nameMatch = !kw || (t.name || '').toLowerCase().includes(kw);
+      const projMatch = !_searchState.project  || t.projectId === _searchState.project;
+      const asnMatch  = !_searchState.assignee || t.assignee  === _searchState.assignee;
+      const stMatch   = !_searchState.status   || t.status    === _searchState.status;
+      return nameMatch && projMatch && asnMatch && stMatch;
+    });
+    renderSearchResults(results, kw);
+  }
+
+  function renderSearchResults(results, kw) {
+    const countEl = document.getElementById('search-count');
+    const listEl  = document.getElementById('search-list');
+    countEl.textContent = `${results.length}개 태스크`;
+    listEl.innerHTML = results.map(t => {
+      const proj = (data.projects || []).find(p => p.id === t.projectId);
+      const projName  = proj ? _esc(proj.name) : '';
+      const label     = _STATUS_LABEL[t.status] || t.status;
+      const badgeCls  = _STATUS_BADGE[t.status] || '';
+      const doneCls   = t.status === 'done' ? ' is-done' : '';
+      return `<div class="search-result-item${doneCls}" data-task-id="${t.id}">
+        <div class="result-title">${_highlight(t.name || '', kw)}</div>
+        <div class="result-meta">
+          ${projName ? `<span class="result-project">${projName}</span>` : ''}
+          ${t.assignee ? `<span class="result-assignee">· ${_esc(t.assignee)}</span>` : ''}
+          <span class="result-status-badge ${badgeCls}">${label}</span>
+        </div>
+      </div>`;
+    }).join('');
+
+    listEl.querySelectorAll('.search-result-item').forEach(el => {
+      el.addEventListener('click', () => focusTaskNode(el.dataset.taskId));
+    });
+  }
+
+  kwInput.addEventListener('input',  e => { _searchState.keyword  = e.target.value; runSearch(); });
+  projSel.addEventListener('change', e => { _searchState.project  = e.target.value; runSearch(); });
+  asnSel.addEventListener('change',  e => { _searchState.assignee = e.target.value; runSearch(); });
+
+  chips.forEach(chip => {
+    chip.addEventListener('click', () => {
+      chips.forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      _searchState.status = chip.dataset.status;
+      runSearch();
+    });
+  });
+
+  resetBtn.addEventListener('click', () => {
+    _searchState = { keyword:'', project:'', assignee:'', status:'' };
+    kwInput.value = '';
+    projSel.value = '';
+    asnSel.value = '';
+    chips.forEach(c => c.classList.remove('active'));
+    chips[0].classList.add('active');
+    runSearch();
+  });
+
+  searchPanel = {
+    refresh() { populateDropdowns(); runSearch(); }
+  };
+  searchPanel.refresh();
+}
+
+function focusTaskNode(taskId) {
+  if (!data || !graph) return;
+  const task = (data.tasks || []).find(t => t.id === taskId);
+  if (!task) return;
+  const container = document.getElementById('graph-container');
+  const cw = container.clientWidth;
+  const ch = container.clientHeight;
+  const { k: scale } = graph.getTransform();
+  graph.setViewport(cw / 2 - task.x * scale, ch / 2 - task.y * scale, scale);
+  openPanel(task);
 }
 
 init().catch(err => {
