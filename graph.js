@@ -306,7 +306,8 @@ export class Graph {
         sm:   { x: e.clientX, y: e.clientY },
         sp:   { x: project.x, y: project.y },
         taskOffsets:  projectTasks.map(t  => ({ t, ox: t.x, oy: t.y })),
-        groupOffsets: projectGroups.map(g => ({ g, ox: g.x ?? 0, oy: g.y ?? 0 })),
+        groupOffsets: projectGroups.map(g => ({ g, ox: g.x ?? 0, oy: g.y ?? 0, bbox: this._groupBBox(g) })),
+        initialBBox: { ...curBBox },
       };
     });
 
@@ -353,6 +354,7 @@ export class Graph {
         sm:   { x: e.clientX, y: e.clientY },
         sp:   { x: group.x, y: group.y },
         taskOffsets: groupTasks.map(t => ({ t, ox: t.x, oy: t.y })),
+        initialBBox: { ...curBBox },
       };
     });
 
@@ -708,48 +710,66 @@ export class Graph {
     window.addEventListener('mousemove', (e) => {
       // 드래그 처리
       if (this._drag) {
+        // 최신 마우스 좌표를 항상 저장 (RAF 내에서 사용)
+        this._lastMouse = { x: e.clientX, y: e.clientY };
         if (this._rafPending) return;
         this._rafPending = true;
-        requestAnimationFrame(() => { this._rafPending = false; });
-        const { type, id, sm, sp, taskOffsets, groupOffsets } = this._drag;
-        const dx = (e.clientX - sm.x) / this.scale;
-        const dy = (e.clientY - sm.y) / this.scale;
+        requestAnimationFrame(() => {
+          this._rafPending = false;
+          if (!this._drag) return;
+          const { type, id, sm, sp, taskOffsets, groupOffsets, initialBBox } = this._drag;
+          const dx = (this._lastMouse.x - sm.x) / this.scale;
+          const dy = (this._lastMouse.y - sm.y) / this.scale;
 
-        if (type === 'task') {
-          const task = (this.data.tasks || []).find(t => t.id === id);
-          if (task) {
-            task.x = sp.x + dx;
-            task.y = sp.y + dy;
-            const el = this._taskEls.get(id);
-            if (el) { el.style.left = `${task.x}px`; el.style.top = `${task.y}px`; }
-            if (task.groupId)   this._updateGroupEl(task.groupId);
-            if (task.projectId) this._updateProjectEl(task.projectId);
+          if (type === 'task') {
+            const task = (this.data.tasks || []).find(t => t.id === id);
+            if (task) {
+              task.x = sp.x + dx;
+              task.y = sp.y + dy;
+              const el = this._taskEls.get(id);
+              if (el) { el.style.left = `${task.x}px`; el.style.top = `${task.y}px`; }
+              if (task.groupId)   this._updateGroupEl(task.groupId);
+              if (task.projectId) this._updateProjectEl(task.projectId);
+            }
+          } else if (type === 'group') {
+            for (const { t, ox, oy } of taskOffsets) {
+              t.x = ox + dx; t.y = oy + dy;
+              const el = this._taskEls.get(t.id);
+              if (el) { el.style.left = `${t.x}px`; el.style.top = `${t.y}px`; }
+            }
+            const group = (this.data.groups || []).find(g => g.id === id);
+            if (group) { group.x = sp.x + dx; group.y = sp.y + dy; }
+            // bbox 재계산 없이 초기 bbox에서 delta만 적용
+            const gEntry = this._groupEls.get(id);
+            if (gEntry && initialBBox) {
+              gEntry.el.style.left = `${initialBBox.x + dx}px`;
+              gEntry.el.style.top  = `${initialBBox.y + dy}px`;
+            }
+            if (group?.projectId) this._updateProjectEl(group.projectId);
+          } else if (type === 'project') {
+            for (const { t, ox, oy } of taskOffsets) {
+              t.x = ox + dx; t.y = oy + dy;
+              const el = this._taskEls.get(t.id);
+              if (el) { el.style.left = `${t.x}px`; el.style.top = `${t.y}px`; }
+            }
+            for (const { g, ox, oy, bbox } of (groupOffsets || [])) {
+              g.x = ox + dx; g.y = oy + dy;
+              const gEntry = this._groupEls.get(g.id);
+              if (gEntry && bbox) {
+                gEntry.el.style.left = `${bbox.x + dx}px`;
+                gEntry.el.style.top  = `${bbox.y + dy}px`;
+              }
+            }
+            const project = (this.data.projects || []).find(p => p.id === id);
+            if (project) { project.x = sp.x + dx; project.y = sp.y + dy; }
+            const pEntry = this._projectEls.get(id);
+            if (pEntry && initialBBox) {
+              pEntry.el.style.left = `${initialBBox.x + dx}px`;
+              pEntry.el.style.top  = `${initialBBox.y + dy}px`;
+            }
           }
-        } else if (type === 'group') {
-          for (const { t, ox, oy } of taskOffsets) {
-            t.x = ox + dx; t.y = oy + dy;
-            const el = this._taskEls.get(t.id);
-            if (el) { el.style.left = `${t.x}px`; el.style.top = `${t.y}px`; }
-          }
-          const group = (this.data.groups || []).find(g => g.id === id);
-          if (group) { group.x = sp.x + dx; group.y = sp.y + dy; }
-          this._updateGroupEl(id);
-          if (group?.projectId) this._updateProjectEl(group.projectId);
-        } else if (type === 'project') {
-          for (const { t, ox, oy } of taskOffsets) {
-            t.x = ox + dx; t.y = oy + dy;
-            const el = this._taskEls.get(t.id);
-            if (el) { el.style.left = `${t.x}px`; el.style.top = `${t.y}px`; }
-          }
-          for (const { g, ox, oy } of groupOffsets) {
-            g.x = ox + dx; g.y = oy + dy;
-            this._updateGroupEl(g.id);
-          }
-          const project = (this.data.projects || []).find(p => p.id === id);
-          if (project) { project.x = sp.x + dx; project.y = sp.y + dy; }
-          this._updateProjectEl(id);
-        }
-        this._renderEdges();
+          this._renderEdges();
+        });
         return;
       }
 
