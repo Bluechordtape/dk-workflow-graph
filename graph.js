@@ -2,8 +2,8 @@
 
 export const NODE_W = 200;
 export const NODE_H = 60;
-export const DONE_NODE_W = 14;
-export const DONE_NODE_H = 14;
+export const DONE_NODE_W = 28;
+export const DONE_NODE_H = 28;
 
 // Layout constants
 const PROJECT_HEADER_H = 52;
