@@ -42,18 +42,21 @@ async function initDB() {
     ALTER TABLE users ADD COLUMN IF NOT EXISTS password_plain TEXT DEFAULT NULL
   `).catch(() => {});
 
-  // admin 계정이 없으면 자동 생성
+  // admin 계정이 없으면 자동 생성 (환경변수 우선, 없으면 기본값)
+  const adminEmail    = process.env.ADMIN_EMAIL    || 'admin@dk.com';
+  const adminPassword = process.env.ADMIN_PASSWORD || 'dk2024!';
+  const adminName     = process.env.ADMIN_NAME     || '관리자';
   const { rows } = await pool.query(
     "SELECT id FROM users WHERE role = 'admin' LIMIT 1"
   );
   if (rows.length === 0) {
-    const hash = await bcrypt.hash('dk2024!', 10);
+    const hash = await bcrypt.hash(adminPassword, 10);
     await pool.query(
       `INSERT INTO users (email, password_hash, password_plain, name, role)
        VALUES ($1, $2, $3, $4, 'admin')`,
-      ['admin@dk.com', hash, 'dk2024!', '관리자']
+      [adminEmail, hash, adminPassword, adminName]
     );
-    console.log('[DB] admin 계정 생성: 관리자 / dk2024!');
+    console.log(`[DB] admin 계정 생성: ${adminName} / ${adminEmail}`);
   }
 
   // 손님(viewer) 계정이 없으면 자동 생성
@@ -68,27 +71,30 @@ async function initDB() {
     console.log('[DB] 손님 계정 생성: 손님 / 0000');
   }
 
-  // 팀원 계정 시딩 (없을 때만)
-  const MEMBERS = ['민경', '창규', '진희', '정현'];
-  for (const name of MEMBERS) {
-    const exists = await pool.query('SELECT id FROM users WHERE name = $1', [name]);
-    if (exists.rows.length === 0) {
-      const hash = await bcrypt.hash('dkc2626', 10);
-      await pool.query(
-        `INSERT INTO users (email, password_hash, password_plain, name, role)
-         VALUES ($1, $2, $3, $4, 'member')`,
-        [`${name}@dk.internal`, hash, 'dkc2626', name]
-      );
+  // 팀원 계정 시딩: SEED_MEMBERS 환경변수로 지정 (없으면 스킵)
+  // 형식: "이름1:비밀번호1,이름2:비밀번호2" 또는 "이름1,이름2" (비밀번호 생략 시 SEED_PASSWORD 사용)
+  const seedMembersEnv = process.env.SEED_MEMBERS || '';
+  const seedPassword   = process.env.SEED_PASSWORD || 'loom1234!';
+  if (seedMembersEnv) {
+    const members = seedMembersEnv.split(',').map(s => {
+      const [name, pw] = s.trim().split(':');
+      return { name: name.trim(), password: (pw || seedPassword).trim() };
+    });
+    for (const { name, password } of members) {
+      const exists = await pool.query('SELECT id FROM users WHERE name = $1', [name]);
+      if (exists.rows.length === 0) {
+        const hash = await bcrypt.hash(password, 10);
+        const email = `${name}@loom.internal`;
+        await pool.query(
+          `INSERT INTO users (email, password_hash, password_plain, name, role)
+           VALUES ($1, $2, $3, $4, 'member')`,
+          [email, hash, password, name]
+        );
+        console.log(`[DB] 팀원 계정 생성: ${name}`);
+      }
     }
   }
-  // 기존 계정에 password_plain 백필 (null인 경우 기본값으로)
-  await pool.query(`
-    UPDATE users SET password_plain = 'dkc2626' WHERE password_plain IS NULL AND role = 'member'
-  `).catch(() => {});
-  await pool.query(`
-    UPDATE users SET password_plain = 'dk2024!' WHERE password_plain IS NULL AND role = 'admin'
-  `).catch(() => {});
-  console.log('[DB] 팀원 계정 확인 완료');
+  console.log('[DB] 계정 초기화 완료');
 
   // 템플릿 테이블
   await pool.query(`
