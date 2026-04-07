@@ -2,7 +2,7 @@
 
 export const NODE_W = 200;
 export const NODE_H = 60;
-export const DONE_NODE_W = 19;
+export const DONE_NODE_W = 29;  // 5(nh-l) + 19(mini-box) + 5(nh-r)
 export const DONE_NODE_H = 19;
 
 // Layout constants

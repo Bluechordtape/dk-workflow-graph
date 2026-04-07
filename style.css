@@ -646,9 +646,9 @@ body {
   white-space: nowrap;
 }
 
-/* ── 완료 미니 카드 (19×19) ───────────────────────────── */
+/* ── 완료 미니 카드 (mini 19×19, total 29px) ─────────── */
 .task-node-done {
-  width: 19px;
+  width: 29px;
   align-items: flex-start;
   overflow: visible;
 }
