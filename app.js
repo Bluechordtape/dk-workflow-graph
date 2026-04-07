@@ -514,7 +514,7 @@ const ROLE_AVATAR = {
   member:  { bg: '#F3F4F6', text: '#6B7280' },
   viewer:  { bg: '#E5E7EB', text: '#9CA3AF' },
 };
-const ROLE_LABEL = { admin: '관리자', leader: '팀장', manager: '과장', member: '팀원', viewer: '손님' };
+const ROLE_LABEL = { admin: '관리자', leader: '팀장', manager: '대리', member: '팀원', viewer: '손님' };
 
 function renderOnlineUsers(users) {
   const panel = document.getElementById('online-panel');
@@ -846,7 +846,7 @@ function applyRoleUI() {
 // ── 권한 안내 모달 ────────────────────────────────────────
 function openPermModal() {
   const roleOrder = ['admin', 'leader', 'manager', 'member', 'viewer'];
-  const roleLabel = { admin: '관리자', leader: '팀장', manager: '과장', member: '팀원', viewer: '손님' };
+  const roleLabel = { admin: '관리자', leader: '팀장', manager: '대리', member: '팀원', viewer: '손님' };
   const rows = [
     { label: '업무 생성',        action: 'createTask'    },
     { label: '업무 수정',        action: 'editTask'      },
@@ -910,7 +910,7 @@ function openPermModal() {
 // ── 툴바 유저 버튼 ────────────────────────────────────────
 function updateUserBtn() {
   const btn = document.getElementById('btn-switch-user');
-  const roleLabel = { admin: '관리자', leader: '팀장', manager: '과장', member: '팀원', viewer: '손님' };
+  const roleLabel = { admin: '관리자', leader: '팀장', manager: '대리', member: '팀원', viewer: '손님' };
   btn.innerHTML = `
     ${currentUser?.name || '?'}
     <span class="role-badge ${currentUser?.role}">${roleLabel[currentUser?.role] || ''}</span>
@@ -1983,7 +1983,7 @@ async function renderUserList() {
   try {
     const users = await fetchUsers();
     list.innerHTML = '';
-    const roleLabel = { admin: '관리자', leader: '팀장', manager: '과장', member: '팀원', viewer: '손님' };
+    const roleLabel = { admin: '관리자', leader: '팀장', manager: '대리', member: '팀원', viewer: '손님' };
     const roleColor = { admin: '#212121', leader: '#C8102E', manager: '#9E9E9E', member: '#BDBDBD', viewer: '#9CA3AF' };
     const roles = ['admin', 'leader', 'manager', 'member', 'viewer'];
 
