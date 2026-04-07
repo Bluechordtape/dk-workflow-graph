@@ -2,7 +2,7 @@
 
 export const NODE_W = 200;
 export const NODE_H = 60;
-export const DONE_NODE_W = 29;  // 5(nh-l) + 19(mini-box) + 5(nh-r)
+export const DONE_NODE_W = 19;
 export const DONE_NODE_H = 19;
 
 // Layout constants
@@ -453,12 +453,12 @@ export class Graph {
       const dc = getDoneColor(task);
       const doneBg = dc === 'red' ? '#C8102E' : dc === 'gray' ? '#888888' : '#111111';
       el.innerHTML = `
-        <div class="nh nh-l" data-id="${task.id}" data-side="left"></div>
         <div class="node-done-wrapper">
+          <div class="nh nh-l" data-id="${task.id}" data-side="left"></div>
           <div class="node-done-mini" title="${task.name}" style="background:${doneBg}"></div>
+          <div class="nh nh-r" data-id="${task.id}" data-side="right"></div>
           <div class="node-done-label">${task.name}</div>
-        </div>
-        <div class="nh nh-r" data-id="${task.id}" data-side="right"></div>`;
+        </div>`;
 
       const mini = el.querySelector('.node-done-mini');
       mini.addEventListener('mouseenter', () => this._applyHover(task.id));

@@ -646,17 +646,17 @@ body {
   white-space: nowrap;
 }
 
-/* ── 완료 미니 카드 (mini 19×19, total 29px) ─────────── */
+/* ── 완료 미니 카드 (19×19) ───────────────────────────── */
 .task-node-done {
-  width: 29px;
-  align-items: flex-start;
+  width: 19px;
   overflow: visible;
 }
 .node-done-wrapper {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  position: relative;
+  width: 19px;
 }
 .node-done-mini {
   width: 19px;
@@ -683,7 +683,14 @@ body {
   user-select: none;
 }
 .task-node-done:hover .node-done-mini { transform: scale(1.15); }
-.task-node-done .nh { margin-top: 3px; }
+/* 핸들: 미니 박스 양쪽 끝에 정확히 고정 */
+.task-node-done .nh {
+  position: absolute;
+  top: 4px;
+  margin: 0;
+}
+.task-node-done .nh-l { left:  -5px; }
+.task-node-done .nh-r { right: -5px; }
 
 /* ── 사이드 패널 ──────────────────────────────────────── */
 #side-panel {
