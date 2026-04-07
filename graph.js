@@ -5,6 +5,9 @@ export const NODE_H = 60;
 export const DONE_NODE_W = 19;
 export const DONE_NODE_H = 19;
 
+const GRID = 10; // 그리드 스냅 간격 (px)
+const snap = v => Math.round(v / GRID) * GRID;
+
 // Layout constants
 const PROJECT_HEADER_H = 52;
 const PROJECT_PAD_X    = 20;
@@ -787,23 +790,25 @@ export class Graph {
           const dx = (this._lastMouse.x - sm.x) / this.scale;
           const dy = (this._lastMouse.y - sm.y) / this.scale;
 
+          const sdx = snap(sp.x + dx) - sp.x;
+          const sdy = snap(sp.y + dy) - sp.y;
           if (type === 'task') {
             const task = this._taskMap.get(id);
             if (task) {
-              task.x = sp.x + dx;
-              task.y = sp.y + dy;
+              task.x = sp.x + sdx;
+              task.y = sp.y + sdy;
               const el = this._taskEls.get(id);
-              if (el) el.style.transform = `translate(${dx}px,${dy}px)`;
+              if (el) el.style.transform = `translate(${sdx}px,${sdy}px)`;
             }
           } else if (type === 'group') {
-            const tdx = `translate(${dx}px,${dy}px)`;
+            const tdx = `translate(${sdx}px,${sdy}px)`;
             for (const { t, ox, oy } of taskOffsets) {
-              t.x = ox + dx; t.y = oy + dy;
+              t.x = snap(ox + dx); t.y = snap(oy + dy);
               const el = this._taskEls.get(t.id);
               if (el) el.style.transform = tdx;
             }
             const group = this._groupMap.get(id);
-            if (group) { group.x = sp.x + dx; group.y = sp.y + dy; }
+            if (group) { group.x = sp.x + sdx; group.y = sp.y + sdy; }
             const gEntry = this._groupEls.get(id);
             if (gEntry) gEntry.el.style.transform = tdx;
             if (group?.projectId) {
@@ -812,19 +817,19 @@ export class Graph {
               if (pEntry) pEntry.el.style.transform = tdx;
             }
           } else if (type === 'project') {
-            const tdx = `translate(${dx}px,${dy}px)`;
+            const tdx = `translate(${sdx}px,${sdy}px)`;
             for (const { t, ox, oy } of taskOffsets) {
-              t.x = ox + dx; t.y = oy + dy;
+              t.x = snap(ox + dx); t.y = snap(oy + dy);
               const el = this._taskEls.get(t.id);
               if (el) el.style.transform = tdx;
             }
             for (const { g, ox, oy } of (groupOffsets || [])) {
-              g.x = ox + dx; g.y = oy + dy;
+              g.x = snap(ox + dx); g.y = snap(oy + dy);
               const gEntry = this._groupEls.get(g.id);
               if (gEntry) gEntry.el.style.transform = tdx;
             }
             const project = this._projectMap.get(id);
-            if (project) { project.x = sp.x + dx; project.y = sp.y + dy; }
+            if (project) { project.x = sp.x + sdx; project.y = sp.y + sdy; }
             const pEntry = this._projectEls.get(id);
             if (pEntry) pEntry.el.style.transform = tdx;
           }
