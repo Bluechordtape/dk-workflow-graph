@@ -52,14 +52,17 @@ pool.query('ALTER TABLE activity_log ADD COLUMN IF NOT EXISTS task_id TEXT')
 // ── 미들웨어 ──────────────────────────────────────────────
 app.use(express.json({ limit: '10mb' }));
 
-// index.html은 항상 최신 버전 제공 (캐시 금지, APP_TITLE 환경변수로 탭 제목 주입)
+// index.html은 항상 최신 버전 제공 (캐시 금지, 환경변수로 설정값 주입)
 const fs = require('fs');
-const appTitle = process.env.APP_TITLE || 'Loom';
+const appTitle     = process.env.APP_TITLE     || 'Loom';
+const managerLabel = process.env.MANAGER_LABEL || '과장';
+const injectConfig = `<script>window.LOOM_CONFIG = { managerLabel: ${JSON.stringify(managerLabel)} };</script>`;
+const serveHtml = () => fs.readFileSync(path.join(__dirname, '../index.html'), 'utf8')
+  .replace('<title>Loom</title>', `<title>${appTitle}</title>`)
+  .replace('</head>', `${injectConfig}\n</head>`);
 app.get('/', (req, res) => {
   res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
-  const html = fs.readFileSync(path.join(__dirname, '../index.html'), 'utf8')
-    .replace('<title>Loom</title>', `<title>${appTitle}</title>`);
-  res.send(html);
+  res.send(serveHtml());
 });
 
 // 프론트엔드 정적 파일 제공
@@ -78,9 +81,7 @@ app.use('/api',           dataRouter(io));
 // SPA 폴백
 app.get('*', (req, res) => {
   res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
-  const html = fs.readFileSync(path.join(__dirname, '../index.html'), 'utf8')
-    .replace('<title>Loom</title>', `<title>${appTitle}</title>`);
-  res.send(html);
+  res.send(serveHtml());
 });
 
 // ── Socket.io ─────────────────────────────────────────────
