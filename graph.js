@@ -20,6 +20,11 @@ const MIN_PROJECT_H    = 160;
 const MIN_GROUP_W      = 270;
 const MIN_GROUP_H      = 100;
 
+// done 노드 레이블 bbox 보정 (120px 레이블이 19px 노드 중심에 위치)
+const DONE_LABEL_LEFT  = 51;  // t.x 기준 왼쪽으로 삐져나오는 픽셀 (120/2 - 19/2)
+const DONE_LABEL_RIGHT = 70;  // t.x 기준 오른쪽으로 삐져나오는 픽셀 (19 + 120/2 - 19/2)
+const DONE_LABEL_BELOW = 50;  // 노드 아래 레이블 최대 높이 (margin 4 + 3줄 * 11px * 1.3 ≈ 47)
+
 const STATUS = {
   pending: { label: '착수전',   ico: '▶', color: '#fff', lbl: 'rgba(255,255,255,0.75)', bg: '#6B7280', border: '#6B7280' },
   doing:   { label: '진행중',   ico: '⏸', color: '#fff', lbl: 'rgba(255,255,255,0.75)', bg: '#C8102E',   border: '#C8102E'   },
@@ -122,8 +127,15 @@ export class Graph {
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     let hasContent = false;
     for (const t of (this.data.tasks || [])) {
-      minX = Math.min(minX, t.x);           minY = Math.min(minY, t.y);
-      maxX = Math.max(maxX, t.x + NODE_W);  maxY = Math.max(maxY, t.y + NODE_H);
+      if (t.status === 'done') {
+        minX = Math.min(minX, t.x - DONE_LABEL_LEFT);
+        minY = Math.min(minY, t.y);
+        maxX = Math.max(maxX, t.x + DONE_LABEL_RIGHT);
+        maxY = Math.max(maxY, t.y + DONE_NODE_H + DONE_LABEL_BELOW);
+      } else {
+        minX = Math.min(minX, t.x);           minY = Math.min(minY, t.y);
+        maxX = Math.max(maxX, t.x + NODE_W);  maxY = Math.max(maxY, t.y + NODE_H);
+      }
       hasContent = true;
     }
     for (const g of (this.data.groups || [])) {
@@ -180,8 +192,15 @@ export class Graph {
     }
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     for (const t of tasks) {
-      minX = Math.min(minX, t.x); minY = Math.min(minY, t.y);
-      maxX = Math.max(maxX, t.x + NODE_W); maxY = Math.max(maxY, t.y + NODE_H);
+      if (t.status === 'done') {
+        minX = Math.min(minX, t.x - DONE_LABEL_LEFT);
+        minY = Math.min(minY, t.y);
+        maxX = Math.max(maxX, t.x + DONE_LABEL_RIGHT);
+        maxY = Math.max(maxY, t.y + DONE_NODE_H + DONE_LABEL_BELOW);
+      } else {
+        minX = Math.min(minX, t.x); minY = Math.min(minY, t.y);
+        maxX = Math.max(maxX, t.x + NODE_W); maxY = Math.max(maxY, t.y + NODE_H);
+      }
     }
     return {
       x: minX - GROUP_PAD_X,
@@ -205,8 +224,15 @@ export class Graph {
       hasContent = true;
     }
     for (const t of orphans) {
-      minX = Math.min(minX, t.x); minY = Math.min(minY, t.y);
-      maxX = Math.max(maxX, t.x + NODE_W); maxY = Math.max(maxY, t.y + NODE_H);
+      if (t.status === 'done') {
+        minX = Math.min(minX, t.x - DONE_LABEL_LEFT);
+        minY = Math.min(minY, t.y);
+        maxX = Math.max(maxX, t.x + DONE_LABEL_RIGHT);
+        maxY = Math.max(maxY, t.y + DONE_NODE_H + DONE_LABEL_BELOW);
+      } else {
+        minX = Math.min(minX, t.x); minY = Math.min(minY, t.y);
+        maxX = Math.max(maxX, t.x + NODE_W); maxY = Math.max(maxY, t.y + NODE_H);
+      }
       hasContent = true;
     }
 
