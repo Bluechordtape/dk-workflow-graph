@@ -19,8 +19,8 @@ module.exports = function () {
     }
   });
 
-  // POST /api/templates — admin 전용
-  router.post('/', authenticateToken, requireRole('admin'), async (req, res) => {
+  // POST /api/templates — admin/leader/manager/member
+  router.post('/', authenticateToken, requireRole('admin', 'leader', 'manager', 'member'), async (req, res) => {
     const { name, description, data } = req.body;
     if (!name || !data) return res.status(400).json({ error: '이름과 데이터가 필요합니다' });
     try {

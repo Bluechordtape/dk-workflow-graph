@@ -16,7 +16,7 @@ import {
 } from './data.js';
 import { Graph } from './graph.js';
 
-const VERSION = 'v4.0.16';
+const VERSION = 'v4.0.17';
 
 // ── 간단 토스트 (충돌 알림 등) ────────────────────────────
 function showToast(msg, ms = 4000) {
@@ -790,7 +790,7 @@ let PERMISSIONS = {
   createTask:    ['admin', 'leader', 'manager', 'member'],
   deleteTask:    ['admin', 'leader', 'manager', 'member'],
   editTask:      ['admin', 'leader', 'manager', 'member'],
-  confirmDone:   ['admin', 'leader', 'manager', 'member'],
+  confirmDone:   ['admin', 'leader', 'manager'],
   changeStatus:  ['admin', 'leader', 'manager', 'member'],
   editMemo:      ['admin', 'leader', 'manager', 'member'],
   createProject: ['admin', 'leader', 'manager', 'member'],
@@ -802,7 +802,7 @@ let PERMISSIONS = {
   importExport:  ['admin', 'leader', 'manager', 'member'],
   backup:        ['admin', 'leader', 'manager', 'member'],
   saveTemplate:  ['admin', 'leader', 'manager', 'member'],
-  manageUsers:   ['admin', 'leader', 'manager', 'member'],
+  manageUsers:   ['admin'],
 };
 
 async function loadPermissions() {
@@ -2263,6 +2263,8 @@ async function refreshBackupList() {
       list.innerHTML = '<div style="color:#9E9E9E;font-size:13px;padding:8px 0">저장된 백업이 없습니다.</div>';
       return;
     }
+    // 백업 복구/삭제는 데이터 전체를 덮어쓰는 파괴적 동작이라 팀원에게는 열지 않음(생성/열람만 허용)
+    const canManageBackup = ['admin', 'leader', 'manager'].includes(currentUser?.role);
     backups.forEach(b => {
       const item = document.createElement('div');
       item.className = 'tmpl-item';
@@ -2279,31 +2281,35 @@ async function refreshBackupList() {
           <div class="tmpl-item-desc">업무 ${b.task_count}개 · ${b.created_by} · ${dateStr}</div>
         </div>
         <div style="display:flex;gap:6px;flex-shrink:0">
+          ${canManageBackup ? `
           <button class="btn-restore" data-id="${b.id}"
             style="height:26px;padding:0 10px;border-radius:5px;border:1px solid #E0E0E0;
                    background:#FAFAFA;font-size:11px;font-weight:600;font-family:inherit;cursor:pointer">
             복구
           </button>
           <button class="tmpl-del" data-id="${b.id}" title="삭제">×</button>
+          ` : ''}
         </div>
       `;
-      item.querySelector('.btn-restore').addEventListener('click', async () => {
-        if (!confirm(`"${b.name}" 백업으로 복구하시겠습니까?\n\n현재 데이터가 덮어씌워집니다.`)) return;
-        try {
-          const result = await restoreBackup(b.id);
-          data = normalize(result.data);
-          graph.setData(filteredData());
-          buildFilters();
-          renderSidebar();
-          closeModal('modal-backup');
-          alert('복구가 완료됐습니다.');
-        } catch (err) { alert(err.message); }
-      });
-      item.querySelector('.tmpl-del').addEventListener('click', async () => {
-        if (!confirm(`"${b.name}" 백업을 삭제할까요?`)) return;
-        try { await deleteBackup(b.id); await refreshBackupList(); }
-        catch (err) { alert(err.message); }
-      });
+      if (canManageBackup) {
+        item.querySelector('.btn-restore').addEventListener('click', async () => {
+          if (!confirm(`"${b.name}" 백업으로 복구하시겠습니까?\n\n현재 데이터가 덮어씌워집니다.`)) return;
+          try {
+            const result = await restoreBackup(b.id);
+            data = normalize(result.data);
+            graph.setData(filteredData());
+            buildFilters();
+            renderSidebar();
+            closeModal('modal-backup');
+            alert('복구가 완료됐습니다.');
+          } catch (err) { alert(err.message); }
+        });
+        item.querySelector('.tmpl-del').addEventListener('click', async () => {
+          if (!confirm(`"${b.name}" 백업을 삭제할까요?`)) return;
+          try { await deleteBackup(b.id); await refreshBackupList(); }
+          catch (err) { alert(err.message); }
+        });
+      }
       list.appendChild(item);
     });
   } catch (err) {

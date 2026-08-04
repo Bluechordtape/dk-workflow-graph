@@ -6,8 +6,8 @@ const { authenticateToken, requireRole } = require('../middleware/auth');
 module.exports = function () {
   const router = express.Router();
 
-  // GET /api/backups — admin 전용, 최근 30개
-  router.get('/', authenticateToken, requireRole('admin'), async (req, res) => {
+  // GET /api/backups — admin/leader/manager/member, 최근 30개
+  router.get('/', authenticateToken, requireRole('admin', 'leader', 'manager', 'member'), async (req, res) => {
     try {
       const result = await pool.query(`
         SELECT id, name, created_by, created_at, is_auto,
@@ -27,8 +27,8 @@ module.exports = function () {
     }
   });
 
-  // POST /api/backups — 수동 백업 (admin 전용)
-  router.post('/', authenticateToken, requireRole('admin'), async (req, res) => {
+  // POST /api/backups — 수동 백업 (admin/leader/manager/member)
+  router.post('/', authenticateToken, requireRole('admin', 'leader', 'manager', 'member'), async (req, res) => {
     const { name } = req.body;
     try {
       const dataRes = await pool.query('SELECT data FROM workflow_data WHERE id = 1');
@@ -48,8 +48,8 @@ module.exports = function () {
     }
   });
 
-  // POST /api/backups/:id/restore — 복구 (admin 전용)
-  router.post('/:id/restore', authenticateToken, requireRole('admin'), async (req, res) => {
+  // POST /api/backups/:id/restore — 복구 (admin/leader/manager, 전체 데이터를 덮어쓰는 파괴적 동작이라 member는 제외)
+  router.post('/:id/restore', authenticateToken, requireRole('admin', 'leader', 'manager'), async (req, res) => {
     try {
       const backupRes = await pool.query('SELECT data FROM backups WHERE id = $1', [req.params.id]);
       if (backupRes.rows.length === 0)
@@ -69,8 +69,8 @@ module.exports = function () {
     }
   });
 
-  // DELETE /api/backups/:id — admin 전용
-  router.delete('/:id', authenticateToken, requireRole('admin'), async (req, res) => {
+  // DELETE /api/backups/:id — admin/leader/manager (member는 제외)
+  router.delete('/:id', authenticateToken, requireRole('admin', 'leader', 'manager'), async (req, res) => {
     try {
       await pool.query('DELETE FROM backups WHERE id = $1', [req.params.id]);
       res.json({ ok: true });
