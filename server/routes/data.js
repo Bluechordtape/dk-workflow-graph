@@ -5,21 +5,39 @@ const fs = require('fs');
 const pool = require('../db');
 const { authenticateToken, requireRole } = require('../middleware/auth');
 
+// 팀원(member) done 차단용: 이전 대비 새로 'done'이 된 task가 있으면 true
+function collectTasks(d) {
+  const arr = [];
+  if (d?.tasks) arr.push(...d.tasks);
+  if (d?.sheets) for (const s of d.sheets) if (s?.tasks) arr.push(...s.tasks);
+  return arr;
+}
+function introducesDone(prev, next) {
+  const prevStatus = new Map();
+  if (prev) for (const t of collectTasks(prev)) prevStatus.set(t.id, t.status);
+  for (const t of collectTasks(next)) {
+    if (t.status === 'done' && prevStatus.get(t.id) !== 'done') return true;
+  }
+  return false;
+}
+
 module.exports = function (io) {
   const router = express.Router();
 
-  // GET /api/data — 인증된 모든 사용자
+  // GET /api/data — 인증된 모든 사용자. 현재 rev는 X-Data-Rev 헤더로 전달.
   router.get('/data', authenticateToken, async (req, res) => {
     try {
       const result = await pool.query(
-        'SELECT data FROM workflow_data WHERE id = 1'
+        'SELECT data, rev FROM workflow_data WHERE id = 1'
       );
       if (result.rows.length === 0) {
         const samplePath = path.join(__dirname, '../../sample-data.json');
         const sample = JSON.parse(fs.readFileSync(samplePath, 'utf8'));
         if (!sample.flows) sample.flows = [];
+        res.set('X-Data-Rev', '0');
         return res.json(sample);
       }
+      res.set('X-Data-Rev', String(result.rows[0].rev ?? 0));
       res.json(result.rows[0].data);
     } catch (err) {
       console.error('[API] GET /data 오류:', err.message);
@@ -27,23 +45,54 @@ module.exports = function (io) {
     }
   });
 
-  // PUT /api/data — admin, leader, manager 가능
+  // PUT /api/data — admin, leader, manager, member 가능
+  // 동시성: 클라이언트가 X-Base-Rev 헤더로 기반 rev를 보내면, 현재 rev와 다를 때 409로 거부(데이터 유실 방지).
+  //         헤더가 없으면(구버전 호환) 충돌 검사는 건너뛰되 rev는 계속 증가시킨다.
   router.put('/data', authenticateToken, requireRole('admin', 'leader', 'manager', 'member'), async (req, res) => {
-    try {
-      const data = req.body;
-      await pool.query(`
-        INSERT INTO workflow_data (id, data, updated_at)
-        VALUES (1, $1, NOW())
-        ON CONFLICT (id) DO UPDATE
-          SET data = EXCLUDED.data, updated_at = NOW()
-      `, [JSON.stringify(data)]);
+    const data = req.body;
+    const role = req.user.role;
+    const baseRevRaw = req.headers['x-base-rev'];
+    const baseRev = baseRevRaw !== undefined ? Number(baseRevRaw) : null;
 
-      console.log('[Sync] PUT /data → io.emit data:updated');
-      io.emit('data:updated', data);
-      res.json({ ok: true });
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const cur = await client.query('SELECT data, rev FROM workflow_data WHERE id = 1 FOR UPDATE');
+      const prev   = cur.rows[0]?.data ?? null;
+      const curRev = cur.rows[0]?.rev ?? 0;
+
+      // 낙관적 동시성 충돌 검사
+      if (baseRev !== null && Number.isFinite(baseRev) && cur.rows.length > 0 && baseRev !== curRev) {
+        await client.query('ROLLBACK');
+        return res.status(409).json({ error: '다른 사용자가 먼저 저장했습니다', currentRev: curRev });
+      }
+
+      // 팀원은 완료(done) 처리 불가 — 완료요청(review)까지만
+      if (role === 'member' && introducesDone(prev, data)) {
+        await client.query('ROLLBACK');
+        return res.status(403).json({ error: '완료(done) 처리는 상급자만 가능합니다' });
+      }
+
+      const upd = await client.query(`
+        INSERT INTO workflow_data (id, data, rev, updated_at)
+        VALUES (1, $1, 1, NOW())
+        ON CONFLICT (id) DO UPDATE
+          SET data = EXCLUDED.data, rev = workflow_data.rev + 1, updated_at = NOW()
+        RETURNING rev
+      `, [JSON.stringify(data)]);
+      await client.query('COMMIT');
+
+      const newRev = upd.rows[0].rev;
+      res.set('X-Data-Rev', String(newRev));
+      console.log(`[Sync] PUT /data (rev ${curRev}→${newRev}) → io.emit data:updated`);
+      io.emit('data:updated', data, newRev);
+      res.json({ ok: true, rev: newRev });
     } catch (err) {
+      await client.query('ROLLBACK').catch(() => {});
       console.error('[API] PUT /data 오류:', err.message);
       res.status(500).json({ error: '데이터 저장 실패' });
+    } finally {
+      client.release();
     }
   });
 
@@ -57,9 +106,11 @@ module.exports = function (io) {
     if (updates.status === 'done' && !canComplete)
       return res.status(403).json({ error: '완료/종결 처리 권한이 없습니다' });
 
+    const client = await pool.connect();
     try {
-      const result = await pool.query('SELECT data FROM workflow_data WHERE id = 1');
-      if (result.rows.length === 0) return res.status(404).json({ error: '데이터 없음' });
+      await client.query('BEGIN');
+      const result = await client.query('SELECT data, rev FROM workflow_data WHERE id = 1 FOR UPDATE');
+      if (result.rows.length === 0) { await client.query('ROLLBACK'); return res.status(404).json({ error: '데이터 없음' }); }
 
       const data = result.rows[0].data;
       // 신규 global 구조 우선, 구버전 sheets 구조 fallback
@@ -70,11 +121,13 @@ module.exports = function (io) {
           if (task) break;
         }
       }
-      if (!task) return res.status(404).json({ error: '업무를 찾을 수 없습니다' });
+      if (!task) { await client.query('ROLLBACK'); return res.status(404).json({ error: '업무를 찾을 수 없습니다' }); }
 
       console.log(`[PATCH task] task.assignee="${task.assignee}" req.user.name="${req.user.name}"`);
-      if (!canComplete && task.assignee && task.assignee !== req.user.name)
+      if (!canComplete && task.assignee && task.assignee !== req.user.name) {
+        await client.query('ROLLBACK');
         return res.status(403).json({ error: '담당 업무만 수정할 수 있습니다' });
+      }
 
       // member는 note, status, subtasks만 허용
       const allowed = canComplete ? updates : {
@@ -84,17 +137,24 @@ module.exports = function (io) {
       };
       Object.assign(task, allowed);
 
-      await pool.query(`
-        INSERT INTO workflow_data (id, data, updated_at) VALUES (1, $1, NOW())
-        ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()
+      const upd = await client.query(`
+        INSERT INTO workflow_data (id, data, rev, updated_at) VALUES (1, $1, 1, NOW())
+        ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, rev = workflow_data.rev + 1, updated_at = NOW()
+        RETURNING rev
       `, [JSON.stringify(data)]);
+      await client.query('COMMIT');
 
+      const newRev = upd.rows[0].rev;
+      res.set('X-Data-Rev', String(newRev));
       console.log('[Sync] PATCH /data/task → io.emit data:updated');
-      io.emit('data:updated', data);
-      res.json({ ok: true, data });
+      io.emit('data:updated', data, newRev);
+      res.json({ ok: true, data, rev: newRev });
     } catch (err) {
+      await client.query('ROLLBACK').catch(() => {});
       console.error('[API] PATCH /data/task 오류:', err.message);
       res.status(500).json({ error: '서버 오류' });
+    } finally {
+      client.release();
     }
   });
 
@@ -117,10 +177,11 @@ module.exports = function (io) {
     if (!allAllowed.includes(status))
       return res.status(400).json({ error: '올바르지 않은 상태값' });
 
+    const client = await pool.connect();
     try {
-      const result = await pool.query('SELECT data FROM workflow_data WHERE id = 1');
-      if (result.rows.length === 0)
-        return res.status(404).json({ error: '데이터 없음' });
+      await client.query('BEGIN');
+      const result = await client.query('SELECT data, rev FROM workflow_data WHERE id = 1 FOR UPDATE');
+      if (result.rows.length === 0) { await client.query('ROLLBACK'); return res.status(404).json({ error: '데이터 없음' }); }
 
       const data = result.rows[0].data;
       let task = data.tasks?.find(t => t.id === taskId);
@@ -131,6 +192,7 @@ module.exports = function (io) {
         }
       }
       if (!task) {
+        await client.query('ROLLBACK');
         console.log(`[PATCH task-status] taskId=${taskId} 없음`);
         return res.status(404).json({ error: '업무를 찾을 수 없습니다' });
       }
@@ -139,6 +201,7 @@ module.exports = function (io) {
 
       // member는 자기 담당 업무만 변경 가능 (단, assignee가 비어있으면 허용)
       if (!canComplete && task.assignee && task.assignee !== req.user.name) {
+        await client.query('ROLLBACK');
         console.log(`[PATCH task-status] 403 — 담당자 불일치`);
         return res.status(403).json({ error: '담당 업무만 변경할 수 있습니다' });
       }
@@ -148,19 +211,26 @@ module.exports = function (io) {
         if (!task.done_color) task.done_color = done_color;
       }
 
-      await pool.query(`
-        INSERT INTO workflow_data (id, data, updated_at)
-        VALUES (1, $1, NOW())
+      const upd = await client.query(`
+        INSERT INTO workflow_data (id, data, rev, updated_at)
+        VALUES (1, $1, 1, NOW())
         ON CONFLICT (id) DO UPDATE
-          SET data = EXCLUDED.data, updated_at = NOW()
+          SET data = EXCLUDED.data, rev = workflow_data.rev + 1, updated_at = NOW()
+        RETURNING rev
       `, [JSON.stringify(data)]);
+      await client.query('COMMIT');
 
+      const newRev = upd.rows[0].rev;
+      res.set('X-Data-Rev', String(newRev));
       console.log(`[PATCH task-status] DB 저장 완료 → io.emit data:updated`);
-      io.emit('data:updated', data);
-      res.json({ ok: true, data });
+      io.emit('data:updated', data, newRev);
+      res.json({ ok: true, data, rev: newRev });
     } catch (err) {
+      await client.query('ROLLBACK').catch(() => {});
       console.error('[API] PATCH /data/task-status 오류:', err.message);
       res.status(500).json({ error: '서버 오류' });
+    } finally {
+      client.release();
     }
   });
 

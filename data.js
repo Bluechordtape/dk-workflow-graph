@@ -3,10 +3,16 @@
 let _socketId = null;
 let _token = null;
 let _socket = null;
+let _rev = 0; // 서버 데이터 버전 (낙관적 동시성)
 
 export function setSocketId(id) { _socketId = id; }
 export function setToken(token) { _token = token; }
 export function setSocket(s) { _socket = s; }
+export function getRev() { return _rev; }
+export function setRev(r) {
+  const n = Number(r);
+  if (Number.isFinite(n)) _rev = n;
+}
 
 function authHeaders(extra = {}) {
   const h = { 'Content-Type': 'application/json', ...extra };
@@ -20,6 +26,7 @@ export async function loadData() {
   try {
     const res = await fetch('/api/data', { headers: authHeaders() });
     if (res.ok) {
+      setRev(res.headers.get('X-Data-Rev'));
       const d = await res.json();
       if (d) return normalize(d);
     }
@@ -118,8 +125,27 @@ export function normalize(d) {
 
 // ── 저장 ─────────────────────────────────────────────────
 export function saveData(data) {
-  fetch('/api/data', { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data) })
-    .then(res => { if (!res.ok) console.error('[SAVE] 실패: HTTP', res.status); })
+  fetch('/api/data', {
+    method: 'PUT',
+    headers: authHeaders({ 'X-Base-Rev': String(_rev) }),
+    body: JSON.stringify(data)
+  })
+    .then(async (res) => {
+      if (res.ok) {
+        setRev(res.headers.get('X-Data-Rev'));
+        return;
+      }
+      if (res.status === 409) {
+        // 충돌: 다른 사용자가 먼저 저장함. 내 변경은 저장되지 않았음(남의 데이터를 덮어쓰지 않음).
+        // 최신 rev로 맞추고, 화면 갱신은 서버의 data:updated 브로드캐스트가 처리한다.
+        const body = await res.json().catch(() => null);
+        if (body && body.currentRev !== undefined) setRev(body.currentRev);
+        console.warn('[SAVE] 충돌(409): 다른 사용자가 먼저 저장함');
+        window.dispatchEvent(new CustomEvent('data:conflict'));
+        return;
+      }
+      console.error('[SAVE] 실패: HTTP', res.status);
+    })
     .catch(err => console.error('[SAVE] 오류:', err));
 }
 

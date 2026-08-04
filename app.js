@@ -1,7 +1,7 @@
 ﻿// app.js
 import {
   loadData, saveData, saveTaskStatus, exportJSON, importJSON,
-  setSocketId, setToken, setSocket,
+  setSocketId, setToken, setSocket, setRev,
   addProject, deleteProject,
   addTask, updateTask, deleteTask,
   addFlow, deleteFlow,
@@ -16,7 +16,30 @@ import {
 } from './data.js';
 import { Graph } from './graph.js';
 
-const VERSION = 'v4.0.0';
+const VERSION = 'v4.0.16';
+
+// ── 간단 토스트 (충돌 알림 등) ────────────────────────────
+function showToast(msg, ms = 4000) {
+  let el = document.getElementById('loom-toast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'loom-toast';
+    el.style.cssText = 'position:fixed;left:50%;bottom:32px;transform:translateX(-50%);' +
+      'background:#212121;color:#fff;padding:12px 18px;border-radius:10px;font-size:14px;' +
+      'box-shadow:0 6px 24px rgba(0,0,0,.25);z-index:99999;max-width:80vw;opacity:0;' +
+      'transition:opacity .2s;pointer-events:none;';
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.style.opacity = '1';
+  clearTimeout(el._t);
+  el._t = setTimeout(() => { el.style.opacity = '0'; }, ms);
+}
+
+// 저장 충돌: 다른 사용자가 먼저 저장한 경우 (내 변경은 저장되지 않음)
+window.addEventListener('data:conflict', () => {
+  showToast('다른 사용자가 먼저 저장해 최신 상태로 갱신됐어요. 방금 변경을 다시 적용해 주세요.');
+});
 
 let data = null;
 let graph = null;
@@ -300,9 +323,10 @@ function initSocket() {
   socket.on('connect_error', (err) => {
     console.error('[SOCKET] 연결 오류:', err.message);
   });
-  socket.on('data:updated', (newData) => {
-    console.log('[RECEIVE] data:updated 수신 | 유저:', currentUser?.name, '| 데이터:', newData ? 'ok' : 'empty');
+  socket.on('data:updated', (newData, rev) => {
+    console.log('[RECEIVE] data:updated 수신 | 유저:', currentUser?.name, '| rev:', rev, '| 데이터:', newData ? 'ok' : 'empty');
     if (!newData) return;
+    if (rev !== undefined) setRev(rev);
     data = normalize(newData);
     if (!graph?.isDragging()) graph.setData(filteredData());
     buildFilters();

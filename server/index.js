@@ -107,11 +107,11 @@ io.on('connection', (socket) => {
     const totalSockets = io.sockets.sockets.size;
     console.log(`[SERVER] data:sync 수신 from ${socket.id} | 연결 소켓 수: ${totalSockets}`);
     try {
-      const result = await pool.query('SELECT data FROM workflow_data LIMIT 1');
+      const result = await pool.query('SELECT data, rev FROM workflow_data LIMIT 1');
       console.log(`[SERVER] DB 조회 완료, rows: ${result.rows.length}`);
       if (result.rows.length > 0) {
         console.log(`[SERVER] broadcast emit data:updated → ${totalSockets - 1}명`);
-        socket.broadcast.emit('data:updated', result.rows[0].data);
+        socket.broadcast.emit('data:updated', result.rows[0].data, result.rows[0].rev);
       } else {
         console.warn('[SERVER] data:sync — workflow_data 테이블에 데이터 없음');
       }

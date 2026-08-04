@@ -18,6 +18,10 @@ async function initDB() {
       updated_at TIMESTAMP DEFAULT NOW()
     )
   `);
+  // rev: 낙관적 동시성 제어용 버전 카운터 (저장 충돌 감지 → 데이터 유실 방지)
+  await pool.query(`
+    ALTER TABLE workflow_data ADD COLUMN IF NOT EXISTS rev INTEGER NOT NULL DEFAULT 0
+  `).catch(err => console.error('[DB] workflow_data.rev 컬럼 추가 실패:', err.message));
 
   // 사용자 테이블
   await pool.query(`
